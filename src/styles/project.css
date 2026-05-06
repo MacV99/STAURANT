@@ -164,15 +164,60 @@
   justify-content: center;
 }
 
+.fab-inner>i {
+  animation: fab-icon-cycle 8s ease-in-out infinite;
+}
+
 .fab-badge {
   position: absolute;
-  top: -5px;
-  right: -7px;
+  top: 50%;
+  left: 50%;
   color: white;
-  font-size: 0.8rem;
-  font-weight: 900;
+  font-size: 2.5rem;
+  font-weight: 300;
   line-height: 1;
   pointer-events: none;
+  animation: fab-badge-cycle 8s ease-in-out infinite;
+}
+
+@keyframes fab-icon-cycle {
+
+  0%,
+  75% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  85%,
+  92% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fab-badge-cycle {
+
+  0%,
+  75% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3);
+  }
+
+  85%,
+  92% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3);
+  }
 }
 
 /* === BUTTON DANGER === */

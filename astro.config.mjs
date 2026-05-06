@@ -11,7 +11,7 @@ export default defineConfig({
         name: 'STAURANT',
         short_name: 'STAURANT',
         description: 'Tu libreta de restaurantes y platos favoritos',
-        theme_color: '#546b41',
+        theme_color: '#2e2e2e',
         background_color: '#fff8ec',
         display: 'standalone',
         start_url: '/',
