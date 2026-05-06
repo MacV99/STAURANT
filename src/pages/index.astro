@@ -325,6 +325,7 @@ const tplRestaurant: Restaurant = {
   });
   document.addEventListener("restaurant:updated", () => renderBoth());
   document.addEventListener("restaurant:visited", () => renderBoth());
+  document.addEventListener("cache:synced", () => renderBoth());
 
   // ─── PRE-RENDER en astro:after-swap ─────────────────────────────────────────
 

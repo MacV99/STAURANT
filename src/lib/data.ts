@@ -65,35 +65,85 @@ function getCache(): AppCache {
   return { userId: _userId!, restaurants: [], dishes: [], dishTypes: [] };
 }
 
-/** Llama esto al inicio de cada página protegida, pasando el userId de la sesión.
- *  - Si hay caché válido (memoria o localStorage) → instantáneo, sin red.
- *  - Primera vez o usuario distinto → fetch a Supabase y guarda en caché. */
-export async function initCache(userId: string): Promise<void> {
-  _userId = userId;
-
-  // Si ya tenemos datos en memoria para este usuario, no hacer nada más.
-  if (_mem?.userId === _userId) return;
-
-  // Intentar hidratar desde localStorage antes de ir a la red.
-  const persisted = readLocalStorage();
-  if (persisted?.userId === _userId) { _mem = persisted; return; }
-
-  // Primera vez: cargar desde Supabase.
+async function fetchFromSupabase(): Promise<AppCache> {
   const [rRes, dRes, dtRes] = await Promise.all([
     supabase.from("restaurants").select("*").eq("user_id", _userId).order("created_at", { ascending: false }),
     supabase.from("dishes").select("*").eq("user_id", _userId).order("created_at", { ascending: false }),
     supabase.from("dish_types").select("*").eq("user_id", _userId).order("name", { ascending: true }),
   ]);
-
-  writeCache({
-    userId: _userId,
+  return {
+    userId: _userId!,
     restaurants: (rRes.data ?? []).map(toRestaurant),
     dishes: (dRes.data ?? []).map(toDish),
     dishTypes: (dtRes.data ?? []).map(toDishType),
-  });
+  };
+}
+
+async function refreshCacheInBackground(): Promise<void> {
+  const local = getCache();
+  const remote = await fetchFromSupabase();
+
+  // Subir a Supabase lo que está en local pero no llegó (IDs ausentes en remote)
+  const remoteTypeIds = new Set(remote.dishTypes.map((dt) => dt.id));
+  const remoteDishIds = new Set(remote.dishes.map((d) => d.id));
+
+  const missingTypes = local.dishTypes.filter((dt) => !remoteTypeIds.has(dt.id));
+  const missingDishes = local.dishes.filter((d) => !remoteDishIds.has(d.id));
+
+  if (missingTypes.length > 0) {
+    await supabase.from("dish_types").upsert(
+      missingTypes.map((dt) => ({
+        id: dt.id, user_id: _userId,
+        name: dt.name, created_at: dt.createdAt,
+      }))
+    );
+    remote.dishTypes.push(...missingTypes);
+  }
+
+  if (missingDishes.length > 0) {
+    await supabase.from("dishes").upsert(
+      missingDishes.map((d) => ({
+        id: d.id, user_id: _userId,
+        restaurant_id: d.restaurantId, type_id: d.typeId,
+        name: d.name, rating: d.rating,
+        notes: d.notes, created_at: d.createdAt,
+      }))
+    );
+    remote.dishes.push(...missingDishes);
+  }
+
+  if (JSON.stringify(local) !== JSON.stringify(remote)) {
+    writeCache(remote);
+    document.dispatchEvent(new CustomEvent("cache:synced"));
+  }
+}
+
+/** Llama esto al inicio de cada página protegida, pasando el userId de la sesión.
+ *  - Si hay caché válido (memoria o localStorage) → instantáneo, sin red.
+ *  - Siempre lanza un refresh en background para sincronizar cambios de otros dispositivos. */
+export async function initCache(userId: string): Promise<void> {
+  _userId = userId;
+
+  // Si ya tenemos datos en memoria para este usuario → fast path, refresh en background.
+  if (_mem?.userId === _userId) {
+    bgSync(refreshCacheInBackground);
+    return;
+  }
+
+  // Intentar hidratar desde localStorage antes de ir a la red.
+  const persisted = readLocalStorage();
+  if (persisted?.userId === _userId) {
+    _mem = persisted;
+    bgSync(refreshCacheInBackground);
+    return;
+  }
+
+  // Primera vez: cargar desde Supabase de forma bloqueante.
+  const fresh = await fetchFromSupabase();
+  writeCache(fresh);
 
   // Tipos por defecto para usuarios nuevos (sin tipos todavía)
-  if ((dtRes.data ?? []).length === 0) {
+  if (fresh.dishTypes.length === 0) {
     ["HAMBURGUESA", "PERRO CALIENTE", "PIZZA"].forEach(name => createDishType(name));
   }
 }

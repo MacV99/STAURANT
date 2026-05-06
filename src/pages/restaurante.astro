@@ -768,6 +768,13 @@ const tplRestaurant: Restaurant = {
     rerenderRestaurantePage();
   });
 
+  document.addEventListener("cache:synced", () => {
+    if (!currentRestaurant) return;
+    const fresh = getRestaurants().find((r) => r.id === currentRestaurant!.id);
+    if (fresh) currentRestaurant = fresh;
+    rerenderRestaurantePage();
+  });
+
   // ─── PRE-RENDER en astro:after-swap ────────────────────────────────────────
 
   document.addEventListener("astro:after-swap", () => {
