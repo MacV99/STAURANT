@@ -79,37 +79,45 @@ async function fetchFromSupabase(): Promise<AppCache> {
   };
 }
 
+const MIGRATION_KEY = "staurant_migrated_v1";
+
 async function refreshCacheInBackground(): Promise<void> {
   const local = getCache();
   const remote = await fetchFromSupabase();
 
-  // Subir a Supabase lo que está en local pero no llegó (IDs ausentes en remote)
-  const remoteTypeIds = new Set(remote.dishTypes.map((dt) => dt.id));
-  const remoteDishIds = new Set(remote.dishes.map((d) => d.id));
+  // Migración única: subir a Supabase lo que está en local pero no llegó.
+  // Solo corre una vez por dispositivo; después de eso las eliminaciones
+  // en otros dispositivos no se revivirían accidentalmente.
+  if (!localStorage.getItem(MIGRATION_KEY)) {
+    const remoteTypeIds = new Set(remote.dishTypes.map((dt) => dt.id));
+    const remoteDishIds = new Set(remote.dishes.map((d) => d.id));
 
-  const missingTypes = local.dishTypes.filter((dt) => !remoteTypeIds.has(dt.id));
-  const missingDishes = local.dishes.filter((d) => !remoteDishIds.has(d.id));
+    const missingTypes = local.dishTypes.filter((dt) => !remoteTypeIds.has(dt.id));
+    const missingDishes = local.dishes.filter((d) => !remoteDishIds.has(d.id));
 
-  if (missingTypes.length > 0) {
-    await supabase.from("dish_types").upsert(
-      missingTypes.map((dt) => ({
-        id: dt.id, user_id: _userId,
-        name: dt.name, created_at: dt.createdAt,
-      }))
-    );
-    remote.dishTypes.push(...missingTypes);
-  }
+    if (missingTypes.length > 0) {
+      await supabase.from("dish_types").upsert(
+        missingTypes.map((dt) => ({
+          id: dt.id, user_id: _userId,
+          name: dt.name, created_at: dt.createdAt,
+        }))
+      );
+      remote.dishTypes.push(...missingTypes);
+    }
 
-  if (missingDishes.length > 0) {
-    await supabase.from("dishes").upsert(
-      missingDishes.map((d) => ({
-        id: d.id, user_id: _userId,
-        restaurant_id: d.restaurantId, type_id: d.typeId,
-        name: d.name, rating: d.rating,
-        notes: d.notes, created_at: d.createdAt,
-      }))
-    );
-    remote.dishes.push(...missingDishes);
+    if (missingDishes.length > 0) {
+      await supabase.from("dishes").upsert(
+        missingDishes.map((d) => ({
+          id: d.id, user_id: _userId,
+          restaurant_id: d.restaurantId, type_id: d.typeId,
+          name: d.name, rating: d.rating,
+          notes: d.notes, created_at: d.createdAt,
+        }))
+      );
+      remote.dishes.push(...missingDishes);
+    }
+
+    localStorage.setItem(MIGRATION_KEY, "1");
   }
 
   if (JSON.stringify(local) !== JSON.stringify(remote)) {

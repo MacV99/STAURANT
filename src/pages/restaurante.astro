@@ -37,9 +37,6 @@ const tplRestaurant: Restaurant = {
     <div class="dishes-section">
       <div class="dishes-top">
         <h2 class="dishes-title">Platos</h2>
-        <button id="btn-add-dish" class="boton">
-          <i class="bi bi-plus-lg"></i> Agregar plato
-        </button>
       </div>
 
       <div class="dish-search-wrap">
@@ -75,6 +72,13 @@ const tplRestaurant: Restaurant = {
       <div id="dishes-list"></div>
     </div>
   </div>
+
+  <button id="btn-add-dish" class="fab" aria-label="Agregar plato">
+    <span class="fab-inner">
+      <i class="bi bi-fork-knife"></i>
+      <span class="fab-badge">+</span>
+    </span>
+  </button>
 
   <DishForm />
   <RestaurantForm />
@@ -173,18 +177,6 @@ const tplRestaurant: Restaurant = {
   .dishes-top {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-  }
-
-  #btn-add-dish {
-    text-transform: none;
-    letter-spacing: 0.5px;
-    background: var(--clr-primary);
-    color: var(--clr-white);
-    border-color: var(--clr-primary);
-    font-size: 0.85rem;
-    padding: 9px 16px;
   }
 
   .dishes-title {

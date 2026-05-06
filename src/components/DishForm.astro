@@ -667,20 +667,22 @@
       const restaurantId = restaurantIdInput.value;
       const id = idInput.value;
 
+      const typeId = typeIdInput.value || null;
       const duplicate = getDishesByRestaurant(restaurantId).find(
         (d) =>
-          d.name.trim().toLowerCase() === name.toLowerCase() && d.id !== id,
+          d.name.trim().toLowerCase() === name.toLowerCase() &&
+          d.typeId === typeId &&
+          d.id !== id,
       );
       if (duplicate) {
         errorEl.textContent =
-          "Ya existe un plato con ese nombre en este restaurante.";
+          "Ya existe un plato con ese nombre y tipo en este restaurante.";
         nameInput.focus();
         return;
       }
 
       const rating = parseFloat(ratingInput.value);
       const notes = notesInput.value.trim();
-      const typeId = typeIdInput.value || null;
 
       // Cerrar ANTES de emitir: garantiza que el modal cierra aunque
       // el listener del evento lance una excepción.
