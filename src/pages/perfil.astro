@@ -14,30 +14,93 @@ import Layout1 from "../layouts/Layout1.astro";
         <i class="bi bi-person-fill"></i>
       </div>
 
-      <div class="profile-email-block">
-        <span class="field-label">Email</span>
+      <div class="profile-info">
+        <p id="profile-name-display" class="profile-name">—</p>
         <p id="profile-email" class="profile-email">—</p>
       </div>
 
-      <form id="profile-form" novalidate>
-        <label for="profile-name">
-          <span class="field-label">Nombre</span>
-          <input
-            type="text"
-            id="profile-name"
-            autocomplete="name"
-            placeholder="Tu nombre"
-          />
-        </label>
-        <p id="profile-msg" class="profile-msg" aria-live="polite"></p>
-        <button type="submit" class="btn-primary">Guardar cambios</button>
-      </form>
+      <button id="btn-edit-profile" class="btn-edit">
+        <i class="bi bi-pencil"></i> Editar perfil
+      </button>
 
       <div class="profile-divider"></div>
 
       <button id="btn-logout" class="btn-danger-outline">
         <i class="bi bi-box-arrow-right"></i> Cerrar sesión
       </button>
+    </div>
+
+    <!-- Modal editar perfil -->
+    <div class="overlay" id="edit-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2 class="modal-title" id="modal-title">Editar perfil</h2>
+          <button class="modal-close boton2" id="btn-modal-close" aria-label="Cerrar">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+
+        <form id="profile-form" novalidate>
+          <label for="profile-name">
+            <span class="field-label">Nombre</span>
+            <input
+              type="text"
+              id="profile-name"
+              autocomplete="name"
+              placeholder="Tu nombre"
+            />
+          </label>
+
+          <!-- Campos de contraseña: solo para usuarios email -->
+          <div id="pw-fields" style="display:none; flex-direction:column; gap:12px;">
+            <div class="form-section-label">
+              <span class="field-label">Contraseña</span>
+              <span class="field-hint">Dejar vacío para no cambiarla</span>
+            </div>
+            <label for="pw-new">
+              <span class="field-label">Nueva contraseña</span>
+              <div class="pw-wrapper">
+                <input
+                  type="password"
+                  id="pw-new"
+                  autocomplete="new-password"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  class="pw-toggle"
+                  id="toggle-pw-new"
+                  aria-label="Mostrar contraseña"
+                >
+                  <i class="bi bi-eye"></i>
+                </button>
+              </div>
+            </label>
+            <label for="pw-confirm">
+              <span class="field-label">Confirmar contraseña</span>
+              <div class="pw-wrapper">
+                <input
+                  type="password"
+                  id="pw-confirm"
+                  autocomplete="new-password"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  class="pw-toggle"
+                  id="toggle-pw-confirm"
+                  aria-label="Mostrar contraseña"
+                >
+                  <i class="bi bi-eye"></i>
+                </button>
+              </div>
+            </label>
+          </div>
+
+          <p id="profile-msg" class="profile-msg" aria-live="polite"></p>
+          <button type="submit" class="btn-primary">Guardar cambios</button>
+        </form>
+      </div>
     </div>
 
     <!-- Columna derecha: stats + top 3 -->
@@ -96,7 +159,6 @@ import Layout1 from "../layouts/Layout1.astro";
     gap: 16px;
   }
 
-  /* ── Columna derecha en desktop ── */
   .dash-col {
     display: flex;
     flex-direction: column;
@@ -145,63 +207,43 @@ import Layout1 from "../layouts/Layout1.astro";
     align-self: center;
   }
 
-  .profile-email-block {
+  .profile-info {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    text-align: center;
   }
 
-  .field-label {
-    font-size: 0.78rem;
-    font-weight: 600;
-    letter-spacing: 1px;
-    color: var(--clr-dark2);
-    text-transform: uppercase;
+  .profile-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--clr-text);
   }
 
   .profile-email {
-    font-size: 0.95rem;
+    font-size: 0.88rem;
     color: var(--clr-text);
+    opacity: 0.5;
     word-break: break-all;
   }
 
-  form {
+  .btn-edit {
     display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  label {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  }
-
-  label input {
-    border-radius: var(--border-radius);
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
     width: 100%;
-  }
-
-  .profile-msg {
-    font-size: 0.85rem;
-    min-height: 1.2em;
-    color: var(--clr-primary);
-    font-weight: 600;
-  }
-
-  .profile-msg.error {
-    color: #c0392b;
-  }
-
-  .btn-primary {
-    width: 100%;
-    background: var(--clr-primary);
-    color: var(--clr-white);
-    border-color: var(--clr-primary);
+    background: var(--clr-white2);
+    border: solid 1.5px var(--clr-border);
+    color: var(--clr-text);
     border-radius: 12px;
-    padding: 12px;
-    font-size: 0.9rem;
-    letter-spacing: 1px;
+    padding: 11px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: none;
+    cursor: pointer;
+    transition: var(--transition);
   }
 
   .profile-divider {
@@ -226,6 +268,142 @@ import Layout1 from "../layouts/Layout1.astro";
     text-transform: none;
     cursor: pointer;
     transition: var(--transition);
+  }
+
+  /* ── Modal ── */
+
+  .modal-card {
+    background: var(--clr-white);
+    border-radius: 20px;
+    padding: 24px 20px;
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .modal-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--clr-text);
+    margin: 0;
+  }
+
+  .modal-close {
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: var(--clr-white2);
+    border: solid 1.5px var(--clr-border);
+  }
+
+  .field-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: var(--clr-dark2);
+    text-transform: uppercase;
+  }
+
+  .field-hint {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--clr-text);
+    opacity: 0.5;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .form-section-label {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding-top: 4px;
+    border-top: 1px solid var(--clr-border);
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  label input {
+    border-radius: var(--border-radius);
+    width: 100%;
+  }
+
+  /* ── Password toggle dentro del input ── */
+
+  .pw-wrapper {
+    position: relative;
+    display: flex;
+  }
+
+  .pw-wrapper input {
+    flex: 1;
+    padding-right: 44px;
+    border-radius: var(--border-radius);
+  }
+
+  .pw-toggle {
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    width: 42px;
+    background: transparent;
+    border: none;
+    color: var(--clr-text);
+    opacity: 0.4;
+    font-size: 0.95rem;
+    letter-spacing: 0;
+    text-transform: none;
+    padding: 0;
+    border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.12s ease;
+  }
+
+  /* ── Messages ── */
+
+  .profile-msg {
+    font-size: 0.85rem;
+    min-height: 1.2em;
+    color: var(--clr-primary);
+    font-weight: 600;
+  }
+
+  .profile-msg.error {
+    color: #c0392b;
+  }
+
+  /* ── Buttons ── */
+
+  .btn-primary {
+    width: 100%;
+    background: var(--clr-primary);
+    color: var(--clr-white);
+    border-color: var(--clr-primary);
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
   }
 
   /* ── Dashboard ── */
@@ -268,14 +446,8 @@ import Layout1 from "../layouts/Layout1.astro";
     letter-spacing: -0.5px;
   }
 
-  .stat-number.accent-green {
-    color: var(--clr-primary);
-  }
-
-  .stat-number.accent-muted {
-    color: var(--clr-text);
-    opacity: 0.45;
-  }
+  .stat-number.accent-green { color: var(--clr-primary); }
+  .stat-number.accent-muted { color: var(--clr-text); opacity: 0.45; }
 
   .stat-label {
     font-size: 0.65rem;
@@ -285,8 +457,6 @@ import Layout1 from "../layouts/Layout1.astro";
     color: var(--clr-text);
     opacity: 0.45;
   }
-
-  /* ── Top 3 ── */
 
   .top3-list {
     display: flex;
@@ -305,8 +475,11 @@ import Layout1 from "../layouts/Layout1.astro";
   /* ── Hover ── */
 
   @media (hover: hover) {
-    .back-link:hover {
-      color: var(--clr-dark);
+    .back-link:hover { color: var(--clr-dark); }
+
+    .btn-edit:hover {
+      border-color: var(--clr-border2);
+      color: var(--clr-primary);
     }
 
     .btn-primary:hover {
@@ -314,9 +487,11 @@ import Layout1 from "../layouts/Layout1.astro";
       border-color: var(--clr-primary-dark);
     }
 
-    .btn-danger-outline:hover {
-      background: #fce8e8;
-    }
+    .btn-danger-outline:hover { background: #fce8e8; }
+
+    .pw-toggle:hover { opacity: 0.85; }
+
+    .modal-close:hover { background: var(--clr-border); border-color: var(--clr-border2); }
   }
 
   @media (min-width: 768px) {
@@ -334,22 +509,15 @@ import Layout1 from "../layouts/Layout1.astro";
       row-gap: 20px;
     }
 
-    .back-link   { grid-area: back; }
+    .back-link    { grid-area: back; }
     .profile-card { grid-area: prof; }
-    .dash-col    { grid-area: dash; }
+    .dash-col     { grid-area: dash; }
 
     .profile-card,
-    .dash-card {
-      padding: 28px 24px;
-    }
+    .dash-card { padding: 28px 24px; }
 
-    .stat-cell {
-      padding: 18px 8px;
-    }
-
-    .stat-number {
-      font-size: 2rem;
-    }
+    .stat-cell { padding: 18px 8px; }
+    .stat-number { font-size: 2rem; }
   }
 </style>
 
@@ -372,22 +540,15 @@ import Layout1 from "../layouts/Layout1.astro";
   interface RawRestaurant { id: string; status: string; name: string }
   interface RawDish { restaurantId: string; rating: number }
 
-  function renderStats(
-    restaurants: RawRestaurant[],
-    dishes: RawDish[],
-  ): void {
+  function renderStats(restaurants: RawRestaurant[], dishes: RawDish[]): void {
     const total = restaurants.length;
     const visited = restaurants.filter((r) => r.status === "visited").length;
     const pending = restaurants.filter((r) => r.status === "pending").length;
     const totalDishes = dishes.length;
-
     const avgAll =
       totalDishes > 0
-        ? Math.round(
-            (dishes.reduce((s, d) => s + d.rating, 0) / totalDishes) * 10,
-          ) / 10
+        ? Math.round((dishes.reduce((s, d) => s + d.rating, 0) / totalDishes) * 10) / 10
         : null;
-
     const ratedIds = new Set(dishes.map((d) => d.restaurantId));
     const rated = restaurants.filter((r) => ratedIds.has(r.id)).length;
 
@@ -402,7 +563,6 @@ import Layout1 from "../layouts/Layout1.astro";
     set("sn-avg", avgAll !== null ? String(avgAll) : "—");
     set("sn-rated", String(rated));
 
-    // Top 3
     const top3El = document.getElementById("top3-list");
     if (!top3El) return;
 
@@ -410,28 +570,23 @@ import Layout1 from "../layouts/Layout1.astro";
       .map((r) => {
         const rd = dishes.filter((d) => d.restaurantId === r.id);
         if (rd.length === 0) return null;
-        const avg =
-          Math.round(
-            (rd.reduce((s, d) => s + d.rating, 0) / rd.length) * 10,
-          ) / 10;
-        return { name: r.name, avg };
+        const avg = Math.round((rd.reduce((s, d) => s + d.rating, 0) / rd.length) * 10) / 10;
+        return { id: r.id, name: r.name, avg };
       })
-      .filter((x): x is { name: string; avg: number } => x !== null)
+      .filter((x): x is { id: string; name: string; avg: number } => x !== null)
       .sort((a, b) => b.avg - a.avg)
       .slice(0, 3);
 
     if (withAvg.length === 0) {
-      top3El.innerHTML =
-        '<p class="top3-empty">Añade platos para ver tus favoritos</p>';
+      top3El.innerHTML = '<p class="top3-empty">Añade platos para ver tus favoritos</p>';
       return;
     }
 
     const medals = ["🥇", "🥈", "🥉"];
     top3El.innerHTML = withAvg
       .map((r, i) => {
-        const badgeClass =
-          r.avg >= 8 ? "badge-high" : r.avg >= 5 ? "badge-mid" : "badge-low";
-        return `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--clr-white2);border-radius:12px;">
+        const badgeClass = r.avg >= 8 ? "badge-high" : r.avg >= 5 ? "badge-mid" : "badge-low";
+        return `<a href="/restaurante?id=${encodeURIComponent(r.id)}" style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--clr-white2);border-radius:12px;text-decoration:none;">
           <span style="font-size:1.25rem;line-height:1;">${medals[i]}</span>
           <span style="flex:1;font-size:0.9rem;font-weight:600;color:var(--clr-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(r.name)}</span>
           <span class="${badgeClass}" style="font-size:0.82rem;font-weight:700;padding:3px 10px;border-radius:20px;flex-shrink:0;">${r.avg}</span>
@@ -446,29 +601,21 @@ import Layout1 from "../layouts/Layout1.astro";
     const emailEl = document.getElementById("profile-email");
     if (!emailEl) return;
     try {
-      const profileCached = JSON.parse(
-        localStorage.getItem(PROFILE_CACHE_KEY) ?? "null",
-      );
+      const profileCached = JSON.parse(localStorage.getItem(PROFILE_CACHE_KEY) ?? "null");
       if (profileCached) {
         emailEl.textContent = profileCached.email || "—";
-        const nameInput = document.getElementById(
-          "profile-name",
-        ) as HTMLInputElement | null;
+        const nameDisplay = document.getElementById("profile-name-display");
+        const nameInput = document.getElementById("profile-name") as HTMLInputElement | null;
         const avatarEl = document.getElementById("profile-avatar");
-        if (nameInput && profileCached.name) nameInput.value = profileCached.name;
-        if (avatarEl && profileCached.name)
-          avatarEl.textContent = profileCached.name.charAt(0).toUpperCase();
+        if (profileCached.name) {
+          if (nameDisplay) nameDisplay.textContent = profileCached.name;
+          if (nameInput) nameInput.value = profileCached.name;
+          if (avatarEl) avatarEl.textContent = profileCached.name.charAt(0).toUpperCase();
+        }
       }
-
-      const dataCached = JSON.parse(
-        localStorage.getItem(DATA_CACHE_KEY) ?? "null",
-      );
-      if (dataCached?.restaurants) {
-        renderStats(dataCached.restaurants, dataCached.dishes ?? []);
-      }
-    } catch {
-      /* ignore */
-    }
+      const dataCached = JSON.parse(localStorage.getItem(DATA_CACHE_KEY) ?? "null");
+      if (dataCached?.restaurants) renderStats(dataCached.restaurants, dataCached.dishes ?? []);
+    } catch { /* ignore */ }
   });
 
   // ─── Lógica principal ───────────────────────────────────────────────────────
@@ -477,53 +624,71 @@ import Layout1 from "../layouts/Layout1.astro";
     const emailEl = document.getElementById("profile-email");
     if (!emailEl) return;
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session) {
-      window.location.href = "/login";
-      return;
-    }
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { window.location.href = "/login"; return; }
     await initCache(session.user.id);
 
-    // Back link contextual
-    const fromTab =
-      new URLSearchParams(window.location.search).get("from") ?? "visitados";
-    const backLinkEl = document.querySelector(
-      ".back-link",
-    ) as HTMLAnchorElement;
+    const fromTab = new URLSearchParams(window.location.search).get("from") ?? "visitados";
+    const backLinkEl = document.querySelector(".back-link") as HTMLAnchorElement;
     if (backLinkEl) backLinkEl.href = `/?tab=${fromTab}`;
 
-    // Perfil
     const user = session.user;
-    const nameInput = document.getElementById(
-      "profile-name",
-    ) as HTMLInputElement;
+    const nameInput = document.getElementById("profile-name") as HTMLInputElement;
+    const nameDisplay = document.getElementById("profile-name-display")!;
     const msgEl = document.getElementById("profile-msg")!;
     const avatarEl = document.getElementById("profile-avatar")!;
+    const overlay = document.getElementById("edit-overlay")!;
 
     emailEl.textContent = user.email ?? "";
 
     const { data: profile } = await supabase
-      .from("profiles")
-      .select("name")
-      .eq("id", user.id)
-      .single();
+      .from("profiles").select("name").eq("id", user.id).single();
 
     if (profile?.name) {
+      nameDisplay.textContent = profile.name;
       nameInput.value = profile.name;
       avatarEl.textContent = profile.name.charAt(0).toUpperCase();
     }
 
-    localStorage.setItem(
-      PROFILE_CACHE_KEY,
-      JSON.stringify({ email: user.email ?? "", name: profile?.name ?? "" }),
-    );
+    localStorage.setItem(PROFILE_CACHE_KEY,
+      JSON.stringify({ email: user.email ?? "", name: profile?.name ?? "" }));
 
-    // Stats desde el cache
     renderStats(getRestaurants(), getDishes());
 
-    // Guardar nombre
+    // Mostrar campos de contraseña solo para usuarios email
+    const hasEmailIdentity =
+      user.identities?.some((i: { provider: string }) => i.provider === "email") ?? false;
+    const pwFields = document.getElementById("pw-fields")!;
+    if (hasEmailIdentity) pwFields.style.display = "flex";
+
+    // Modal open/close
+    const openModal = () => { overlay.classList.add("is-open"); msgEl.textContent = ""; msgEl.classList.remove("error"); };
+    const closeModal = () => {
+      overlay.classList.remove("is-open");
+      (document.getElementById("pw-new") as HTMLInputElement).value = "";
+      (document.getElementById("pw-confirm") as HTMLInputElement).value = "";
+      msgEl.textContent = "";
+      msgEl.classList.remove("error");
+    };
+
+    document.getElementById("btn-edit-profile")!.onclick = openModal;
+    document.getElementById("btn-modal-close")!.onclick = closeModal;
+    overlay.onclick = (e) => { if (e.target === overlay) closeModal(); };
+
+    // Password toggles
+    function setupPwToggle(inputId: string, btnId: string) {
+      const input = document.getElementById(inputId) as HTMLInputElement;
+      const btn = document.getElementById(btnId) as HTMLButtonElement;
+      btn.onclick = () => {
+        const show = input.type === "password";
+        input.type = show ? "text" : "password";
+        btn.querySelector("i")!.className = show ? "bi bi-eye-slash" : "bi bi-eye";
+      };
+    }
+    setupPwToggle("pw-new", "toggle-pw-new");
+    setupPwToggle("pw-confirm", "toggle-pw-confirm");
+
+    // ─── Form unificado: nombre + contraseña opcional ─────────────────────────
     const form = document.getElementById("profile-form") as HTMLFormElement;
     form.onsubmit = async (e) => {
       e.preventDefault();
@@ -531,29 +696,49 @@ import Layout1 from "../layouts/Layout1.astro";
       msgEl.classList.remove("error");
 
       const name = nameInput.value.trim();
-      const btn = form.querySelector<HTMLButtonElement>(
-        "button[type='submit']",
-      )!;
+      const newPw = (document.getElementById("pw-new") as HTMLInputElement).value;
+      const confirmPw = (document.getElementById("pw-confirm") as HTMLInputElement).value;
+
+      if (newPw) {
+        if (newPw.length < 6) {
+          msgEl.textContent = "La contraseña debe tener al menos 6 caracteres.";
+          msgEl.classList.add("error");
+          return;
+        }
+        if (newPw !== confirmPw) {
+          msgEl.textContent = "Las contraseñas no coinciden.";
+          msgEl.classList.add("error");
+          return;
+        }
+      }
+
+      const btn = form.querySelector<HTMLButtonElement>("button[type='submit']")!;
       btn.disabled = true;
       btn.textContent = "Guardando...";
 
-      const { error } = await supabase
-        .from("profiles")
-        .update({ name })
-        .eq("id", user.id);
+      const { error: nameError } = await supabase
+        .from("profiles").update({ name }).eq("id", user.id);
 
-      if (error) {
+      let pwError = null;
+      if (newPw && !nameError) {
+        const res = await supabase.auth.updateUser({ password: newPw });
+        pwError = res.error;
+      }
+
+      const anyError = nameError ?? pwError;
+      if (anyError) {
         msgEl.textContent = "Error al guardar. Intenta de nuevo.";
         msgEl.classList.add("error");
       } else {
         msgEl.textContent = "¡Guardado correctamente!";
         if (name) {
+          nameDisplay.textContent = name;
           avatarEl.textContent = name.charAt(0).toUpperCase();
-          localStorage.setItem(
-            PROFILE_CACHE_KEY,
-            JSON.stringify({ email: user.email ?? "", name }),
-          );
+          localStorage.setItem(PROFILE_CACHE_KEY,
+            JSON.stringify({ email: user.email ?? "", name }));
         }
+        (document.getElementById("pw-new") as HTMLInputElement).value = "";
+        (document.getElementById("pw-confirm") as HTMLInputElement).value = "";
       }
 
       btn.disabled = false;
