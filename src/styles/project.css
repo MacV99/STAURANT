@@ -155,6 +155,7 @@
   letter-spacing: 0;
   text-indent: 0;
   z-index: 150;
+  box-shadow: 0 4px 16px rgba(84, 107, 65, 0.45), 0 2px 6px rgba(0, 0, 0, 0.18);
 }
 
 .fab-inner {

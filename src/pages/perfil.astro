@@ -8,6 +8,7 @@ import Layout1 from "../layouts/Layout1.astro";
       <i class="bi bi-arrow-left"></i> Volver
     </a>
 
+    <!-- Perfil -->
     <div class="profile-card">
       <div class="profile-avatar" id="profile-avatar">
         <i class="bi bi-person-fill"></i>
@@ -38,6 +39,50 @@ import Layout1 from "../layouts/Layout1.astro";
         <i class="bi bi-box-arrow-right"></i> Cerrar sesión
       </button>
     </div>
+
+    <!-- Columna derecha: stats + top 3 -->
+    <div class="dash-col">
+      <div class="dash-card">
+        <h2 class="dash-title">
+          <i class="bi bi-bar-chart-fill"></i> Tu actividad
+        </h2>
+        <div class="stats-grid">
+          <div class="stat-cell">
+            <span class="stat-number" id="sn-total">—</span>
+            <span class="stat-label">Total</span>
+          </div>
+          <div class="stat-cell">
+            <span class="stat-number accent-green" id="sn-visited">—</span>
+            <span class="stat-label">Visitados</span>
+          </div>
+          <div class="stat-cell">
+            <span class="stat-number accent-muted" id="sn-pending">—</span>
+            <span class="stat-label">Pendientes</span>
+          </div>
+          <div class="stat-cell">
+            <span class="stat-number" id="sn-dishes">—</span>
+            <span class="stat-label">Platos</span>
+          </div>
+          <div class="stat-cell">
+            <span class="stat-number" id="sn-avg">—</span>
+            <span class="stat-label">Promedio</span>
+          </div>
+          <div class="stat-cell">
+            <span class="stat-number accent-green" id="sn-rated">—</span>
+            <span class="stat-label">Calificados</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-card">
+        <h2 class="dash-title">
+          <i class="bi bi-trophy-fill"></i> Top 3 favoritos
+        </h2>
+        <div id="top3-list" class="top3-list">
+          <p class="top3-empty">Añade platos para ver tus favoritos</p>
+        </div>
+      </div>
+    </div>
   </div>
 </Layout1>
 
@@ -48,7 +93,14 @@ import Layout1 from "../layouts/Layout1.astro";
     padding: 20px 16px 80px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
+  }
+
+  /* ── Columna derecha en desktop ── */
+  .dash-col {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
   }
 
   .back-link {
@@ -64,15 +116,20 @@ import Layout1 from "../layouts/Layout1.astro";
     transition: var(--transition);
   }
 
-  .profile-card {
+  /* ── Cards ── */
+
+  .profile-card,
+  .dash-card {
     background: var(--clr-white);
     border: solid 1px var(--clr-border);
     border-radius: 20px;
-    padding: 28px 24px;
+    padding: 24px 20px;
     display: flex;
     flex-direction: column;
     gap: 20px;
   }
+
+  /* ── Profile card internals ── */
 
   .profile-avatar {
     width: 72px;
@@ -171,6 +228,82 @@ import Layout1 from "../layouts/Layout1.astro";
     transition: var(--transition);
   }
 
+  /* ── Dashboard ── */
+
+  .dash-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--clr-text);
+    opacity: 0.5;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .stat-cell {
+    background: var(--clr-white2);
+    border-radius: 14px;
+    padding: 14px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    text-align: center;
+  }
+
+  .stat-number {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--clr-text);
+    line-height: 1;
+    letter-spacing: -0.5px;
+  }
+
+  .stat-number.accent-green {
+    color: var(--clr-primary);
+  }
+
+  .stat-number.accent-muted {
+    color: var(--clr-text);
+    opacity: 0.45;
+  }
+
+  .stat-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--clr-text);
+    opacity: 0.45;
+  }
+
+  /* ── Top 3 ── */
+
+  .top3-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .top3-empty {
+    font-size: 0.85rem;
+    color: var(--clr-text);
+    opacity: 0.45;
+    text-align: center;
+    padding: 8px 0;
+  }
+
+  /* ── Hover ── */
+
   @media (hover: hover) {
     .back-link:hover {
       color: var(--clr-dark);
@@ -188,11 +321,34 @@ import Layout1 from "../layouts/Layout1.astro";
 
   @media (min-width: 768px) {
     .profile-page {
-      padding: 28px 24px 80px;
+      max-width: 880px;
+      padding: 32px 24px 80px;
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      grid-template-rows: auto 1fr;
+      grid-template-areas:
+        "back  back"
+        "prof  dash";
+      align-items: start;
+      column-gap: 20px;
+      row-gap: 20px;
     }
 
-    .profile-card {
-      padding: 36px 32px;
+    .back-link   { grid-area: back; }
+    .profile-card { grid-area: prof; }
+    .dash-col    { grid-area: dash; }
+
+    .profile-card,
+    .dash-card {
+      padding: 28px 24px;
+    }
+
+    .stat-cell {
+      padding: 18px 8px;
+    }
+
+    .stat-number {
+      font-size: 2rem;
     }
   }
 </style>
@@ -200,45 +356,127 @@ import Layout1 from "../layouts/Layout1.astro";
 <script>
   import { navigate } from "astro:transitions/client";
   import { supabase } from "../lib/supabase.ts";
-  import { clearCache, initCache } from "../lib/data.ts";
+  import {
+    clearCache,
+    initCache,
+    getRestaurants,
+    getDishes,
+    escapeHtml,
+  } from "../lib/data.ts";
 
   const PROFILE_CACHE_KEY = "staurant_profile_v1";
+  const DATA_CACHE_KEY = "staurant_cache_v4";
+
+  // ─── Helpers de stats ───────────────────────────────────────────────────────
+
+  interface RawRestaurant { id: string; status: string; name: string }
+  interface RawDish { restaurantId: string; rating: number }
+
+  function renderStats(
+    restaurants: RawRestaurant[],
+    dishes: RawDish[],
+  ): void {
+    const total = restaurants.length;
+    const visited = restaurants.filter((r) => r.status === "visited").length;
+    const pending = restaurants.filter((r) => r.status === "pending").length;
+    const totalDishes = dishes.length;
+
+    const avgAll =
+      totalDishes > 0
+        ? Math.round(
+            (dishes.reduce((s, d) => s + d.rating, 0) / totalDishes) * 10,
+          ) / 10
+        : null;
+
+    const ratedIds = new Set(dishes.map((d) => d.restaurantId));
+    const rated = restaurants.filter((r) => ratedIds.has(r.id)).length;
+
+    const set = (id: string, val: string) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = val;
+    };
+    set("sn-total", String(total));
+    set("sn-visited", String(visited));
+    set("sn-pending", String(pending));
+    set("sn-dishes", String(totalDishes));
+    set("sn-avg", avgAll !== null ? String(avgAll) : "—");
+    set("sn-rated", String(rated));
+
+    // Top 3
+    const top3El = document.getElementById("top3-list");
+    if (!top3El) return;
+
+    const withAvg = restaurants
+      .map((r) => {
+        const rd = dishes.filter((d) => d.restaurantId === r.id);
+        if (rd.length === 0) return null;
+        const avg =
+          Math.round(
+            (rd.reduce((s, d) => s + d.rating, 0) / rd.length) * 10,
+          ) / 10;
+        return { name: r.name, avg };
+      })
+      .filter((x): x is { name: string; avg: number } => x !== null)
+      .sort((a, b) => b.avg - a.avg)
+      .slice(0, 3);
+
+    if (withAvg.length === 0) {
+      top3El.innerHTML =
+        '<p class="top3-empty">Añade platos para ver tus favoritos</p>';
+      return;
+    }
+
+    const medals = ["🥇", "🥈", "🥉"];
+    top3El.innerHTML = withAvg
+      .map((r, i) => {
+        const badgeClass =
+          r.avg >= 8 ? "badge-high" : r.avg >= 5 ? "badge-mid" : "badge-low";
+        return `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--clr-white2);border-radius:12px;">
+          <span style="font-size:1.25rem;line-height:1;">${medals[i]}</span>
+          <span style="flex:1;font-size:0.9rem;font-weight:600;color:var(--clr-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(r.name)}</span>
+          <span class="${badgeClass}" style="font-size:0.82rem;font-weight:700;padding:3px 10px;border-radius:20px;flex-shrink:0;">${r.avg}</span>
+        </div>`;
+      })
+      .join("");
+  }
 
   // ─── PRE-RENDER en astro:after-swap ────────────────────────────────────────
-  // Si hay un perfil cacheado en localStorage, lo muestra inmediatamente
-  // antes de que empiece la animación, para que el usuario vea los datos
-  // animándose en vez de un perfil vacío.
 
   document.addEventListener("astro:after-swap", () => {
     const emailEl = document.getElementById("profile-email");
     if (!emailEl) return;
     try {
-      const cached = JSON.parse(
+      const profileCached = JSON.parse(
         localStorage.getItem(PROFILE_CACHE_KEY) ?? "null",
       );
-      if (!cached) return;
-      emailEl.textContent = cached.email || "—";
-      const nameInput = document.getElementById(
-        "profile-name",
-      ) as HTMLInputElement | null;
-      const avatarEl = document.getElementById("profile-avatar");
-      if (nameInput && cached.name) nameInput.value = cached.name;
-      if (avatarEl && cached.name)
-        avatarEl.textContent = cached.name.charAt(0).toUpperCase();
+      if (profileCached) {
+        emailEl.textContent = profileCached.email || "—";
+        const nameInput = document.getElementById(
+          "profile-name",
+        ) as HTMLInputElement | null;
+        const avatarEl = document.getElementById("profile-avatar");
+        if (nameInput && profileCached.name) nameInput.value = profileCached.name;
+        if (avatarEl && profileCached.name)
+          avatarEl.textContent = profileCached.name.charAt(0).toUpperCase();
+      }
+
+      const dataCached = JSON.parse(
+        localStorage.getItem(DATA_CACHE_KEY) ?? "null",
+      );
+      if (dataCached?.restaurants) {
+        renderStats(dataCached.restaurants, dataCached.dishes ?? []);
+      }
     } catch {
       /* ignore */
     }
   });
 
-  // Usar astro:page-load garantiza que este código corre en cada navegación
-  // (tanto carga directa como navegación via ViewTransitions), evitando el
-  // bug donde el módulo ES cacheado no re-ejecuta el código top-level.
+  // ─── Lógica principal ───────────────────────────────────────────────────────
+
   document.addEventListener("astro:page-load", async () => {
-    // Guard: solo correr si estamos en la página de perfil
     const emailEl = document.getElementById("profile-email");
     if (!emailEl) return;
 
-    // ─── Auth guard ─────────────────────────────────────────────────────────
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -248,7 +486,7 @@ import Layout1 from "../layouts/Layout1.astro";
     }
     await initCache(session.user.id);
 
-    // ─── Back link contextual ───────────────────────────────────────────────
+    // Back link contextual
     const fromTab =
       new URLSearchParams(window.location.search).get("from") ?? "visitados";
     const backLinkEl = document.querySelector(
@@ -256,7 +494,7 @@ import Layout1 from "../layouts/Layout1.astro";
     ) as HTMLAnchorElement;
     if (backLinkEl) backLinkEl.href = `/?tab=${fromTab}`;
 
-    // ─── Cargar datos de perfil ─────────────────────────────────────────────
+    // Perfil
     const user = session.user;
     const nameInput = document.getElementById(
       "profile-name",
@@ -277,18 +515,15 @@ import Layout1 from "../layouts/Layout1.astro";
       avatarEl.textContent = profile.name.charAt(0).toUpperCase();
     }
 
-    // Guardar en caché local para pre-render instantáneo en la próxima visita
     localStorage.setItem(
       PROFILE_CACHE_KEY,
-      JSON.stringify({
-        email: user.email ?? "",
-        name: profile?.name ?? "",
-      }),
+      JSON.stringify({ email: user.email ?? "", name: profile?.name ?? "" }),
     );
 
-    // ─── Guardar nombre ─────────────────────────────────────────────────────
-    // Usamos .onsubmit (asignación de propiedad) en vez de addEventListener
-    // para evitar acumulación de listeners si el módulo se re-carga.
+    // Stats desde el cache
+    renderStats(getRestaurants(), getDishes());
+
+    // Guardar nombre
     const form = document.getElementById("profile-form") as HTMLFormElement;
     form.onsubmit = async (e) => {
       e.preventDefault();
@@ -314,7 +549,6 @@ import Layout1 from "../layouts/Layout1.astro";
         msgEl.textContent = "¡Guardado correctamente!";
         if (name) {
           avatarEl.textContent = name.charAt(0).toUpperCase();
-          // Actualizar caché local para que el pre-render refleje el nombre nuevo
           localStorage.setItem(
             PROFILE_CACHE_KEY,
             JSON.stringify({ email: user.email ?? "", name }),
@@ -326,8 +560,7 @@ import Layout1 from "../layouts/Layout1.astro";
       btn.textContent = "Guardar cambios";
     };
 
-    // ─── Cerrar sesión ──────────────────────────────────────────────────────
-    // Igual: .onclick para evitar duplicados
+    // Cerrar sesión
     const logoutBtn = document.getElementById("btn-logout")!;
     logoutBtn.onclick = async () => {
       clearCache();

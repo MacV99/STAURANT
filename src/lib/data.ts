@@ -220,6 +220,10 @@ export function getRestaurants(): Restaurant[] {
   return getCache().restaurants;
 }
 
+export function getDishes(): Dish[] {
+  return getCache().dishes;
+}
+
 export function createRestaurant(input: Pick<Restaurant, "name" | "notes">): Restaurant {
   const r: Restaurant = {
     id: crypto.randomUUID(),

@@ -1,0 +1,24 @@
+---
+// Callback OAuth — supabase-js v2 detecta y canjea el code PKCE
+// automáticamente al inicializarse (detectSessionInUrl: true).
+// Solo necesitamos esperar a que getSession() confirme la sesión.
+---
+
+<script>
+  import { supabase } from "../../lib/supabase.ts";
+
+  // getSession() espera a que la inicialización interna (intercambio del code)
+  // termine antes de devolver. No llamamos exchangeCodeForSession manualmente
+  // para evitar el doble intercambio que invalida el code.
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession();
+
+  if (session) {
+    window.location.replace("/");
+  } else {
+    const params = error ? `?error=${encodeURIComponent(error.message)}` : "";
+    window.location.replace(`/login${params}`);
+  }
+</script>

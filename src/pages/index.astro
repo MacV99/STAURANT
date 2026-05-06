@@ -290,9 +290,18 @@ const tplRestaurant: Restaurant = {
   function updateSortBarVisibility() {
     const sortBarEl = document.querySelector<HTMLElement>(".sort-bar");
     if (!sortBarEl) return;
-    const status = getActiveTab() === "visitados" ? "visited" : "pending";
+    const isVisitados = getActiveTab() === "visitados";
+    const status = isVisitados ? "visited" : "pending";
     sortBarEl.hidden =
       getRestaurants().filter((r) => r.status === status).length < 2;
+
+    // El pill de rating no aplica a pendientes (no tienen calificación).
+    // Usamos style.display en vez de hidden para evitar que el display:inline-flex
+    // del CSS de SortBar.astro sobrescriba el display:none del atributo hidden.
+    const ratingPill = sortBarEl.querySelector<HTMLElement>(
+      '[data-field="rating"]',
+    );
+    if (ratingPill) ratingPill.style.display = isVisitados ? "" : "none";
   }
 
   function renderBoth() {
