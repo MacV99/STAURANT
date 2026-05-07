@@ -2,6 +2,7 @@
 import "../styles/global.css";
 import "../styles/project.css";
 import Header from "../components/header.astro";
+import Navbar from "../components/navbar.astro";
 import { ViewTransitions } from "astro:transitions";
 
 interface Props {
@@ -37,5 +38,6 @@ const { title, bare = false } = Astro.props;
     <main>
       <slot />
     </main>
+    {!bare && <Navbar />}
   </body>
 </html>

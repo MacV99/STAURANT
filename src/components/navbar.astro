@@ -1,10 +1,23 @@
-<!-- <span class="app-label">STAURANT</span> -->
-<style>
-  .app-label {
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 4px;
-    color: var(--clr-primary);
-    text-transform: uppercase;
-  }
-</style>
+<nav class="mobile-bottom-nav" aria-label="Navegación móvil">
+  <a href="/" class="nav-item flex-column" aria-label="Inicio">
+    <i class="bi bi-house-door"></i>
+    <span>Inicio</span>
+  </a>
+
+  <button
+    type="button"
+    class="nav-item nav-fab"
+    data-action="create"
+    aria-label="Crear restaurante o plato"
+  >
+    <span class="fab-inner">
+      <i class="bi bi-plus-circle"></i>
+      <span class="fab-badge">+</span>
+    </span>
+  </button>
+
+  <a href="/perfil" class="nav-item flex-column" aria-label="Perfil">
+    <i class="bi bi-person-fill"></i>
+    <span>Perfil</span>
+  </a>
+</nav>

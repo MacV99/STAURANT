@@ -44,13 +44,6 @@ const tplRestaurant: Restaurant = {
     <div id="tab-pendientes" class="tab-content" role="tabpanel" hidden></div>
   </div>
 
-  <button id="btn-add-restaurant" class="fab" aria-label="Agregar restaurante">
-    <span class="fab-inner">
-      <i class="bi bi-shop-window"></i>
-      <span class="fab-badge">+</span>
-    </span>
-  </button>
-
   <RestaurantForm />
   <ConfirmDialog />
 
@@ -417,9 +410,6 @@ const tplRestaurant: Restaurant = {
       btn.onclick = () =>
         activateTab(btn.dataset.tab as "visitados" | "pendientes");
     });
-
-    const fabEl = document.getElementById("btn-add-restaurant")!;
-    fabEl.onclick = () => (window as any).restaurantForm.open("create");
 
     const searchEl = document.getElementById(
       "restaurant-search",
