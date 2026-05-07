@@ -2,6 +2,23 @@
   PROJECT.CSS — Estilos globales específicos de STAURANT
    ============================================================ */
 
+:root {
+  --clr-primary: #2e2e2e;
+  --clr-primary-dark: color-mix(in oklch, var(--clr-primary) 25%, black);
+  --clr-primary-light: color-mix(in oklch, var(--clr-primary) 80%, white);
+
+  --clr-white: #ffffff;
+  --clr-white2: #f7f7f7;
+
+  --clr-text: var(--clr-primary);
+  --clr-border: color-mix(in oklch, var(--clr-primary) 10%, white);
+  --clr-border2: color-mix(in oklch, var(--clr-primary) 20%, white);
+
+  --clr-danger: #b02a3a;
+  --clr-danger-bg: color-mix(in oklch, var(--clr-danger) 10%, white);
+  --clr-danger-border: color-mix(in oklch, var(--clr-danger) 75%, black);
+}
+
 /* === OVERLAY (compartido: RestaurantForm, DishForm, ConfirmDialog) === */
 
 .overlay {

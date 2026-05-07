@@ -1,28 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
 
 :root {
-  /* COLORES - Paleta minimalista blanco y negro */
-  --clr-primary: #2e2e2e;
-  --clr-primary-dark: #1A1A1A;
-
-  --clr-white: #ffffff;
-  --clr-white2: #f7f7f7;
-
-  --clr-text: #2e2e2e;
-  --clr-border: #e4e4e4;
-  --clr-border2: #cecece;
-
   /* TIPOGRAFÍA */
   --font-main: "Montserrat", sans-serif;
 
   /* EFECTOS Y TIMING */
   --transition: 0.12s ease;
   --border-radius: 12px;
-
-  /* ESTADOS SEMÁNTICOS */
-  --clr-danger: #b02a3a;
-  --clr-danger-bg: #fce8ec;
-  --clr-danger-border: #f0b8c0;
 }
 
 /* === RESET BÁSICO === */
