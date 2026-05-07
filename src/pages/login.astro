@@ -21,7 +21,7 @@ import Layout1 from "../layouts/Layout1.astro";
 
       <!-- Form login -->
       <form id="form-login" class="flex-column" novalidate>
-        <label>
+        <label class="flex-column">
           <span class="field-label">Email</span>
           <input
             type="email"
@@ -31,9 +31,9 @@ import Layout1 from "../layouts/Layout1.astro";
             required
           />
         </label>
-        <label>
+        <label class="flex-column">
           <span class="field-label">Contraseña</span>
-          <div class="pw-wrapper">
+          <div class="pw-wrapper flex-row">
             <input
               type="password"
               id="login-password"
@@ -70,7 +70,7 @@ import Layout1 from "../layouts/Layout1.astro";
 
       <!-- Form register -->
       <form id="form-register" class="flex-column" novalidate>
-        <label>
+        <label class="flex-column">
           <span class="field-label">Nombre</span>
           <input
             type="text"
@@ -79,7 +79,7 @@ import Layout1 from "../layouts/Layout1.astro";
             placeholder="Tu nombre"
           />
         </label>
-        <label>
+        <label class="flex-column">
           <span class="field-label">Email</span>
           <input
             type="email"
@@ -89,12 +89,12 @@ import Layout1 from "../layouts/Layout1.astro";
             required
           />
         </label>
-        <label>
+        <label class="flex-column">
           <span class="field-label"
             >Contraseña <span class="field-hint">(mín. 6 caracteres)</span
             ></span
           >
-          <div class="pw-wrapper">
+          <div class="pw-wrapper flex-row">
             <input
               type="password"
               id="reg-password"
@@ -198,8 +198,7 @@ import Layout1 from "../layouts/Layout1.astro";
   }
 
   label {
-    display: flex;
-    flex-direction: column;
+    align-items: stretch;
     gap: 5px;
   }
 
@@ -228,7 +227,6 @@ import Layout1 from "../layouts/Layout1.astro";
   /* Password toggle */
   .pw-wrapper {
     position: relative;
-    display: flex;
   }
 
   .pw-wrapper input {

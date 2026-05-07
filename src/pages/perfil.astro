@@ -41,7 +41,7 @@ import Layout1 from "../layouts/Layout1.astro";
         </div>
 
         <form id="profile-form" class="flex-column" novalidate>
-          <label for="profile-name">
+          <label for="profile-name" class="flex-column">
             <span class="field-label">Nombre</span>
             <input
               type="text"
@@ -53,13 +53,13 @@ import Layout1 from "../layouts/Layout1.astro";
 
           <!-- Campos de contraseña: solo para usuarios email -->
           <div id="pw-fields">
-            <div class="form-section-label">
+            <div class="form-section-label flex-row">
               <span class="field-label">Contraseña</span>
               <span class="field-hint">Dejar vacío para no cambiarla</span>
             </div>
-            <label for="pw-new">
+            <label for="pw-new" class="flex-column">
               <span class="field-label">Nueva contraseña</span>
-              <div class="pw-wrapper">
+              <div class="pw-wrapper flex-row">
                 <input
                   type="password"
                   id="pw-new"
@@ -76,9 +76,9 @@ import Layout1 from "../layouts/Layout1.astro";
                 </button>
               </div>
             </label>
-            <label for="pw-confirm">
+            <label for="pw-confirm" class="flex-column">
               <span class="field-label">Confirmar contraseña</span>
-              <div class="pw-wrapper">
+              <div class="pw-wrapper flex-row">
                 <input
                   type="password"
                   id="pw-confirm"
@@ -296,7 +296,7 @@ import Layout1 from "../layouts/Layout1.astro";
   }
 
   .form-section-label {
-    display: flex;
+    justify-content: flex-start;
     align-items: baseline;
     gap: 8px;
     padding-top: 4px;
@@ -309,8 +309,7 @@ import Layout1 from "../layouts/Layout1.astro";
   }
 
   label {
-    display: flex;
-    flex-direction: column;
+    align-items: stretch;
     gap: 5px;
   }
 
@@ -323,13 +322,11 @@ import Layout1 from "../layouts/Layout1.astro";
 
   #pw-fields {
     display: none;
-    flex-direction: column;
     gap: 12px;
   }
 
   .pw-wrapper {
     position: relative;
-    display: flex;
   }
 
   .pw-wrapper input {
@@ -527,8 +524,7 @@ import Layout1 from "../layouts/Layout1.astro";
 
 <style is:global>
   .top3-item {
-    display: flex;
-    align-items: center;
+    justify-content: flex-start;
     gap: 12px;
     padding: 10px 14px;
     background: var(--clr-white2);
@@ -625,7 +621,7 @@ import Layout1 from "../layouts/Layout1.astro";
     top3El.innerHTML = withAvg
       .map((r, i) => {
         const badgeClass = r.avg >= 8 ? "badge-high" : r.avg >= 5 ? "badge-mid" : "badge-low";
-        return `<a href="/restaurante?id=${encodeURIComponent(r.id)}" class="top3-item">
+        return `<a href="/restaurante?id=${encodeURIComponent(r.id)}" class="top3-item flex-row">
           <span class="top3-medal">${medals[i]}</span>
           <span class="top3-name">${escapeHtml(r.name)}</span>
           <span class="${badgeClass} top3-badge">${r.avg}</span>

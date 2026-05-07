@@ -669,11 +669,11 @@ const tplRestaurant: Restaurant = {
     if (filtered.length === 0) {
       const isFiltering = !!dishSearch || !!dishTypeFilter;
       dishesListEl.innerHTML = isFiltering
-        ? `<div class="empty-state">
+        ? `<div class="empty-state flex-column">
              <i class="bi bi-search"></i>
              <p>Sin resultados para la búsqueda.</p>
            </div>`
-        : `<div class="empty-state">
+        : `<div class="empty-state flex-column">
              <i class="bi bi-egg-fried"></i>
              <p>Aún no hay platos registrados.</p>
              <p class="empty-hint">Agrega el primer plato con el botón de arriba.</p>

@@ -36,7 +36,7 @@ const isPending = r.status === "pending";
       <button class="rh-btn-menu boton2" data-id={r.id}>
         <i class="bi bi-three-dots-vertical"></i>
       </button>
-      <div class="rh-menu-popup">
+      <div class="rh-menu-popup flex-column">
         <button class="rh-menu-item rh-btn-edit-rh" data-id={r.id}>
           <i class="bi bi-pencil-fill"></i>
           <span>Editar</span>
@@ -107,7 +107,6 @@ const isPending = r.status === "pending";
 
   .rh-menu-popup.active {
     display: flex;
-    flex-direction: column;
   }
 
   .rh-menu-item {

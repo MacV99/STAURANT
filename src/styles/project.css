@@ -114,9 +114,6 @@
 /* === EMPTY STATE === */
 
 .empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   gap: 10px;
   padding: 56px 20px;
   text-align: center;
@@ -284,8 +281,6 @@
 }
 
 .menu-item {
-  display: flex;
-  align-items: center;
   gap: 8px;
   padding: 10px 14px;
   background: transparent;

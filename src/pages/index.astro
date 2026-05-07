@@ -249,11 +249,11 @@ const tplRestaurant: Restaurant = {
 
     if (sorted.length === 0) {
       container.innerHTML = q
-        ? `<div class="empty-state">
+        ? `<div class="empty-state flex-column">
              <i class="bi bi-search"></i>
              <p>Sin resultados para "<strong>${q}</strong>".</p>
            </div>`
-        : `<div class="empty-state">
+        : `<div class="empty-state flex-column">
              <i class="bi bi-${status === "visited" ? "journal-check" : "bookmark"}"></i>
              <p>${status === "visited" ? "Aún no has registrado restaurantes visitados." : "No tienes restaurantes pendientes."}</p>
              ${status === "visited" ? '<p class="empty-hint">Agrega uno con el botón <strong>+</strong></p>' : ""}

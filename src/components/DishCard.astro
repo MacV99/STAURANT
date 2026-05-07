@@ -22,7 +22,7 @@ const { dish: d, typeName } = Astro.props;
       <button class="btn-menu boton2" data-id={d.id}>
         <i class="bi bi-three-dots-vertical"></i>
       </button>
-      <div class="menu-popup">
+      <div class="menu-popup flex-column">
         <button class="menu-item btn-edit-dish" data-id={d.id}>
           <i class="bi bi-pencil-fill"></i>
           <span>Editar</span>
@@ -118,7 +118,6 @@ const { dish: d, typeName } = Astro.props;
 
   .menu-popup.active {
     display: flex;
-    flex-direction: column;
   }
 
   .menu-item {

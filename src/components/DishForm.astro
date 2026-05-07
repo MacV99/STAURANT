@@ -364,8 +364,7 @@
     border-top: 1px solid var(--clr-border);
     text-transform: none;
     letter-spacing: 0;
-    display: flex;
-    align-items: center;
+    justify-content: flex-start;
     gap: 6px;
   }
 
@@ -503,7 +502,7 @@
       // Opción para crear (solo si el texto no coincide exactamente)
       if (q && !exactMatch) {
         const createOpt = document.createElement("div");
-        createOpt.className = "type-option is-create";
+        createOpt.className = "type-option is-create flex-row";
         createOpt.innerHTML = `<i class="bi bi-plus-lg" style="font-size:0.7rem;flex-shrink:0"></i> Crear "<span class="create-name">${q}</span>"`;
         createOpt.addEventListener("mousedown", (e) => e.preventDefault());
         createOpt.addEventListener("click", () => {
