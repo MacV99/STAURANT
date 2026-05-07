@@ -12,12 +12,12 @@ const { restaurant: r, avg, dishCount } = Astro.props;
 const isPending = r.status === "pending";
 ---
 
-<div class="rh-card" style={`view-transition-name: restaurant-${r.id}`}>
-  <div class="rh-top">
+<div class="rh-card flex-column" style={`view-transition-name: restaurant-${r.id}`}>
+  <div class="rh-top flex-row">
     <RatingBadge score={avg} />
-    <div class="rh-meta">
+    <div class="rh-meta flex-column">
       <h1 class="rh-name">{r.name}</h1>
-      <div class="rh-pills">
+      <div class="rh-pills flex-row">
         {
           isPending ? (
             <span class="pending-tag">
@@ -57,20 +57,17 @@ const isPending = r.status === "pending";
     border: 1px solid var(--clr-border);
     border-radius: 20px;
     padding: 22px 20px;
-    display: flex;
-    flex-direction: column;
+    align-items: stretch;
     gap: 10px;
   }
 
   .rh-top {
-    display: flex;
-    align-items: center;
+    justify-content: flex-start;
     gap: 14px;
   }
 
   .rh-meta {
-    display: flex;
-    flex-direction: column;
+    align-items: flex-start;
     gap: 3px;
     flex: 1;
     min-width: 0;
@@ -114,8 +111,6 @@ const isPending = r.status === "pending";
   }
 
   .rh-menu-item {
-    display: flex;
-    align-items: center;
     gap: 8px;
     padding: 10px 14px;
     background: transparent;
@@ -139,7 +134,7 @@ const isPending = r.status === "pending";
   }
 
   .rh-pills {
-    display: flex;
+    justify-content: flex-start;
     gap: 6px;
     flex-wrap: wrap;
   }

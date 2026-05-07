@@ -221,6 +221,22 @@
   }
 }
 
+/* === CLOSE BUTTON (DishForm, RestaurantForm, perfil modal) === */
+
+.btn-icon-close {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--clr-white2);
+  border: solid 1.5px var(--clr-border);
+}
+
+@media (hover: hover) {
+  .btn-icon-close:hover {
+    background: var(--clr-border);
+    border-color: var(--clr-border2);
+  }
+}
+
 /* === BUTTON DANGER === */
 
 .btn-danger {

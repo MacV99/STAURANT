@@ -3,18 +3,18 @@ import Layout1 from "../layouts/Layout1.astro";
 ---
 
 <Layout1 title="Perfil · STAURANT">
-  <div class="profile-page">
-    <a href="/" class="back-link">
+  <div class="profile-page flex-column">
+    <a href="/" class="back-link flex-row">
       <i class="bi bi-arrow-left"></i> Volver
     </a>
 
     <!-- Perfil -->
-    <div class="profile-card">
-      <div class="profile-avatar" id="profile-avatar">
+    <div class="profile-card flex-column">
+      <div class="profile-avatar flex-row" id="profile-avatar">
         <i class="bi bi-person-fill"></i>
       </div>
 
-      <div class="profile-info">
+      <div class="profile-info flex-column">
         <p id="profile-name-display" class="profile-name">—</p>
         <p id="profile-email" class="profile-email">—</p>
       </div>
@@ -32,15 +32,15 @@ import Layout1 from "../layouts/Layout1.astro";
 
     <!-- Modal editar perfil -->
     <div class="overlay" id="edit-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-      <div class="modal-card">
-        <div class="modal-header">
+      <div class="modal-card flex-column">
+        <div class="modal-header flex-row">
           <h2 class="modal-title" id="modal-title">Editar perfil</h2>
-          <button class="modal-close boton2" id="btn-modal-close" aria-label="Cerrar">
+          <button class="modal-close btn-icon-close boton2" id="btn-modal-close" aria-label="Cerrar">
             <i class="bi bi-x-lg"></i>
           </button>
         </div>
 
-        <form id="profile-form" novalidate>
+        <form id="profile-form" class="flex-column" novalidate>
           <label for="profile-name">
             <span class="field-label">Nombre</span>
             <input
@@ -52,7 +52,7 @@ import Layout1 from "../layouts/Layout1.astro";
           </label>
 
           <!-- Campos de contraseña: solo para usuarios email -->
-          <div id="pw-fields" style="display:none; flex-direction:column; gap:12px;">
+          <div id="pw-fields">
             <div class="form-section-label">
               <span class="field-label">Contraseña</span>
               <span class="field-hint">Dejar vacío para no cambiarla</span>
@@ -104,44 +104,44 @@ import Layout1 from "../layouts/Layout1.astro";
     </div>
 
     <!-- Columna derecha: stats + top 3 -->
-    <div class="dash-col">
-      <div class="dash-card">
-        <h2 class="dash-title">
+    <div class="dash-col flex-column">
+      <div class="dash-card flex-column">
+        <h2 class="dash-title flex-row">
           <i class="bi bi-bar-chart-fill"></i> Tu actividad
         </h2>
         <div class="stats-grid">
-          <div class="stat-cell">
+          <div class="stat-cell flex-column">
             <span class="stat-number" id="sn-total">—</span>
             <span class="stat-label">Total</span>
           </div>
-          <div class="stat-cell">
+          <div class="stat-cell flex-column">
             <span class="stat-number accent-green" id="sn-visited">—</span>
             <span class="stat-label">Visitados</span>
           </div>
-          <div class="stat-cell">
+          <div class="stat-cell flex-column">
             <span class="stat-number accent-muted" id="sn-pending">—</span>
             <span class="stat-label">Pendientes</span>
           </div>
-          <div class="stat-cell">
+          <div class="stat-cell flex-column">
             <span class="stat-number" id="sn-dishes">—</span>
             <span class="stat-label">Platos</span>
           </div>
-          <div class="stat-cell">
+          <div class="stat-cell flex-column">
             <span class="stat-number" id="sn-avg">—</span>
             <span class="stat-label">Promedio</span>
           </div>
-          <div class="stat-cell">
+          <div class="stat-cell flex-column">
             <span class="stat-number accent-green" id="sn-rated">—</span>
             <span class="stat-label">Calificados</span>
           </div>
         </div>
       </div>
 
-      <div class="dash-card">
-        <h2 class="dash-title">
+      <div class="dash-card flex-column">
+        <h2 class="dash-title flex-row">
           <i class="bi bi-trophy-fill"></i> Top 3 favoritos
         </h2>
-        <div id="top3-list" class="top3-list">
+        <div id="top3-list" class="top3-list flex-column">
           <p class="top3-empty">Añade platos para ver tus favoritos</p>
         </div>
       </div>
@@ -154,20 +154,17 @@ import Layout1 from "../layouts/Layout1.astro";
     width: 100%;
     max-width: 480px;
     padding: 20px 16px 80px;
-    display: flex;
-    flex-direction: column;
+    align-items: stretch;
     gap: 16px;
   }
 
   .dash-col {
-    display: flex;
-    flex-direction: column;
+    align-items: stretch;
     gap: 16px;
   }
 
   .back-link {
-    display: flex;
-    align-items: center;
+    justify-content: flex-start;
     gap: 6px;
     font-size: 0.85rem;
     font-weight: 600;
@@ -186,8 +183,7 @@ import Layout1 from "../layouts/Layout1.astro";
     border: solid 1px var(--clr-border);
     border-radius: 20px;
     padding: 24px 20px;
-    display: flex;
-    flex-direction: column;
+    align-items: stretch;
     gap: 20px;
   }
 
@@ -199,17 +195,12 @@ import Layout1 from "../layouts/Layout1.astro";
     border-radius: 50%;
     background: var(--clr-white2);
     border: solid 2px var(--clr-border);
-    display: flex;
-    align-items: center;
-    justify-content: center;
     font-size: 2rem;
     color: var(--clr-primary);
     align-self: center;
   }
 
   .profile-info {
-    display: flex;
-    flex-direction: column;
     gap: 4px;
     text-align: center;
   }
@@ -228,9 +219,6 @@ import Layout1 from "../layouts/Layout1.astro";
   }
 
   .btn-edit {
-    display: flex;
-    align-items: center;
-    justify-content: center;
     gap: 7px;
     width: 100%;
     background: var(--clr-white2);
@@ -252,9 +240,6 @@ import Layout1 from "../layouts/Layout1.astro";
   }
 
   .btn-danger-outline {
-    display: flex;
-    align-items: center;
-    justify-content: center;
     gap: 8px;
     width: 100%;
     background: transparent;
@@ -278,14 +263,11 @@ import Layout1 from "../layouts/Layout1.astro";
     padding: 24px 20px;
     width: 100%;
     max-width: 420px;
-    display: flex;
-    flex-direction: column;
+    align-items: stretch;
     gap: 20px;
   }
 
   .modal-header {
-    display: flex;
-    align-items: center;
     justify-content: space-between;
   }
 
@@ -294,13 +276,6 @@ import Layout1 from "../layouts/Layout1.astro";
     font-weight: 700;
     color: var(--clr-text);
     margin: 0;
-  }
-
-  .modal-close {
-    padding: 8px 10px;
-    border-radius: 10px;
-    background: var(--clr-white2);
-    border: solid 1.5px var(--clr-border);
   }
 
   .field-label {
@@ -329,8 +304,7 @@ import Layout1 from "../layouts/Layout1.astro";
   }
 
   form {
-    display: flex;
-    flex-direction: column;
+    align-items: stretch;
     gap: 12px;
   }
 
@@ -346,6 +320,12 @@ import Layout1 from "../layouts/Layout1.astro";
   }
 
   /* ── Password toggle dentro del input ── */
+
+  #pw-fields {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+  }
 
   .pw-wrapper {
     position: relative;
@@ -374,9 +354,6 @@ import Layout1 from "../layouts/Layout1.astro";
     padding: 0;
     border-radius: 0 var(--border-radius) var(--border-radius) 0;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     transition: opacity 0.12s ease;
   }
 
@@ -416,8 +393,7 @@ import Layout1 from "../layouts/Layout1.astro";
     color: var(--clr-text);
     opacity: 0.5;
     margin: 0;
-    display: flex;
-    align-items: center;
+    justify-content: flex-start;
     gap: 6px;
   }
 
@@ -431,9 +407,6 @@ import Layout1 from "../layouts/Layout1.astro";
     background: var(--clr-white2);
     border-radius: 14px;
     padding: 14px 8px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
     gap: 5px;
     text-align: center;
   }
@@ -459,8 +432,7 @@ import Layout1 from "../layouts/Layout1.astro";
   }
 
   .top3-list {
-    display: flex;
-    flex-direction: column;
+    align-items: stretch;
     gap: 10px;
   }
 
@@ -490,34 +462,101 @@ import Layout1 from "../layouts/Layout1.astro";
     .btn-danger-outline:hover { background: #fce8e8; }
 
     .pw-toggle:hover { opacity: 0.85; }
-
-    .modal-close:hover { background: var(--clr-border); border-color: var(--clr-border2); }
   }
 
   @media (min-width: 768px) {
     .profile-page {
-      max-width: 880px;
+      max-width: 860px;
       padding: 32px 24px 80px;
-      display: grid;
-      grid-template-columns: 340px 1fr;
-      grid-template-rows: auto 1fr;
-      grid-template-areas:
-        "back  back"
-        "prof  dash";
-      align-items: start;
-      column-gap: 20px;
-      row-gap: 20px;
+      gap: 20px;
     }
 
-    .back-link    { grid-area: back; }
-    .profile-card { grid-area: prof; }
-    .dash-col     { grid-area: dash; }
+    /* Profile card: 3 cols — avatar | info | botones */
+    .profile-card {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 10px 24px;
+      padding: 24px 28px;
+      align-items: center;
+    }
 
-    .profile-card,
+    .profile-avatar {
+      grid-column: 1;
+      grid-row: 1 / 3;
+      width: 80px;
+      height: 80px;
+      font-size: 2.5rem;
+    }
+
+    .profile-info {
+      grid-column: 2;
+      grid-row: 1 / 3;
+      align-items: flex-start;
+      text-align: left;
+      align-self: center;
+    }
+
+    .btn-edit {
+      grid-column: 3;
+      grid-row: 1;
+      width: auto;
+      min-width: 160px;
+    }
+
+    .profile-divider { display: none; }
+
+    .btn-danger-outline {
+      grid-column: 3;
+      grid-row: 2;
+      width: auto;
+      min-width: 160px;
+    }
+
+    /* Dash col: dos cards iguales, misma altura */
+    .dash-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: stretch;
+    }
+
     .dash-card { padding: 28px 24px; }
+    .stat-cell { padding: 16px 8px; }
+    .stat-number { font-size: 1.9rem; }
+  }
+</style>
 
-    .stat-cell { padding: 18px 8px; }
-    .stat-number { font-size: 2rem; }
+<style is:global>
+  .top3-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--clr-white2);
+    border-radius: 12px;
+    text-decoration: none;
+  }
+
+  .top3-medal {
+    font-size: 1.25rem;
+    line-height: 1;
+  }
+
+  .top3-name {
+    flex: 1;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--clr-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .top3-badge {
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    flex-shrink: 0;
   }
 </style>
 
@@ -586,11 +625,11 @@ import Layout1 from "../layouts/Layout1.astro";
     top3El.innerHTML = withAvg
       .map((r, i) => {
         const badgeClass = r.avg >= 8 ? "badge-high" : r.avg >= 5 ? "badge-mid" : "badge-low";
-        return `<a href="/restaurante?id=${encodeURIComponent(r.id)}" style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--clr-white2);border-radius:12px;text-decoration:none;">
-          <span style="font-size:1.25rem;line-height:1;">${medals[i]}</span>
-          <span style="flex:1;font-size:0.9rem;font-weight:600;color:var(--clr-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(r.name)}</span>
-          <span class="${badgeClass}" style="font-size:0.82rem;font-weight:700;padding:3px 10px;border-radius:20px;flex-shrink:0;">${r.avg}</span>
-        </div>`;
+        return `<a href="/restaurante?id=${encodeURIComponent(r.id)}" class="top3-item">
+          <span class="top3-medal">${medals[i]}</span>
+          <span class="top3-name">${escapeHtml(r.name)}</span>
+          <span class="${badgeClass} top3-badge">${r.avg}</span>
+        </a>`;
       })
       .join("");
   }
@@ -626,7 +665,11 @@ import Layout1 from "../layouts/Layout1.astro";
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { window.location.href = "/login"; return; }
-    await initCache(session.user.id);
+
+    const [, { data: profile }] = await Promise.all([
+      initCache(session.user.id),
+      supabase.from("profiles").select("name").eq("id", session.user.id).single(),
+    ]);
 
     const fromTab = new URLSearchParams(window.location.search).get("from") ?? "visitados";
     const backLinkEl = document.querySelector(".back-link") as HTMLAnchorElement;
@@ -638,11 +681,10 @@ import Layout1 from "../layouts/Layout1.astro";
     const msgEl = document.getElementById("profile-msg")!;
     const avatarEl = document.getElementById("profile-avatar")!;
     const overlay = document.getElementById("edit-overlay")!;
+    const pwNewInput = document.getElementById("pw-new") as HTMLInputElement;
+    const pwConfirmInput = document.getElementById("pw-confirm") as HTMLInputElement;
 
     emailEl.textContent = user.email ?? "";
-
-    const { data: profile } = await supabase
-      .from("profiles").select("name").eq("id", user.id).single();
 
     if (profile?.name) {
       nameDisplay.textContent = profile.name;
@@ -657,7 +699,7 @@ import Layout1 from "../layouts/Layout1.astro";
 
     // Mostrar campos de contraseña solo para usuarios email
     const hasEmailIdentity =
-      user.identities?.some((i: { provider: string }) => i.provider === "email") ?? false;
+      user.identities?.some((i) => i.provider === "email") ?? false;
     const pwFields = document.getElementById("pw-fields")!;
     if (hasEmailIdentity) pwFields.style.display = "flex";
 
@@ -665,8 +707,8 @@ import Layout1 from "../layouts/Layout1.astro";
     const openModal = () => { overlay.classList.add("is-open"); msgEl.textContent = ""; msgEl.classList.remove("error"); };
     const closeModal = () => {
       overlay.classList.remove("is-open");
-      (document.getElementById("pw-new") as HTMLInputElement).value = "";
-      (document.getElementById("pw-confirm") as HTMLInputElement).value = "";
+      pwNewInput.value = "";
+      pwConfirmInput.value = "";
       msgEl.textContent = "";
       msgEl.classList.remove("error");
     };
@@ -688,7 +730,6 @@ import Layout1 from "../layouts/Layout1.astro";
     setupPwToggle("pw-new", "toggle-pw-new");
     setupPwToggle("pw-confirm", "toggle-pw-confirm");
 
-    // ─── Form unificado: nombre + contraseña opcional ─────────────────────────
     const form = document.getElementById("profile-form") as HTMLFormElement;
     form.onsubmit = async (e) => {
       e.preventDefault();
@@ -696,8 +737,8 @@ import Layout1 from "../layouts/Layout1.astro";
       msgEl.classList.remove("error");
 
       const name = nameInput.value.trim();
-      const newPw = (document.getElementById("pw-new") as HTMLInputElement).value;
-      const confirmPw = (document.getElementById("pw-confirm") as HTMLInputElement).value;
+      const newPw = pwNewInput.value;
+      const confirmPw = pwConfirmInput.value;
 
       if (newPw) {
         if (newPw.length < 6) {
@@ -725,20 +766,18 @@ import Layout1 from "../layouts/Layout1.astro";
         pwError = res.error;
       }
 
-      const anyError = nameError ?? pwError;
+      const anyError = nameError || pwError;
       if (anyError) {
         msgEl.textContent = "Error al guardar. Intenta de nuevo.";
         msgEl.classList.add("error");
       } else {
         msgEl.textContent = "¡Guardado correctamente!";
-        if (name) {
-          nameDisplay.textContent = name;
-          avatarEl.textContent = name.charAt(0).toUpperCase();
-          localStorage.setItem(PROFILE_CACHE_KEY,
-            JSON.stringify({ email: user.email ?? "", name }));
-        }
-        (document.getElementById("pw-new") as HTMLInputElement).value = "";
-        (document.getElementById("pw-confirm") as HTMLInputElement).value = "";
+        nameDisplay.textContent = name || "—";
+        if (name) avatarEl.textContent = name.charAt(0).toUpperCase();
+        localStorage.setItem(PROFILE_CACHE_KEY,
+          JSON.stringify({ email: user.email ?? "", name }));
+        pwNewInput.value = "";
+        pwConfirmInput.value = "";
       }
 
       btn.disabled = false;

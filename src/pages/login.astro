@@ -3,10 +3,10 @@ import Layout1 from "../layouts/Layout1.astro";
 ---
 
 <Layout1 title="Acceder · STAURANT" bare>
-  <div class="auth-page">
-    <div class="auth-card">
+  <div class="auth-page flex-row">
+    <div class="auth-card flex-column">
       <!-- Logo -->
-      <div class="auth-logo">
+      <div class="auth-logo flex-row">
         <a href="/"><img src="/img/logo2.png" alt="STAURANT" /></a>
       </div>
 
@@ -20,7 +20,7 @@ import Layout1 from "../layouts/Layout1.astro";
       <p id="auth-error" class="auth-error" aria-live="polite"></p>
 
       <!-- Form login -->
-      <form id="form-login" novalidate>
+      <form id="form-login" class="flex-column" novalidate>
         <label>
           <span class="field-label">Email</span>
           <input
@@ -55,8 +55,8 @@ import Layout1 from "../layouts/Layout1.astro";
       </form>
 
       <!-- Continuar con Google (compartido entre login y register) -->
-      <div class="social-section">
-        <div class="auth-divider"><span>o</span></div>
+      <div class="social-section flex-column">
+        <div class="auth-divider flex-row"><span>o</span></div>
         <button id="btn-google" class="btn-google" type="button">
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -69,7 +69,7 @@ import Layout1 from "../layouts/Layout1.astro";
       </div>
 
       <!-- Form register -->
-      <form id="form-register" novalidate>
+      <form id="form-register" class="flex-column" novalidate>
         <label>
           <span class="field-label">Nombre</span>
           <input
@@ -124,28 +124,18 @@ import Layout1 from "../layouts/Layout1.astro";
   .auth-page {
     width: 100%;
     min-height: 100dvh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     padding: 24px 16px;
   }
 
   .auth-card {
     background: var(--clr-white);
-    border: solid 1px var(--clr-border);
+    border: 1px solid var(--clr-border);
     border-radius: 20px;
     padding: 32px 24px;
     width: 100%;
     max-width: 400px;
-    display: flex;
-    flex-direction: column;
+    align-items: stretch;
     gap: 20px;
-    border: 1px solid var(--clr-border);
-  }
-
-  .auth-logo {
-    display: flex;
-    justify-content: center;
   }
 
   .auth-logo img {
@@ -199,8 +189,7 @@ import Layout1 from "../layouts/Layout1.astro";
   }
 
   form {
-    display: flex;
-    flex-direction: column;
+    align-items: stretch;
     gap: 14px;
   }
 
@@ -264,15 +253,7 @@ import Layout1 from "../layouts/Layout1.astro";
     padding: 0;
     border-radius: 0 var(--border-radius) var(--border-radius) 0;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     transition: opacity 0.12s ease;
-  }
-
-  .pw-toggle:hover {
-    opacity: 0.85;
-    background: transparent;
   }
 
   .auth-error {
@@ -285,14 +266,11 @@ import Layout1 from "../layouts/Layout1.astro";
   /* ── Google OAuth ── */
 
   .social-section {
-    display: flex;
-    flex-direction: column;
+    align-items: stretch;
     gap: 14px;
   }
 
   .auth-divider {
-    display: flex;
-    align-items: center;
     gap: 10px;
     color: var(--clr-text);
     font-size: 0.78rem;
@@ -308,9 +286,6 @@ import Layout1 from "../layouts/Layout1.astro";
   }
 
   .btn-google {
-    display: flex;
-    align-items: center;
-    justify-content: center;
     gap: 10px;
     width: 100%;
     background: #fff;
@@ -337,13 +312,6 @@ import Layout1 from "../layouts/Layout1.astro";
     cursor: not-allowed;
   }
 
-  @media (hover: hover) {
-    .btn-google:not(:disabled):hover {
-      background: var(--clr-white2);
-      border-color: #bbb;
-    }
-  }
-
   .btn-primary {
     width: 100%;
     background: var(--clr-primary);
@@ -357,6 +325,15 @@ import Layout1 from "../layouts/Layout1.astro";
   }
 
   @media (hover: hover) {
+    .btn-google:not(:disabled):hover {
+      background: var(--clr-white2);
+      border-color: #bbb;
+    }
+
+    .pw-toggle:hover {
+      opacity: 0.85;
+    }
+
     .btn-primary:hover {
       background: var(--clr-primary-dark);
       border-color: var(--clr-primary-dark);

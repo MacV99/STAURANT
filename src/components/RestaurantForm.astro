@@ -4,23 +4,23 @@
   aria-modal="true"
   role="dialog"
 >
-  <div class="form-box">
-    <div class="form-header">
+  <div class="form-box flex-column">
+    <div class="form-header flex-row">
       <h2 id="restaurant-form-title">Nuevo restaurante</h2>
       <button
         id="restaurant-form-close"
-        class="btn-close boton2"
+        class="btn-close btn-icon-close boton2"
         aria-label="Cerrar"
       >
         <i class="bi bi-x-lg"></i>
       </button>
     </div>
 
-    <form id="restaurant-form" novalidate>
+    <form id="restaurant-form" class="flex-column" novalidate>
       <input type="hidden" id="rf-id" />
 
       <label for="rf-name">
-        <span class="label-text">Nombre <span class="required">*</span></span>
+        <span class="label-text flex-row">Nombre <span class="required">*</span></span>
         <input
           type="text"
           id="rf-name"
@@ -30,7 +30,7 @@
       </label>
 
       <label for="rf-notes">
-        <span class="label-text">Notas</span>
+        <span class="label-text flex-row">Notas</span>
         <textarea
           id="rf-notes"
           rows="3"
@@ -40,7 +40,7 @@
 
       <p id="rf-error" class="form-error" aria-live="polite"></p>
 
-      <div class="form-footer">
+      <div class="form-footer flex-row">
         <button type="button" id="restaurant-form-cancel" class="boton2"
           >Cancelar</button
         >
@@ -58,16 +58,13 @@
     padding: 24px 20px;
     width: 92%;
     max-width: 460px;
-    display: flex;
-    flex-direction: column;
+    align-items: stretch;
     gap: 0;
     max-height: 90dvh;
     overflow-y: auto;
   }
 
   .form-header {
-    display: flex;
-    align-items: center;
     justify-content: space-between;
     margin-bottom: 20px;
   }
@@ -78,16 +75,8 @@
     color: var(--clr-dark);
   }
 
-  .btn-close {
-    padding: 8px 10px;
-    border-radius: 10px;
-    background: var(--clr-white2);
-    border: solid 1.5px var(--clr-border);
-  }
-
   form {
-    display: flex;
-    flex-direction: column;
+    align-items: stretch;
     gap: 14px;
   }
 
@@ -101,9 +90,7 @@
   }
 
   .label-text {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
+    justify-content: flex-start;
     gap: 3px;
     margin-bottom: 5px;
   }
@@ -133,7 +120,6 @@
   }
 
   .form-footer {
-    display: flex;
     justify-content: flex-end;
     gap: 10px;
     margin-top: 6px;

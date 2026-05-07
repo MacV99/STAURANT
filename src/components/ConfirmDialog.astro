@@ -1,10 +1,10 @@
 <div id="confirm-overlay" class="overlay" aria-modal="true" role="dialog">
-  <div class="confirm-box">
+  <div class="confirm-box flex-column">
     <div class="confirm-icon">
       <i class="bi bi-exclamation-triangle-fill"></i>
     </div>
     <p id="confirm-message">¿Estás seguro?</p>
-    <div class="confirm-actions">
+    <div class="confirm-actions flex-row">
       <button id="confirm-cancel" class="boton2">Cancelar</button>
       <button id="confirm-ok" class="boton btn-danger">Eliminar</button>
     </div>
@@ -19,9 +19,6 @@
     padding: 32px 24px 28px;
     width: 90%;
     max-width: 360px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
     gap: 14px;
   }
 
@@ -40,7 +37,6 @@
   }
 
   .confirm-actions {
-    display: flex;
     gap: 10px;
     width: 100%;
     margin-top: 6px;

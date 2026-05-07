@@ -27,15 +27,15 @@ const tplRestaurant: Restaurant = {
 ---
 
 <Layout1 title="Restaurante · STAURANT">
-  <div class="detail-page">
-    <a id="back-link" href="/" class="back-link">
+  <div class="detail-page flex-column">
+    <a id="back-link" href="/" class="back-link flex-row">
       <i class="bi bi-arrow-left"></i> Volver
     </a>
 
     <div id="restaurant-header" class="restaurant-header"></div>
 
-    <div class="dishes-section">
-      <div class="dishes-top">
+    <div class="dishes-section flex-column">
+      <div class="dishes-top flex-row">
         <h2 class="dishes-title">Platos</h2>
       </div>
 
@@ -51,7 +51,7 @@ const tplRestaurant: Restaurant = {
         />
       </div>
 
-      <div class="dishes-controls">
+      <div class="dishes-controls flex-row">
         <SortBar
           pills={[
             { field: "rating", label: "Rating" },
@@ -69,7 +69,7 @@ const tplRestaurant: Restaurant = {
         </div>
       </div>
 
-      <div id="dishes-list"></div>
+      <div id="dishes-list" class="flex-column"></div>
     </div>
   </div>
 
@@ -146,14 +146,12 @@ const tplRestaurant: Restaurant = {
     width: 100%;
     max-width: 760px;
     padding: 20px 16px 80px;
-    display: flex;
-    flex-direction: column;
+    align-items: stretch;
     gap: 24px;
   }
 
   .back-link {
-    display: flex;
-    align-items: center;
+    justify-content: flex-start;
     gap: 6px;
     font-size: 0.85rem;
     font-weight: 600;
@@ -169,14 +167,12 @@ const tplRestaurant: Restaurant = {
   }
 
   .dishes-section {
-    display: flex;
-    flex-direction: column;
+    align-items: stretch;
     gap: 12px;
   }
 
   .dishes-top {
-    display: flex;
-    align-items: center;
+    justify-content: flex-start;
   }
 
   .dishes-title {
@@ -227,8 +223,7 @@ const tplRestaurant: Restaurant = {
   }
 
   .dishes-controls {
-    display: flex;
-    align-items: center;
+    justify-content: flex-start;
     gap: 8px;
     flex-wrap: wrap;
   }
@@ -287,8 +282,7 @@ const tplRestaurant: Restaurant = {
   }
 
   #dishes-list {
-    display: flex;
-    flex-direction: column;
+    align-items: stretch;
     gap: 5px;
   }
 

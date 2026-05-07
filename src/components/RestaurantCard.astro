@@ -13,11 +13,11 @@ const isPending = r.status === "pending";
 ---
 
 <article
-  class="restaurant-card card-clickable"
+  class="restaurant-card card-clickable flex-row"
   data-href={`/restaurante?id=${r.id}`}
   style={`view-transition-name: restaurant-${r.id}`}
 >
-  <div class="card-body">
+  <div class="card-body flex-column">
     <h3>{r.name}</h3>
     {
       !isPending && (
@@ -37,8 +37,6 @@ const isPending = r.status === "pending";
     border: 1px solid var(--clr-border);
     border-radius: 18px;
     padding: 16px;
-    display: flex;
-    align-items: center;
     justify-content: space-between;
     gap: 12px;
     transition: var(--transition);
@@ -49,8 +47,7 @@ const isPending = r.status === "pending";
   }
 
   .card-body {
-    display: flex;
-    flex-direction: column;
+    align-items: flex-start;
     min-width: 0;
   }
 

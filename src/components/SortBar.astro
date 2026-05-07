@@ -11,9 +11,9 @@ interface Props {
 const { pills } = Astro.props;
 ---
 
-<div class="sort-bar">
+<div class="sort-bar flex-row">
   <span class="sort-label">Ordenar</span>
-  <div class="sort-pills">
+  <div class="sort-pills flex-row">
     {
       pills.map((p) => (
         <button class="sort-pill" data-field={p.field}>
@@ -26,8 +26,7 @@ const { pills } = Astro.props;
 
 <style>
   .sort-bar {
-    display: flex;
-    align-items: center;
+    justify-content: flex-start;
     gap: 8px;
     flex-wrap: wrap;
   }
@@ -43,7 +42,7 @@ const { pills } = Astro.props;
   }
 
   .sort-pills {
-    display: flex;
+    justify-content: flex-start;
     gap: 6px;
     flex-wrap: wrap;
   }
