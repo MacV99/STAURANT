@@ -1,6 +1,17 @@
+---
+const pathname = Astro.url.pathname;
+const isHome = pathname === "/" || pathname.endsWith("/index");
+const isPerfil = pathname.includes("/perfil");
+---
+
 <nav class="mobile-bottom-nav" aria-label="Navegación móvil">
-  <a href="/" class="nav-item flex-column" aria-label="Inicio">
-    <i class="bi bi-house-door"></i>
+  <a
+    href="/"
+    class:list={["nav-item", "flex-column", { active: isHome }]}
+    aria-label="Inicio"
+    aria-current={isHome ? "page" : undefined}
+  >
+    <i class={isHome ? "bi bi-house-door-fill" : "bi bi-house-door"}></i>
     <span>Inicio</span>
   </a>
 
@@ -10,14 +21,67 @@
     data-action="create"
     aria-label="Crear restaurante o plato"
   >
-    <span class="fab-inner">
-      <i class="bi bi-plus-circle"></i>
-      <span class="fab-badge">+</span>
-    </span>
+    <i class="bi bi-plus-lg"></i>
   </button>
 
-  <a href="/perfil" class="nav-item flex-column" aria-label="Perfil">
-    <i class="bi bi-person-fill"></i>
+  <a
+    href="/perfil"
+    class:list={["nav-item", "flex-column", { active: isPerfil }]}
+    aria-label="Perfil"
+    aria-current={isPerfil ? "page" : undefined}
+  >
+    <i class={isPerfil ? "bi bi-person-fill" : "bi bi-person"}></i>
     <span>Perfil</span>
   </a>
 </nav>
+
+<script>
+  function updateActiveState(): void {
+    const pathname = window.location.pathname;
+    const isHome = pathname === "/" || pathname.endsWith("/index");
+    const isPerfil = pathname.includes("/perfil");
+
+    const homeLink = document.querySelector(
+      '.mobile-bottom-nav a[href="/"]',
+    ) as HTMLAnchorElement | null;
+    const perfilLink = document.querySelector(
+      '.mobile-bottom-nav a[href="/perfil"]',
+    ) as HTMLAnchorElement | null;
+
+    homeLink?.classList.toggle("active", isHome);
+    perfilLink?.classList.toggle("active", isPerfil);
+
+    const homeIcon = homeLink?.querySelector("i");
+    const perfilIcon = perfilLink?.querySelector("i");
+
+    if (homeIcon) homeIcon.className = isHome ? "bi bi-house-door-fill" : "bi bi-house-door";
+    if (perfilIcon) perfilIcon.className = isPerfil ? "bi bi-person-fill" : "bi bi-person";
+  }
+
+  document.addEventListener("astro:page-load", () => {
+    updateActiveState();
+
+    const fabBtn = document.querySelector(".nav-fab") as HTMLButtonElement | null;
+    if (!fabBtn) return;
+
+    fabBtn.onclick = (event) => {
+      event.preventDefault();
+      const pathname = window.location.pathname;
+
+      if (pathname === "/" || pathname.endsWith("/index")) {
+        (window as any).restaurantForm?.open("create");
+        return;
+      }
+
+      if (pathname.includes("/restaurante")) {
+        const restaurantId = new URLSearchParams(window.location.search).get("id");
+        if (restaurantId) {
+          (window as any).dishForm?.open("create", restaurantId);
+          return;
+        }
+      }
+
+      window.location.href = "/";
+    };
+  });
+</script>

@@ -8,46 +8,6 @@
   </a>
 </header>
 
-<script>
-  document.addEventListener("astro:page-load", () => {
-    const bottomNav = document.querySelector(
-      ".mobile-bottom-nav",
-    ) as HTMLElement | null;
-    if (!bottomNav) return;
-
-    bottomNav.addEventListener("click", (event) => {
-      const actionBtn = (event.target as HTMLElement).closest(
-        "[data-action]",
-      ) as HTMLElement | null;
-      if (!actionBtn) return;
-      const action = actionBtn.dataset.action;
-      if (!action) return;
-      event.preventDefault();
-
-      if (action === "create") {
-        if (
-          window.location.pathname === "/" ||
-          window.location.pathname.endsWith("/index")
-        ) {
-          (window as any).restaurantForm?.open("create");
-          return;
-        }
-
-        if (window.location.pathname.includes("/restaurante")) {
-          const restaurantId = new URLSearchParams(window.location.search).get(
-            "id",
-          );
-          if (restaurantId) {
-            (window as any).dishForm?.open("create", restaurantId);
-            return;
-          }
-        }
-
-        window.location.href = "/";
-      }
-    });
-  });
-</script>
 
 <style>
   .header-bar {
