@@ -296,6 +296,7 @@ const fabIcon = pathname.includes("/restaurante")
   .sidebar-item {
     display: flex;
     align-items: center;
+    justify-content: flex-start;
     gap: 14px;
     padding: 12px 14px;
     border-radius: 50px;
@@ -303,6 +304,9 @@ const fabIcon = pathname.includes("/restaurante")
     font-size: 0.95rem;
     font-weight: 500;
     text-decoration: none;
+    text-transform: none;
+    letter-spacing: normal;
+    text-indent: 0;
     cursor: pointer;
     background: transparent;
     border: none;
@@ -327,6 +331,10 @@ const fabIcon = pathname.includes("/restaurante")
 
   .sidebar-create {
     margin-top: auto;
+    align-self: center;
+    width: fit-content;
+    padding: 15px 21px;
+    gap: 10px;
     background: var(--clr-primary);
     color: var(--clr-white);
   }
@@ -434,8 +442,12 @@ const fabIcon = pathname.includes("/restaurante")
 
   /* ── Hover (pointer devices only) ──────────────────────────────── */
   @media (hover: hover) {
-    .sidebar-item:hover {
+    .sidebar-item:not(.sidebar-create):hover {
       background: var(--clr-white2);
+    }
+
+    .sidebar-create:hover {
+      filter: brightness(1.08);
     }
 
     .nav-item:not(.nav-fab):hover {
