@@ -95,8 +95,43 @@ html {
   transition: var(--transition);
 }
 
+.mobile-bottom-nav .nav-fab .fab-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.mobile-bottom-nav .nav-fab .fab-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--clr-white);
+  font-size: 2.2rem;
+  font-weight: 300;
+  line-height: 1;
+  pointer-events: none;
+  animation: fab-badge-cycle 6s ease-in-out infinite;
+}
+
 .mobile-bottom-nav .nav-fab i {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
+  animation: fab-icon-cycle 6s ease-in-out infinite;
+}
+
+@keyframes fab-icon-cycle {
+  0%, 15%   { opacity: 0; transform: scale(0.6) rotate(-20deg); }
+  30%, 70%  { opacity: 1; transform: scale(1) rotate(0deg); }
+  85%, 100% { opacity: 0; transform: scale(0.6) rotate(20deg); }
+}
+
+@keyframes fab-badge-cycle {
+  0%, 15%   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  30%, 70%  { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+  85%, 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
 .mobile-bottom-nav .nav-item:hover,

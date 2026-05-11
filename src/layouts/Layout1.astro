@@ -1,7 +1,6 @@
 ---
 import "../styles/global.css";
 import "../styles/project.css";
-import Header from "../components/header.astro";
 import Navbar from "../components/navbar.astro";
 import { ViewTransitions } from "astro:transitions";
 
@@ -34,7 +33,6 @@ const { title, bare = false } = Astro.props;
   </head>
 
   <body>
-    {!bare && <Header />}
     <main>
       <slot />
     </main>
