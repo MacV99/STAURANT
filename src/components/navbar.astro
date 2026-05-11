@@ -1,8 +1,10 @@
 ---
 const pathname = Astro.url.pathname;
-const isHome    = pathname === "/" || pathname.endsWith("/index");
-const isPerfil  = pathname.includes("/perfil");
-const fabIcon   = pathname.includes("/restaurante") ? "bi bi-fork-knife" : "bi bi-shop-window";
+const isHome = pathname === "/" || pathname.endsWith("/index");
+const isPerfil = pathname.includes("/perfil");
+const fabIcon = pathname.includes("/restaurante")
+  ? "bi bi-fork-knife"
+  : "bi bi-shop-window";
 ---
 
 <!-- ── Mobile header ───────────────────────────────────────────── -->
@@ -87,25 +89,41 @@ const fabIcon   = pathname.includes("/restaurante") ? "bi bi-fork-knife" : "bi b
 <script>
   function updateActiveState(): void {
     const { pathname } = window.location;
-    const isHome   = pathname === "/" || pathname.endsWith("/index");
+    const isHome = pathname === "/" || pathname.endsWith("/index");
     const isPerfil = pathname.includes("/perfil");
 
     const sets = [
-      { root: ".mobile-bottom-nav", homeClass: "nav-item", perfilClass: "nav-item" },
-      { root: ".desktop-sidebar",   homeClass: "sidebar-item", perfilClass: "sidebar-item" },
+      {
+        root: ".mobile-bottom-nav",
+        homeClass: "nav-item",
+        perfilClass: "nav-item",
+      },
+      {
+        root: ".desktop-sidebar",
+        homeClass: "sidebar-item",
+        perfilClass: "sidebar-item",
+      },
     ] as const;
 
     for (const { root } of sets) {
-      const homeEl   = document.querySelector(`${root} a[href="/"]`)   as HTMLElement | null;
-      const perfilEl = document.querySelector(`${root} a[href="/perfil"]`) as HTMLElement | null;
+      const homeEl = document.querySelector(
+        `${root} a[href="/"]`,
+      ) as HTMLElement | null;
+      const perfilEl = document.querySelector(
+        `${root} a[href="/perfil"]`,
+      ) as HTMLElement | null;
 
       homeEl?.classList.toggle("active", isHome);
       perfilEl?.classList.toggle("active", isPerfil);
 
-      const homeIcon   = homeEl?.querySelector("i")   as HTMLElement | null;
+      const homeIcon = homeEl?.querySelector("i") as HTMLElement | null;
       const perfilIcon = perfilEl?.querySelector("i") as HTMLElement | null;
-      if (homeIcon)   homeIcon.className   = isHome   ? "bi bi-house-door-fill" : "bi bi-house-door";
-      if (perfilIcon) perfilIcon.className = isPerfil ? "bi bi-person-fill"     : "bi bi-person";
+      if (homeIcon)
+        homeIcon.className = isHome
+          ? "bi bi-house-door-fill"
+          : "bi bi-house-door";
+      if (perfilIcon)
+        perfilIcon.className = isPerfil ? "bi bi-person-fill" : "bi bi-person";
     }
   }
 
@@ -113,9 +131,11 @@ const fabIcon   = pathname.includes("/restaurante") ? "bi bi-fork-knife" : "bi b
     const cls = window.location.pathname.includes("/restaurante")
       ? "bi bi-fork-knife"
       : "bi bi-shop-window";
-    document.querySelectorAll("[data-action='create'] .fab-inner > i").forEach(
-      (el) => { (el as HTMLElement).className = cls; }
-    );
+    document
+      .querySelectorAll("[data-action='create'] .fab-inner > i")
+      .forEach((el) => {
+        (el as HTMLElement).className = cls;
+      });
   }
 
   function initFab(): void {
@@ -129,7 +149,10 @@ const fabIcon   = pathname.includes("/restaurante") ? "bi bi-fork-knife" : "bi b
         }
         if (pathname.includes("/restaurante")) {
           const id = new URLSearchParams(window.location.search).get("id");
-          if (id) { (window as any).dishForm?.open("create", id); return; }
+          if (id) {
+            (window as any).dishForm?.open("create", id);
+            return;
+          }
         }
         window.location.href = "/";
       };
@@ -146,15 +169,37 @@ const fabIcon   = pathname.includes("/restaurante") ? "bi bi-fork-knife" : "bi b
 <style>
   /* ── Animación FAB (keyframes globales por spec CSS) ──────────── */
   @keyframes fab-icon-cycle {
-    0%, 75%  { opacity: 1; transform: scale(1); }
-    85%, 92% { opacity: 0; transform: scale(0.3); }
-    100%     { opacity: 1; transform: scale(1); }
+    0%,
+    75% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    85%,
+    92% {
+      opacity: 0;
+      transform: scale(0.3);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
 
   @keyframes fab-badge-cycle {
-    0%, 75%  { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
-    85%, 92% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-    100%     { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+    0%,
+    75% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.3);
+    }
+    85%,
+    92% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.3);
+    }
   }
 
   .fab-inner {
@@ -189,13 +234,13 @@ const fabIcon   = pathname.includes("/restaurante") ? "bi bi-fork-knife" : "bi b
 
   .mobile-header .brand-link {
     height: 100%;
-    padding-top: 5px;
   }
 
   .mobile-header .brand-logo {
     height: 100%;
     width: auto;
     object-fit: contain;
+    transform: translateY(5px);
   }
 
   .desktop-sidebar .brand-logo {
@@ -288,7 +333,9 @@ const fabIcon   = pathname.includes("/restaurante") ? "bi bi-fork-knife" : "bi b
     border: none;
     background: var(--clr-primary);
     color: var(--clr-white);
-    box-shadow: 0 4px 16px rgba(84, 107, 65, 0.45), 0 2px 6px rgba(0, 0, 0, 0.18);
+    box-shadow:
+      0 4px 16px rgba(84, 107, 65, 0.45),
+      0 2px 6px rgba(0, 0, 0, 0.18);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -371,7 +418,9 @@ const fabIcon   = pathname.includes("/restaurante") ? "bi bi-fork-knife" : "bi b
     border: none;
     background: var(--clr-primary);
     color: var(--clr-white);
-    box-shadow: 0 4px 16px rgba(84, 107, 65, 0.45), 0 2px 6px rgba(0, 0, 0, 0.18);
+    box-shadow:
+      0 4px 16px rgba(84, 107, 65, 0.45),
+      0 2px 6px rgba(0, 0, 0, 0.18);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -417,12 +466,18 @@ const fabIcon   = pathname.includes("/restaurante") ? "bi bi-fork-knife" : "bi b
 
   /* ── Responsive: mobile ─────────────────────────────────────────── */
   @media (max-width: 767px) {
-    .mobile-header     { display: flex; }
-    .mobile-bottom-nav { display: flex; }
+    .mobile-header {
+      display: flex;
+    }
+    .mobile-bottom-nav {
+      display: flex;
+    }
   }
 
   /* ── Responsive: desktop ────────────────────────────────────────── */
   @media (min-width: 768px) {
-    .desktop-sidebar { display: flex; }
+    .desktop-sidebar {
+      display: flex;
+    }
   }
 </style>
