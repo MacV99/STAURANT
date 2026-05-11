@@ -73,13 +73,6 @@ const tplRestaurant: Restaurant = {
     </div>
   </div>
 
-  <button id="btn-add-dish" class="fab" aria-label="Agregar plato">
-    <span class="fab-inner">
-      <i class="bi bi-fork-knife"></i>
-      <span class="fab-badge">+</span>
-    </span>
-  </button>
-
   <DishForm />
   <RestaurantForm />
   <ConfirmDialog />
@@ -294,7 +287,6 @@ const tplRestaurant: Restaurant = {
     .type-pill:hover {
       border-color: var(--clr-border2);
     }
-
   }
 
   @media (min-width: 768px) {
@@ -846,11 +838,6 @@ const tplRestaurant: Restaurant = {
           rerenderRestaurantePage();
         };
       });
-
-    document.getElementById("btn-add-dish")!.onclick = () =>
-      (window as any).dishForm.open("create", currentRestaurant!.id);
-
-    // ─── Búsqueda de platos ───────────────────────────────────────────────────
 
     const searchEl = document.getElementById(
       "dish-search",
