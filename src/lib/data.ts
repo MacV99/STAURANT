@@ -92,7 +92,10 @@ async function refreshCacheInBackground(): Promise<void> {
     const remoteTypeIds = new Set(remote.dishTypes.map((dt) => dt.id));
     const remoteDishIds = new Set(remote.dishes.map((d) => d.id));
 
-    const missingTypes = local.dishTypes.filter((dt) => !remoteTypeIds.has(dt.id));
+    const remoteTypeNames = new Set(remote.dishTypes.map((dt) => dt.name));
+    const missingTypes = local.dishTypes.filter(
+      (dt) => !remoteTypeIds.has(dt.id) && !remoteTypeNames.has(dt.name),
+    );
     const missingDishes = local.dishes.filter((d) => !remoteDishIds.has(d.id));
 
     if (missingTypes.length > 0) {
@@ -343,7 +346,13 @@ export function deleteDish(id: string): void {
 // ─── DishTypes (síncronos — leen del caché) ───────────────────────────────────
 
 export function getDishTypes(): DishType[] {
-  return getCache().dishTypes ?? [];
+  const types = getCache().dishTypes ?? [];
+  const seen = new Set<string>();
+  return types.filter((t) => {
+    if (seen.has(t.name)) return false;
+    seen.add(t.name);
+    return true;
+  });
 }
 
 export function createDishType(name: string): DishType {

@@ -771,6 +771,8 @@ const tplRestaurant: Restaurant = {
     const restaurant = getRestaurants().find((r) => r.id === id);
     if (!restaurant) return;
 
+    document.title = `${restaurant.name} · STAURANT`;
+
     const avg = getRestaurantAverage(restaurant.id);
     const filtered = getFilteredSortedDishes(restaurant.id);
     const total = getDishesByRestaurant(restaurant.id).length;
@@ -801,6 +803,8 @@ const tplRestaurant: Restaurant = {
 
     const id = new URLSearchParams(window.location.search).get("id") ?? "";
     currentRestaurant = getRestaurants().find((r) => r.id === id);
+
+    if (currentRestaurant) document.title = `${currentRestaurant.name} · STAURANT`;
 
     const backLink = document.getElementById("back-link") as HTMLAnchorElement;
     if (backLink)

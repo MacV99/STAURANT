@@ -119,7 +119,7 @@ import Layout1 from "../layouts/Layout1.astro";
             <span class="stat-label">Visitados</span>
           </div>
           <div class="stat-cell flex-column">
-            <span class="stat-number accent-muted" id="sn-pending">—</span>
+            <span class="stat-number" id="sn-pending">—</span>
             <span class="stat-label">Pendientes</span>
           </div>
           <div class="stat-cell flex-column">
@@ -139,10 +139,19 @@ import Layout1 from "../layouts/Layout1.astro";
 
       <div class="dash-card flex-column">
         <h2 class="dash-title flex-row">
-          <i class="bi bi-trophy-fill"></i> Top 3 favoritos
+          <i class="bi bi-trophy-fill"></i> Top 3 platos
         </h2>
-        <div id="top3-list" class="top3-list flex-column">
+        <div id="top3-dishes-list" class="top3-list flex-column">
           <p class="top3-empty">Añade platos para ver tus favoritos</p>
+        </div>
+      </div>
+
+      <div class="dash-card flex-column">
+        <h2 class="dash-title flex-row">
+          <i class="bi bi-star-fill"></i> Top 3 restaurantes
+        </h2>
+        <div id="top3-restaurants-list" class="top3-list flex-column">
+          <p class="top3-empty">Califica platos para ver tus favoritos</p>
         </div>
       </div>
     </div>
@@ -184,6 +193,7 @@ import Layout1 from "../layouts/Layout1.astro";
     border-radius: 20px;
     padding: 24px 20px;
     align-items: stretch;
+    justify-content: flex-start;
     gap: 20px;
   }
 
@@ -509,11 +519,19 @@ import Layout1 from "../layouts/Layout1.astro";
       min-width: 160px;
     }
 
-    /* Dash col: dos cards iguales, misma altura */
+    /* Dash col: actividad full-width, tops en segunda fila */
     .dash-col {
       display: grid;
       grid-template-columns: 1fr 1fr;
       align-items: stretch;
+    }
+
+    .dash-col > .dash-card:first-child {
+      grid-column: 1 / -1;
+    }
+
+    .dash-col > .dash-card:first-child .stats-grid {
+      grid-template-columns: repeat(6, 1fr);
     }
 
     .dash-card { padding: 28px 24px; }
@@ -525,8 +543,10 @@ import Layout1 from "../layouts/Layout1.astro";
 <style is:global>
   .top3-item {
     justify-content: flex-start;
+    align-items: center;
     gap: 12px;
     padding: 10px 14px;
+    min-height: 62px;
     background: var(--clr-white2);
     border-radius: 12px;
     text-decoration: none;
@@ -537,8 +557,14 @@ import Layout1 from "../layouts/Layout1.astro";
     line-height: 1;
   }
 
-  .top3-name {
+  .top3-info {
     flex: 1;
+    gap: 2px;
+    min-width: 0;
+    align-items: flex-start;
+  }
+
+  .top3-name {
     font-size: 0.9rem;
     font-weight: 600;
     color: var(--clr-text);
@@ -547,18 +573,22 @@ import Layout1 from "../layouts/Layout1.astro";
     white-space: nowrap;
   }
 
-  .top3-badge {
-    font-size: 0.82rem;
-    font-weight: 700;
-    padding: 3px 10px;
-    border-radius: 20px;
-    flex-shrink: 0;
+  .top3-restaurant {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--clr-text);
+    opacity: 0.5;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
+
 </style>
 
 <script>
   import { navigate } from "astro:transitions/client";
   import { supabase } from "../lib/supabase.ts";
+  import { getRatingBadgeHTML } from "../scripts/store.ts";
   import {
     clearCache,
     initCache,
@@ -573,7 +603,7 @@ import Layout1 from "../layouts/Layout1.astro";
   // ─── Helpers de stats ───────────────────────────────────────────────────────
 
   interface RawRestaurant { id: string; status: string; name: string }
-  interface RawDish { restaurantId: string; rating: number }
+  interface RawDish { id: string; restaurantId: string; name: string; rating: number }
 
   function renderStats(restaurants: RawRestaurant[], dishes: RawDish[]): void {
     const total = restaurants.length;
@@ -598,36 +628,67 @@ import Layout1 from "../layouts/Layout1.astro";
     set("sn-avg", avgAll !== null ? String(avgAll) : "—");
     set("sn-rated", String(rated));
 
-    const top3El = document.getElementById("top3-list");
-    if (!top3El) return;
-
-    const withAvg = restaurants
-      .map((r) => {
-        const rd = dishes.filter((d) => d.restaurantId === r.id);
-        if (rd.length === 0) return null;
-        const avg = Math.round((rd.reduce((s, d) => s + d.rating, 0) / rd.length) * 10) / 10;
-        return { id: r.id, name: r.name, avg };
-      })
-      .filter((x): x is { id: string; name: string; avg: number } => x !== null)
-      .sort((a, b) => b.avg - a.avg)
-      .slice(0, 3);
-
-    if (withAvg.length === 0) {
-      top3El.innerHTML = '<p class="top3-empty">Añade platos para ver tus favoritos</p>';
-      return;
+    const medals = ["🥇", "🥈", "🥉"];
+    const restaurantMap = new Map(restaurants.map((r) => [r.id, r.name]));
+    const dishesByRestaurant = new Map<string, typeof dishes>();
+    for (const d of dishes) {
+      const bucket = dishesByRestaurant.get(d.restaurantId) ?? [];
+      bucket.push(d);
+      dishesByRestaurant.set(d.restaurantId, bucket);
     }
 
-    const medals = ["🥇", "🥈", "🥉"];
-    top3El.innerHTML = withAvg
-      .map((r, i) => {
-        const badgeClass = r.avg >= 8 ? "badge-high" : r.avg >= 5 ? "badge-mid" : "badge-low";
-        return `<a href="/restaurante?id=${encodeURIComponent(r.id)}" class="top3-item flex-row">
-          <span class="top3-medal">${medals[i]}</span>
-          <span class="top3-name">${escapeHtml(r.name)}</span>
-          <span class="${badgeClass} top3-badge">${r.avg}</span>
-        </a>`;
-      })
-      .join("");
+    // ── Top 3 platos ──
+    const dishesEl = document.getElementById("top3-dishes-list");
+    if (dishesEl) {
+      const top3Dishes = [...dishes].sort((a, b) => b.rating - a.rating).slice(0, 3);
+      if (top3Dishes.length === 0) {
+        dishesEl.innerHTML = '<p class="top3-empty">Añade platos para ver tus favoritos</p>';
+      } else {
+        dishesEl.innerHTML = top3Dishes
+          .map((d, i) => {
+            const restaurantName = escapeHtml(restaurantMap.get(d.restaurantId) ?? "");
+            return `<a href="/restaurante?id=${encodeURIComponent(d.restaurantId)}" class="top3-item flex-row">
+              <span class="top3-medal">${medals[i]}</span>
+              <span class="top3-info flex-column">
+                <span class="top3-name">${escapeHtml(d.name)}</span>
+                ${restaurantName ? `<span class="top3-restaurant">${restaurantName}</span>` : ""}
+              </span>
+              ${getRatingBadgeHTML(d.rating)}
+            </a>`;
+          })
+          .join("");
+      }
+    }
+
+    // ── Top 3 restaurantes ──
+    const restaurantsEl = document.getElementById("top3-restaurants-list");
+    if (restaurantsEl) {
+      const top3Restaurants = restaurants
+        .map((r) => {
+          const rd = dishesByRestaurant.get(r.id);
+          if (!rd || rd.length === 0) return null;
+          const avg = Math.round((rd.reduce((s, d) => s + d.rating, 0) / rd.length) * 10) / 10;
+          return { id: r.id, name: r.name, avg };
+        })
+        .filter((x): x is { id: string; name: string; avg: number } => x !== null)
+        .sort((a, b) => b.avg - a.avg)
+        .slice(0, 3);
+      if (top3Restaurants.length === 0) {
+        restaurantsEl.innerHTML = '<p class="top3-empty">Califica platos para ver tus favoritos</p>';
+      } else {
+        restaurantsEl.innerHTML = top3Restaurants
+          .map((r, i) => {
+            return `<a href="/restaurante?id=${encodeURIComponent(r.id)}" class="top3-item flex-row">
+              <span class="top3-medal">${medals[i]}</span>
+              <span class="top3-info flex-column">
+                <span class="top3-name">${escapeHtml(r.name)}</span>
+              </span>
+              ${getRatingBadgeHTML(r.avg)}
+            </a>`;
+          })
+          .join("");
+      }
+    }
   }
 
   // ─── PRE-RENDER en astro:after-swap ────────────────────────────────────────
