@@ -8,7 +8,7 @@ const fabIcon = pathname.includes("/restaurante")
 ---
 
 <!-- ── Mobile header ───────────────────────────────────────────── -->
-<header class="mobile-header">
+<header class="mobile-header texture-dotted">
   <a href="/" class="brand-link" aria-label="Inicio">
     <img src="/img/logo2.png" alt="STAURANT" class="brand-logo" />
   </a>
@@ -93,20 +93,9 @@ const fabIcon = pathname.includes("/restaurante")
     const isHome = pathname === "/" || pathname.endsWith("/index");
     const isPerfil = pathname.includes("/perfil");
 
-    const sets = [
-      {
-        root: ".mobile-bottom-nav",
-        homeClass: "nav-item",
-        perfilClass: "nav-item",
-      },
-      {
-        root: ".desktop-sidebar",
-        homeClass: "sidebar-item",
-        perfilClass: "sidebar-item",
-      },
-    ] as const;
+    const roots = [".mobile-bottom-nav", ".desktop-sidebar"] as const;
 
-    for (const { root } of sets) {
+    for (const root of roots) {
       const homeEl = document.querySelector(
         `${root} a[href="/"]`,
       ) as HTMLElement | null;
@@ -261,9 +250,6 @@ const fabIcon = pathname.includes("/restaurante")
     justify-content: center;
     height: 60px;
     width: 100%;
-    background-color: var(--clr-white2);
-    background-image: radial-gradient(circle, #c8c8c8 1px, transparent 1px);
-    background-size: 20px 20px;
     z-index: 100;
   }
 
@@ -311,7 +297,6 @@ const fabIcon = pathname.includes("/restaurante")
     background: transparent;
     border: none;
     width: 100%;
-    text-align: left;
     transition: var(--transition);
   }
 
@@ -331,9 +316,9 @@ const fabIcon = pathname.includes("/restaurante")
 
   .sidebar-create {
     margin-top: auto;
-    align-self: center;
+    align-self: flex-start;
     width: fit-content;
-    padding: 15px 21px;
+    padding: 15px 28px;
     gap: 10px;
     background: var(--clr-primary);
     color: var(--clr-white);

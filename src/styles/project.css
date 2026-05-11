@@ -151,90 +151,6 @@
   opacity: 0.6;
 }
 
-/* === FAB (botón flotante fijo) === */
-
-.fab {
-  position: fixed;
-  bottom: 28px;
-  right: 20px;
-  width: 58px;
-  height: 58px;
-  min-width: 58px;
-  border-radius: 50%;
-  padding: 0;
-  background: var(--clr-primary);
-  color: white;
-  border-color: var(--clr-primary);
-  font-size: 1.5rem;
-  letter-spacing: 0;
-  text-indent: 0;
-  z-index: 150;
-  box-shadow: 0 4px 16px rgba(84, 107, 65, 0.45), 0 2px 6px rgba(0, 0, 0, 0.18);
-}
-
-.fab-inner {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.fab-inner>i {
-  animation: fab-icon-cycle 8s ease-in-out infinite;
-}
-
-.fab-badge {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  color: white;
-  font-size: 2.5rem;
-  font-weight: 450;
-  line-height: 1;
-  pointer-events: none;
-  animation: fab-badge-cycle 8s ease-in-out infinite;
-}
-
-@keyframes fab-icon-cycle {
-
-  0%,
-  75% {
-    opacity: 1;
-    transform: scale(1);
-  }
-
-  85%,
-  92% {
-    opacity: 0;
-    transform: scale(0.3);
-  }
-
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes fab-badge-cycle {
-
-  0%,
-  75% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.3);
-  }
-
-  85%,
-  92% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.3);
-  }
-}
-
 /* === CLOSE BUTTON (DishForm, RestaurantForm, perfil modal) === */
 
 .btn-icon-close {
@@ -323,12 +239,6 @@
 /* === HOVER STATES === */
 
 @media (hover: hover) {
-
-  .fab:hover {
-    background: var(--clr-primary-dark);
-    border-color: var(--clr-primary-dark);
-    transform: scale(1.05);
-  }
 
   .btn-danger:hover {
     background: var(--clr-danger-border);
