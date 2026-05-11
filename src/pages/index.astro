@@ -18,27 +18,29 @@ const tplRestaurant: Restaurant = {
 
 <Layout1 title="STAURANT">
   <div class="app-page flex-column">
-    <TabBar />
+    <div class="page-top-sticky">
+      <TabBar />
 
-    <div class="search-wrap">
-      <i class="bi bi-search-fill search-icon"></i>
-      <input
-        id="restaurant-search"
-        class="search-input"
-        type="search"
-        placeholder="Buscar por nombre o notas..."
-        autocomplete="off"
-        spellcheck="false"
+      <div class="search-wrap">
+        <i class="bi bi-search-fill search-icon"></i>
+        <input
+          id="restaurant-search"
+          class="search-input"
+          type="search"
+          placeholder="Buscar por nombre o notas..."
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+
+      <SortBar
+        pills={[
+          { field: "date", label: "Fecha" },
+          { field: "name", label: "Nombre" },
+          { field: "rating", label: "Rating" },
+        ]}
       />
     </div>
-
-    <SortBar
-      pills={[
-        { field: "date", label: "Fecha" },
-        { field: "name", label: "Nombre" },
-        { field: "rating", label: "Rating" },
-      ]}
-    />
 
     <div id="tab-visitados" class="tab-content" role="tabpanel" hidden></div>
     <div id="tab-pendientes" class="tab-content" role="tabpanel" hidden></div>
@@ -57,13 +59,32 @@ const tplRestaurant: Restaurant = {
   .app-page {
     width: 100%;
     max-width: 1100px;
-    padding: 20px 16px 100px;
+    padding: 0 0 100px;
     align-items: stretch;
-    gap: 20px;
+    gap: 0;
+  }
+
+  .page-top-sticky {
+    position: sticky;
+    top: 76px;
+    z-index: 90;
+    background: var(--clr-white2);
+    padding: 12px 16px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  @media (min-width: 768px) {
+    .page-top-sticky {
+      top: 0;
+      padding: 20px 16px 8px;
+    }
   }
 
   .tab-content {
     width: 100%;
+    padding: 0 16px;
   }
 
   .search-wrap {

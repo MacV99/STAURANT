@@ -28,19 +28,6 @@ const fabIcon   = pathname.includes("/restaurante") ? "bi bi-fork-knife" : "bi b
       <span>Inicio</span>
     </a>
 
-    <button
-      type="button"
-      class="sidebar-item sidebar-create"
-      data-action="create"
-      aria-label="Crear restaurante o plato"
-    >
-      <span class="fab-inner">
-        <i class={fabIcon}></i>
-        <span class="fab-badge">+</span>
-      </span>
-      <span>Crear</span>
-    </button>
-
     <a
       href="/perfil"
       class:list={["sidebar-item", { active: isPerfil }]}
@@ -50,6 +37,18 @@ const fabIcon   = pathname.includes("/restaurante") ? "bi bi-fork-knife" : "bi b
       <span>Perfil</span>
     </a>
   </nav>
+
+  <button
+    type="button"
+    class="sidebar-fab-btn"
+    data-action="create"
+    aria-label="Crear restaurante o plato"
+  >
+    <span class="fab-inner">
+      <i class={fabIcon}></i>
+      <span class="fab-badge">+</span>
+    </span>
+  </button>
 </aside>
 
 <!-- ── Mobile bottom nav ───────────────────────────────────────── -->
@@ -189,10 +188,18 @@ const fabIcon   = pathname.includes("/restaurante") ? "bi bi-fork-knife" : "bi b
   }
 
   .brand-logo {
-    width: 40px;
-    height: 40px;
+    height: 44px;
+    width: auto;
+    max-width: 190px;
     object-fit: contain;
     flex-shrink: 0;
+  }
+
+  @media (min-width: 768px) {
+    .brand-logo {
+      height: 54px;
+      max-width: 210px;
+    }
   }
 
   /* ── Mobile header ──────────────────────────────────────────────── */
@@ -235,6 +242,7 @@ const fabIcon   = pathname.includes("/restaurante") ? "bi bi-fork-knife" : "bi b
     gap: 4px;
     margin-top: 16px;
     width: 100%;
+    flex: 1;
   }
 
   .sidebar-item {
@@ -269,28 +277,39 @@ const fabIcon   = pathname.includes("/restaurante") ? "bi bi-fork-knife" : "bi b
     color: var(--clr-text);
   }
 
-  .sidebar-create {
+  .sidebar-fab-btn {
+    align-self: center;
+    flex-shrink: 0;
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    border: none;
     background: var(--clr-primary);
     color: var(--clr-white);
-    margin-top: 8px;
-    padding: 13px 18px;
-    box-shadow: 0 4px 16px rgba(84, 107, 65, 0.35);
-    letter-spacing: 1px;
+    box-shadow: 0 4px 16px rgba(84, 107, 65, 0.45), 0 2px 6px rgba(0, 0, 0, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    margin-bottom: 20px;
+    padding: 0;
+    transition: var(--transition);
   }
 
-  .sidebar-create i {
-    color: var(--clr-white);
-    font-size: 1.3rem;
+  .sidebar-fab-btn .fab-inner {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
-  .sidebar-create .fab-inner {
-    width: 22px;
-    height: 22px;
-    overflow: hidden;
+  .sidebar-fab-btn .fab-inner > i {
+    font-size: 1.5rem;
   }
 
-  .sidebar-create .fab-badge {
-    font-size: 1.8rem;
+  .sidebar-fab-btn .fab-badge {
+    font-size: 2.5rem;
   }
 
   /* ── Mobile bottom nav ──────────────────────────────────────────── */
@@ -304,8 +323,8 @@ const fabIcon   = pathname.includes("/restaurante") ? "bi bi-fork-knife" : "bi b
     gap: 10px;
     justify-content: space-between;
     align-items: center;
-    background: rgba(255, 248, 236, 0.97);
-    border-top: solid 1px var(--clr-border);
+    background: #fff;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
     border-radius: 18px 18px 0 0;
     z-index: 125;
   }
@@ -381,7 +400,7 @@ const fabIcon   = pathname.includes("/restaurante") ? "bi bi-fork-knife" : "bi b
       background: var(--clr-white2);
     }
 
-    .sidebar-create:hover {
+    .sidebar-fab-btn:hover {
       filter: brightness(1.08);
     }
 
