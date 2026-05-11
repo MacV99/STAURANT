@@ -2,6 +2,7 @@
 const pathname = Astro.url.pathname;
 const isHome = pathname === "/" || pathname.endsWith("/index");
 const isPerfil = pathname.includes("/perfil");
+const fabIcon = pathname.includes("/restaurante") ? "bi bi-fork-knife" : "bi bi-shop-window";
 ---
 
 <nav class="mobile-bottom-nav" aria-label="Navegación móvil">
@@ -22,7 +23,7 @@ const isPerfil = pathname.includes("/perfil");
     aria-label="Crear restaurante o plato"
   >
     <span class="fab-inner">
-      <i class="bi bi-plus-circle"></i>
+      <i class={fabIcon}></i>
       <span class="fab-badge">+</span>
     </span>
   </button>
@@ -61,8 +62,17 @@ const isPerfil = pathname.includes("/perfil");
     if (perfilIcon) perfilIcon.className = isPerfil ? "bi bi-person-fill" : "bi bi-person";
   }
 
+  function updateFabIcon(): void {
+    const fabIcon = document.querySelector(".nav-fab .fab-inner > i") as HTMLElement | null;
+    if (!fabIcon) return;
+    fabIcon.className = window.location.pathname.includes("/restaurante")
+      ? "bi bi-fork-knife"
+      : "bi bi-shop-window";
+  }
+
   document.addEventListener("astro:page-load", () => {
     updateActiveState();
+    updateFabIcon();
 
     const fabBtn = document.querySelector(".nav-fab") as HTMLButtonElement | null;
     if (!fabBtn) return;
