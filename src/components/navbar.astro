@@ -1,15 +1,64 @@
 ---
 const pathname = Astro.url.pathname;
-const isHome = pathname === "/" || pathname.endsWith("/index");
-const isPerfil = pathname.includes("/perfil");
-const fabIcon = pathname.includes("/restaurante") ? "bi bi-fork-knife" : "bi bi-shop-window";
+const isHome    = pathname === "/" || pathname.endsWith("/index");
+const isPerfil  = pathname.includes("/perfil");
+const fabIcon   = pathname.includes("/restaurante") ? "bi bi-fork-knife" : "bi bi-shop-window";
 ---
 
+<!-- ── Mobile header ───────────────────────────────────────────── -->
+<header class="mobile-header">
+  <a href="/" class="brand-link" aria-label="Inicio">
+    <img src="/img/logo2.png" alt="STAURANT" class="brand-logo" />
+    <span class="brand-name">STAURANT</span>
+  </a>
+</header>
+
+<!-- ── Desktop sidebar ─────────────────────────────────────────── -->
+<aside class="desktop-sidebar">
+  <a href="/" class="brand-link" aria-label="Inicio">
+    <img src="/img/logo2.png" alt="STAURANT" class="brand-logo" />
+    <span class="brand-name">STAURANT</span>
+  </a>
+
+  <nav class="sidebar-nav" aria-label="Navegación">
+    <a
+      href="/"
+      class:list={["sidebar-item", { active: isHome }]}
+      aria-current={isHome ? "page" : undefined}
+    >
+      <i class={isHome ? "bi bi-house-door-fill" : "bi bi-house-door"}></i>
+      <span>Inicio</span>
+    </a>
+
+    <button
+      type="button"
+      class="sidebar-item sidebar-create"
+      data-action="create"
+      aria-label="Crear restaurante o plato"
+    >
+      <span class="fab-inner">
+        <i class={fabIcon}></i>
+        <span class="fab-badge">+</span>
+      </span>
+      <span>Crear</span>
+    </button>
+
+    <a
+      href="/perfil"
+      class:list={["sidebar-item", { active: isPerfil }]}
+      aria-current={isPerfil ? "page" : undefined}
+    >
+      <i class={isPerfil ? "bi bi-person-fill" : "bi bi-person"}></i>
+      <span>Perfil</span>
+    </a>
+  </nav>
+</aside>
+
+<!-- ── Mobile bottom nav ───────────────────────────────────────── -->
 <nav class="mobile-bottom-nav" aria-label="Navegación móvil">
   <a
     href="/"
-    class:list={["nav-item", "flex-column", { active: isHome }]}
-    aria-label="Inicio"
+    class:list={["nav-item", { active: isHome }]}
     aria-current={isHome ? "page" : undefined}
   >
     <i class={isHome ? "bi bi-house-door-fill" : "bi bi-house-door"}></i>
@@ -30,8 +79,7 @@ const fabIcon = pathname.includes("/restaurante") ? "bi bi-fork-knife" : "bi bi-
 
   <a
     href="/perfil"
-    class:list={["nav-item", "flex-column", { active: isPerfil }]}
-    aria-label="Perfil"
+    class:list={["nav-item", { active: isPerfil }]}
     aria-current={isPerfil ? "page" : undefined}
   >
     <i class={isPerfil ? "bi bi-person-fill" : "bi bi-person"}></i>
@@ -41,60 +89,330 @@ const fabIcon = pathname.includes("/restaurante") ? "bi bi-fork-knife" : "bi bi-
 
 <script>
   function updateActiveState(): void {
-    const pathname = window.location.pathname;
-    const isHome = pathname === "/" || pathname.endsWith("/index");
+    const { pathname } = window.location;
+    const isHome   = pathname === "/" || pathname.endsWith("/index");
     const isPerfil = pathname.includes("/perfil");
 
-    const homeLink = document.querySelector(
-      '.mobile-bottom-nav a[href="/"]',
-    ) as HTMLAnchorElement | null;
-    const perfilLink = document.querySelector(
-      '.mobile-bottom-nav a[href="/perfil"]',
-    ) as HTMLAnchorElement | null;
+    const sets = [
+      { root: ".mobile-bottom-nav", homeClass: "nav-item", perfilClass: "nav-item" },
+      { root: ".desktop-sidebar",   homeClass: "sidebar-item", perfilClass: "sidebar-item" },
+    ] as const;
 
-    homeLink?.classList.toggle("active", isHome);
-    perfilLink?.classList.toggle("active", isPerfil);
+    for (const { root } of sets) {
+      const homeEl   = document.querySelector(`${root} a[href="/"]`)   as HTMLElement | null;
+      const perfilEl = document.querySelector(`${root} a[href="/perfil"]`) as HTMLElement | null;
 
-    const homeIcon = homeLink?.querySelector("i");
-    const perfilIcon = perfilLink?.querySelector("i");
+      homeEl?.classList.toggle("active", isHome);
+      perfilEl?.classList.toggle("active", isPerfil);
 
-    if (homeIcon) homeIcon.className = isHome ? "bi bi-house-door-fill" : "bi bi-house-door";
-    if (perfilIcon) perfilIcon.className = isPerfil ? "bi bi-person-fill" : "bi bi-person";
+      const homeIcon   = homeEl?.querySelector("i")   as HTMLElement | null;
+      const perfilIcon = perfilEl?.querySelector("i") as HTMLElement | null;
+      if (homeIcon)   homeIcon.className   = isHome   ? "bi bi-house-door-fill" : "bi bi-house-door";
+      if (perfilIcon) perfilIcon.className = isPerfil ? "bi bi-person-fill"     : "bi bi-person";
+    }
   }
 
   function updateFabIcon(): void {
-    const fabIcon = document.querySelector(".nav-fab .fab-inner > i") as HTMLElement | null;
-    if (!fabIcon) return;
-    fabIcon.className = window.location.pathname.includes("/restaurante")
+    const cls = window.location.pathname.includes("/restaurante")
       ? "bi bi-fork-knife"
       : "bi bi-shop-window";
+    document.querySelectorAll("[data-action='create'] .fab-inner > i").forEach(
+      (el) => { (el as HTMLElement).className = cls; }
+    );
+  }
+
+  function initFab(): void {
+    document.querySelectorAll("[data-action='create']").forEach((btn) => {
+      (btn as HTMLElement).onclick = (e) => {
+        e.preventDefault();
+        const { pathname } = window.location;
+        if (pathname === "/" || pathname.endsWith("/index")) {
+          (window as any).restaurantForm?.open("create");
+          return;
+        }
+        if (pathname.includes("/restaurante")) {
+          const id = new URLSearchParams(window.location.search).get("id");
+          if (id) { (window as any).dishForm?.open("create", id); return; }
+        }
+        window.location.href = "/";
+      };
+    });
   }
 
   document.addEventListener("astro:page-load", () => {
     updateActiveState();
     updateFabIcon();
-
-    const fabBtn = document.querySelector(".nav-fab") as HTMLButtonElement | null;
-    if (!fabBtn) return;
-
-    fabBtn.onclick = (event) => {
-      event.preventDefault();
-      const pathname = window.location.pathname;
-
-      if (pathname === "/" || pathname.endsWith("/index")) {
-        (window as any).restaurantForm?.open("create");
-        return;
-      }
-
-      if (pathname.includes("/restaurante")) {
-        const restaurantId = new URLSearchParams(window.location.search).get("id");
-        if (restaurantId) {
-          (window as any).dishForm?.open("create", restaurantId);
-          return;
-        }
-      }
-
-      window.location.href = "/";
-    };
+    initFab();
   });
 </script>
+
+<style>
+  /* ── Animación FAB (keyframes globales por spec CSS) ──────────── */
+  @keyframes fab-icon-cycle {
+    0%, 75%  { opacity: 1; transform: scale(1); }
+    85%, 92% { opacity: 0; transform: scale(0.3); }
+    100%     { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes fab-badge-cycle {
+    0%, 75%  { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+    85%, 92% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100%     { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+  }
+
+  .fab-inner {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .fab-inner > i {
+    animation: fab-icon-cycle 8s ease-in-out infinite;
+  }
+
+  .fab-badge {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    color: white;
+    font-weight: 450;
+    line-height: 1;
+    pointer-events: none;
+    animation: fab-badge-cycle 8s ease-in-out infinite;
+  }
+
+  /* ── Brand ─────────────────────────────────────────────────────── */
+  .brand-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+  }
+
+  .brand-logo {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .brand-name {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-indent: 3px;
+    color: var(--clr-text);
+    text-transform: uppercase;
+  }
+
+  /* ── Mobile header ──────────────────────────────────────────────── */
+  .mobile-header {
+    display: none;
+    position: sticky;
+    top: 10px;
+    align-items: center;
+    justify-content: center;
+    height: 60px;
+    width: 95%;
+    margin: 10px auto 0;
+    padding: 10px 20px;
+    background: var(--clr-white);
+    border: solid 1px var(--clr-border);
+    border-radius: 20px;
+    z-index: 100;
+  }
+
+  /* ── Desktop sidebar ────────────────────────────────────────────── */
+  .desktop-sidebar {
+    display: none;
+    flex-direction: column;
+    width: 240px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    padding: 24px 14px;
+    gap: 6px;
+    background: var(--clr-white);
+    border-right: solid 1px var(--clr-border);
+    overflow-y: auto;
+    z-index: 100;
+  }
+
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 16px;
+    width: 100%;
+  }
+
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 14px;
+    border-radius: 50px;
+    color: var(--clr-text);
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    transition: var(--transition);
+  }
+
+  .sidebar-item i {
+    font-size: 1.25rem;
+    color: var(--clr-primary);
+    flex-shrink: 0;
+  }
+
+  .sidebar-item.active {
+    font-weight: 700;
+  }
+
+  .sidebar-item.active i {
+    color: var(--clr-text);
+  }
+
+  .sidebar-create {
+    background: var(--clr-primary);
+    color: var(--clr-white);
+    margin-top: 8px;
+    padding: 13px 18px;
+    box-shadow: 0 4px 16px rgba(84, 107, 65, 0.35);
+    letter-spacing: 1px;
+  }
+
+  .sidebar-create i {
+    color: var(--clr-white);
+    font-size: 1.3rem;
+  }
+
+  .sidebar-create .fab-inner {
+    width: 22px;
+    height: 22px;
+    overflow: hidden;
+  }
+
+  .sidebar-create .fab-badge {
+    font-size: 1.8rem;
+  }
+
+  /* ── Mobile bottom nav ──────────────────────────────────────────── */
+  .mobile-bottom-nav {
+    display: none;
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    gap: 10px;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 248, 236, 0.97);
+    border-top: solid 1px var(--clr-border);
+    border-radius: 18px 18px 0 0;
+    z-index: 125;
+  }
+
+  .nav-item {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: 62px;
+    padding: 10px 4px;
+    color: var(--clr-primary);
+    font-size: 0.75rem;
+    text-decoration: none;
+    border-radius: 16px;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    transition: var(--transition);
+  }
+
+  .nav-item i {
+    font-size: 1.2rem;
+    line-height: 1;
+  }
+
+  .nav-item.active {
+    color: var(--clr-text);
+  }
+
+  .nav-item.active span {
+    font-weight: 700;
+  }
+
+  .nav-fab {
+    flex: 0 0 62px;
+    width: 62px;
+    height: 62px;
+    border-radius: 50%;
+    border: none;
+    background: var(--clr-primary);
+    color: var(--clr-white);
+    box-shadow: 0 4px 16px rgba(84, 107, 65, 0.45), 0 2px 6px rgba(0, 0, 0, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: translateY(-18px);
+    padding: 0;
+    z-index: 130;
+    transition: var(--transition);
+  }
+
+  .nav-fab .fab-inner {
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .nav-fab .fab-inner > i {
+    font-size: 1.5rem;
+  }
+
+  .nav-fab .fab-badge {
+    font-size: 2.5rem;
+  }
+
+  /* ── Hover (pointer devices only) ──────────────────────────────── */
+  @media (hover: hover) {
+    .sidebar-item:not(.sidebar-create):hover {
+      background: var(--clr-white2);
+    }
+
+    .sidebar-create:hover {
+      filter: brightness(1.08);
+    }
+
+    .nav-item:not(.nav-fab):hover {
+      background: var(--clr-white2);
+    }
+
+    .nav-fab:hover {
+      filter: brightness(1.08);
+    }
+  }
+
+  /* ── Responsive: mobile ─────────────────────────────────────────── */
+  @media (max-width: 767px) {
+    .mobile-header     { display: flex; }
+    .mobile-bottom-nav { display: flex; }
+  }
+
+  /* ── Responsive: desktop ────────────────────────────────────────── */
+  @media (min-width: 768px) {
+    .desktop-sidebar { display: flex; }
+  }
+</style>

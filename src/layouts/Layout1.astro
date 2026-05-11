@@ -33,9 +33,9 @@ const { title, bare = false } = Astro.props;
   </head>
 
   <body>
+    {!bare && <Navbar />}
     <main>
       <slot />
     </main>
-    {!bare && <Navbar />}
   </body>
 </html>
