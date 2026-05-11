@@ -111,10 +111,6 @@ import Layout1 from "../layouts/Layout1.astro";
         </h2>
         <div class="stats-grid">
           <div class="stat-cell flex-column">
-            <span class="stat-number" id="sn-total">—</span>
-            <span class="stat-label">Total</span>
-          </div>
-          <div class="stat-cell flex-column">
             <span class="stat-number accent-green" id="sn-visited">—</span>
             <span class="stat-label">Visitados</span>
           </div>
@@ -129,10 +125,6 @@ import Layout1 from "../layouts/Layout1.astro";
           <div class="stat-cell flex-column">
             <span class="stat-number" id="sn-avg">—</span>
             <span class="stat-label">Promedio</span>
-          </div>
-          <div class="stat-cell flex-column">
-            <span class="stat-number accent-green" id="sn-rated">—</span>
-            <span class="stat-label">Calificados</span>
           </div>
         </div>
       </div>
@@ -406,7 +398,7 @@ import Layout1 from "../layouts/Layout1.astro";
 
   .stats-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
   }
 
@@ -531,7 +523,7 @@ import Layout1 from "../layouts/Layout1.astro";
     }
 
     .dash-col > .dash-card:first-child .stats-grid {
-      grid-template-columns: repeat(6, 1fr);
+      grid-template-columns: repeat(4, 1fr);
     }
 
     .dash-card { padding: 28px 24px; }
@@ -606,7 +598,6 @@ import Layout1 from "../layouts/Layout1.astro";
   interface RawDish { id: string; restaurantId: string; name: string; rating: number }
 
   function renderStats(restaurants: RawRestaurant[], dishes: RawDish[]): void {
-    const total = restaurants.length;
     const visited = restaurants.filter((r) => r.status === "visited").length;
     const pending = restaurants.filter((r) => r.status === "pending").length;
     const totalDishes = dishes.length;
@@ -614,19 +605,15 @@ import Layout1 from "../layouts/Layout1.astro";
       totalDishes > 0
         ? Math.round((dishes.reduce((s, d) => s + d.rating, 0) / totalDishes) * 10) / 10
         : null;
-    const ratedIds = new Set(dishes.map((d) => d.restaurantId));
-    const rated = restaurants.filter((r) => ratedIds.has(r.id)).length;
 
     const set = (id: string, val: string) => {
       const el = document.getElementById(id);
       if (el) el.textContent = val;
     };
-    set("sn-total", String(total));
     set("sn-visited", String(visited));
     set("sn-pending", String(pending));
     set("sn-dishes", String(totalDishes));
     set("sn-avg", avgAll !== null ? String(avgAll) : "—");
-    set("sn-rated", String(rated));
 
     const medals = ["🥇", "🥈", "🥉"];
     const restaurantMap = new Map(restaurants.map((r) => [r.id, r.name]));
