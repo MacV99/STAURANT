@@ -9,21 +9,21 @@ const fabIcon = pathname.includes("/restaurante")
 
 <!-- ── Mobile header ───────────────────────────────────────────── -->
 <header class="mobile-header texture-dotted">
-  <a href="/" class="brand-link" aria-label="Inicio">
+  <a href="/" class="brand-link flex-row" aria-label="Inicio">
     <img src="/img/logo2.png" alt="STAURANT" class="brand-logo" />
   </a>
 </header>
 
 <!-- ── Desktop sidebar ─────────────────────────────────────────── -->
 <aside class="desktop-sidebar">
-  <a href="/" class="brand-link" aria-label="Inicio">
+  <a href="/" class="brand-link flex-row" aria-label="Inicio">
     <img src="/img/logo2.png" alt="STAURANT" class="brand-logo" />
   </a>
 
-  <nav class="sidebar-nav" aria-label="Navegación">
+  <nav class="sidebar-nav flex-column" aria-label="Navegación">
     <a
       href="/"
-      class:list={["sidebar-item", { active: isHome }]}
+      class:list={["sidebar-item", "flex-row", { active: isHome }]}
       aria-current={isHome ? "page" : undefined}
     >
       <i class={isHome ? "bi bi-house-door-fill" : "bi bi-house-door"}></i>
@@ -32,7 +32,7 @@ const fabIcon = pathname.includes("/restaurante")
 
     <a
       href="/perfil"
-      class:list={["sidebar-item", { active: isPerfil }]}
+      class:list={["sidebar-item", "flex-row", { active: isPerfil }]}
       aria-current={isPerfil ? "page" : undefined}
     >
       <i class={isPerfil ? "bi bi-person-fill" : "bi bi-person"}></i>
@@ -42,7 +42,7 @@ const fabIcon = pathname.includes("/restaurante")
 
   <button
     type="button"
-    class="sidebar-item sidebar-create"
+    class="sidebar-item sidebar-create flex-row"
     data-action="create"
     aria-label="Crear restaurante o plato"
   >
@@ -58,7 +58,7 @@ const fabIcon = pathname.includes("/restaurante")
 <nav class="mobile-bottom-nav" aria-label="Navegación móvil">
   <a
     href="/"
-    class:list={["nav-item", { active: isHome }]}
+    class:list={["nav-item", "flex-column", { active: isHome }]}
     aria-current={isHome ? "page" : undefined}
   >
     <i class={isHome ? "bi bi-house-door-fill" : "bi bi-house-door"}></i>
@@ -67,7 +67,7 @@ const fabIcon = pathname.includes("/restaurante")
 
   <button
     type="button"
-    class="nav-item nav-fab"
+    class="nav-item nav-fab flex-row"
     data-action="create"
     aria-label="Crear restaurante o plato"
   >
@@ -79,7 +79,7 @@ const fabIcon = pathname.includes("/restaurante")
 
   <a
     href="/perfil"
-    class:list={["nav-item", { active: isPerfil }]}
+    class:list={["nav-item", "flex-column", { active: isPerfil }]}
     aria-current={isPerfil ? "page" : undefined}
   >
     <i class={isPerfil ? "bi bi-person-fill" : "bi bi-person"}></i>
@@ -216,8 +216,7 @@ const fabIcon = pathname.includes("/restaurante")
 
   /* ── Brand ─────────────────────────────────────────────────────── */
   .brand-link {
-    display: flex;
-    align-items: center;
+    justify-content: flex-start;
     gap: 10px;
     text-decoration: none;
   }
@@ -271,8 +270,8 @@ const fabIcon = pathname.includes("/restaurante")
   }
 
   .sidebar-nav {
-    display: flex;
-    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
     gap: 4px;
     margin-top: 16px;
     width: 100%;
@@ -280,8 +279,6 @@ const fabIcon = pathname.includes("/restaurante")
   }
 
   .sidebar-item {
-    display: flex;
-    align-items: center;
     justify-content: flex-start;
     gap: 14px;
     padding: 12px 14px;
@@ -359,11 +356,7 @@ const fabIcon = pathname.includes("/restaurante")
   }
 
   .nav-item {
-    display: flex;
     flex: 1 1 0;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
     gap: 4px;
     min-height: 62px;
     padding: 10px 4px;
@@ -401,9 +394,6 @@ const fabIcon = pathname.includes("/restaurante")
     box-shadow:
       0 4px 16px rgba(84, 107, 65, 0.45),
       0 2px 6px rgba(0, 0, 0, 0.18);
-    display: flex;
-    align-items: center;
-    justify-content: center;
     transform: translateY(-22px);
     padding: 0;
     z-index: 130;
