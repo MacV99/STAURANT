@@ -228,7 +228,7 @@ const tplRestaurant: Restaurant = {
     padding: 5px 12px;
     border-radius: 20px;
     border: solid 1.5px var(--clr-border);
-    background: transparent;
+    background: var(--clr-white);
     color: var(--clr-text);
     font-size: 0.72rem;
     font-weight: 600;
@@ -796,7 +796,8 @@ const tplRestaurant: Restaurant = {
     const id = new URLSearchParams(window.location.search).get("id") ?? "";
     currentRestaurant = getRestaurants().find((r) => r.id === id);
 
-    if (currentRestaurant) document.title = `${currentRestaurant.name} · STAURANT`;
+    if (currentRestaurant)
+      document.title = `${currentRestaurant.name} · STAURANT`;
 
     const backLink = document.getElementById("back-link") as HTMLAnchorElement;
     if (backLink)
