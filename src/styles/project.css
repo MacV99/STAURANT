@@ -57,6 +57,7 @@
   border-radius: 14px;
   flex-shrink: 0;
   gap: 1px;
+  position: relative;
 }
 
 .rating-star {
@@ -94,6 +95,44 @@
   background: #d8f5e2;
   color: #1a7a38;
   border: solid 1px #a8e0b8ad;
+}
+
+/* === BADGE BTN (dish badge clickable → opens edit) === */
+
+.badge-btn {
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .badge-btn:hover {
+    filter: brightness(0.92);
+  }
+}
+
+/* === UNRATED INDICATORS === */
+
+.unrated-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f59e0b;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.unrated-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #a06010;
+  background: #fff3d6;
+  border: solid 1px #f0c17bad;
+  border-radius: 20px;
+  padding: 2px 8px;
 }
 
 /* === CARDS GRID === */

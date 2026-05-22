@@ -16,6 +16,7 @@ const tplDish: Dish = {
   rating: 5,
   notes: " ",
   createdAt: "",
+  updatedAt: "",
 };
 const tplRestaurant: Restaurant = {
   id: "",
@@ -23,6 +24,7 @@ const tplRestaurant: Restaurant = {
   status: "visited",
   notes: " ",
   createdAt: "",
+  updatedAt: "",
 };
 ---
 
@@ -56,7 +58,8 @@ const tplRestaurant: Restaurant = {
           pills={[
             { field: "rating", label: "Rating" },
             { field: "name", label: "Nombre" },
-            { field: "date", label: "Fecha" },
+            { field: "modified", label: "Modificación" },
+            { field: "date", label: "Creación" },
           ]}
         />
         <div class="type-filter-wrap">
@@ -316,7 +319,7 @@ const tplRestaurant: Restaurant = {
 
   // ─── Sort state (persiste en módulo entre navegaciones) ────────────────────
 
-  type SortField = "name" | "rating" | "date";
+  type SortField = "name" | "rating" | "date" | "modified";
   type SortDir = "asc" | "desc";
   const SORT_KEY = "staurant_sort_d";
 
@@ -340,7 +343,12 @@ const tplRestaurant: Restaurant = {
     return [...dishes].sort((a, b) => {
       let cmp = 0;
       if (dishSort.field === "name") cmp = a.name.localeCompare(b.name);
-      else if (dishSort.field === "rating") cmp = a.rating - b.rating;
+      else if (dishSort.field === "rating") {
+        const ra = a.rating ?? -1;
+        const rb = b.rating ?? -1;
+        cmp = ra - rb;
+      } else if (dishSort.field === "modified")
+        cmp = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
       else
         cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       return dishSort.dir === "asc" ? cmp : -cmp;
@@ -598,8 +606,18 @@ const tplRestaurant: Restaurant = {
       notesEl?.remove();
     }
     const badge = article.querySelector(".rating-badge")!;
-    badge.className = `rating-badge ${getRatingClass(d.rating)}`;
-    badge.innerHTML = `<span class="rating-num">${d.rating}</span>`;
+    if (d.rating === null) {
+      badge.className = "rating-badge badge-empty badge-btn";
+      badge.innerHTML = '<i class="bi bi-star"></i>';
+    } else {
+      badge.className = `rating-badge ${getRatingClass(d.rating)} badge-btn`;
+      badge.innerHTML = `<span class="rating-num">${d.rating}</span>`;
+    }
+    badge.addEventListener("click", (e) => {
+      e.stopPropagation();
+      (window as any).dishForm.open("edit", d.restaurantId, d);
+      menuPopup.classList.remove("active");
+    });
 
     // ─── Setup menú popup ─────────────────────────────────────────────────────
     const btnMenu = article.querySelector<HTMLButtonElement>(".btn-menu")!;

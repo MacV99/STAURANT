@@ -13,6 +13,7 @@ const tplRestaurant: Restaurant = {
   status: "visited",
   notes: "",
   createdAt: "",
+  updatedAt: "",
 };
 ---
 
@@ -35,7 +36,8 @@ const tplRestaurant: Restaurant = {
 
       <SortBar
         pills={[
-          { field: "date", label: "Fecha" },
+          { field: "modified", label: "Modificación" },
+          { field: "date", label: "Creación" },
           { field: "name", label: "Nombre" },
           { field: "rating", label: "Rating" },
         ]}
@@ -146,13 +148,14 @@ const tplRestaurant: Restaurant = {
     getRestaurants,
     getDishesByRestaurant,
     getRestaurantAverage,
+    hasUnratedDishes,
     type Restaurant,
   } from "../lib/data.ts";
   import { getRatingClass } from "../scripts/store.ts";
 
   // ─── Sort state (persiste entre navegaciones en memoria de módulo) ──────────
 
-  type SortField = "name" | "rating" | "date";
+  type SortField = "name" | "rating" | "date" | "modified";
   type SortDir = "asc" | "desc";
   const SORT_KEY = "staurant_sort_r";
 
@@ -160,11 +163,11 @@ const tplRestaurant: Restaurant = {
     try {
       const saved = JSON.parse(localStorage.getItem(SORT_KEY) ?? "{}");
       return {
-        field: (saved.field as SortField) ?? "date",
+        field: (saved.field as SortField) ?? "modified",
         dir: (saved.dir as SortDir) ?? "desc",
       };
     } catch {
-      return { field: "date", dir: "desc" };
+      return { field: "modified", dir: "desc" };
     }
   }
   function setSortState(s: { field: SortField; dir: SortDir }) {
@@ -185,6 +188,8 @@ const tplRestaurant: Restaurant = {
         const ra = getRestaurantAverage(a.id) ?? -1;
         const rb = getRestaurantAverage(b.id) ?? -1;
         cmp = ra - rb;
+      } else if (sortState.field === "modified") {
+        cmp = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
       } else {
         cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       }
@@ -235,6 +240,12 @@ const tplRestaurant: Restaurant = {
     const pill = article.querySelector(".dish-count-pill");
     if (pill) {
       pill.innerHTML = `<i class="bi bi-journal-text"></i> ${dishCount} ${dishCount === 1 ? "plato" : "platos"}`;
+      if (hasUnratedDishes(r.id)) {
+        const dot = document.createElement("span");
+        dot.className = "unrated-dot";
+        dot.title = "Hay platos sin calificar";
+        pill.appendChild(dot);
+      }
     }
 
     const badge = article.querySelector(".rating-badge")!;

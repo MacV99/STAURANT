@@ -56,21 +56,19 @@
       </label>
 
       <div class="rating-field flex-column">
-        <span class="rating-label"
-          >Calificación <span class="required">*</span></span
-        >
+        <div class="rating-label-row flex-row">
+          <span class="rating-label">Calificación <span class="optional">(opcional)</span></span>
+          <button type="button" id="df-rating-clear" class="rating-clear-link" hidden>
+            Quitar
+          </button>
+        </div>
         <div class="rating-row flex-row">
           <span class="range-min">1</span>
-          <input
-            type="range"
-            id="df-rating"
-            min="1"
-            max="10"
-            value="7"
-            step="0.5"
-          />
+          <input type="range" id="df-rating" min="1" max="10" step="0.5" value="7" />
           <span class="range-max">10</span>
-          <span id="df-rating-value" class="rating-value flex-row">7</span>
+          <span id="df-rating-value" class="rating-value rating-value--empty flex-row">
+            <i class="bi bi-star"></i>
+          </span>
         </div>
       </div>
 
@@ -153,6 +151,11 @@
     gap: 8px;
   }
 
+  .rating-label-row {
+    justify-content: space-between;
+    align-items: center;
+  }
+
   .rating-label {
     font-size: 0.82rem;
     font-weight: 600;
@@ -161,8 +164,27 @@
     text-transform: uppercase;
   }
 
+  .rating-clear-link {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.75rem;
+    color: var(--clr-text);
+    opacity: 0.45;
+    padding: 0;
+    transition: opacity var(--transition);
+  }
+
+  @media (hover: hover) {
+    .rating-clear-link:hover {
+      opacity: 1;
+      color: var(--clr-danger);
+    }
+  }
+
   .rating-row {
     gap: 10px;
+    align-items: center;
   }
 
   .rating-row input[type="range"] {
@@ -172,6 +194,11 @@
     background: transparent;
     cursor: pointer;
     accent-color: var(--clr-primary);
+    transition: opacity var(--transition);
+  }
+
+  .rating-row.is-unrated input[type="range"] {
+    opacity: 0.3;
   }
 
   .range-min,
@@ -192,6 +219,14 @@
     height: 36px;
     border-radius: 50%;
     flex-shrink: 0;
+  }
+
+  .rating-value--empty {
+    background: var(--clr-white2);
+    color: var(--clr-text);
+    border: solid 1px var(--clr-border);
+    font-size: 1rem;
+    opacity: 0.5;
   }
 
   /* ── Combobox de tipo — elementos estáticos ───────────────────────────── */
@@ -430,6 +465,27 @@
     const errorEl = document.getElementById("df-error")!;
     const closeBtn = document.getElementById("dish-form-close")!;
     const cancelBtn = document.getElementById("dish-form-cancel")!;
+    const ratingClearBtn = document.getElementById("df-rating-clear") as HTMLButtonElement;
+    const ratingRowEl = document.querySelector<HTMLElement>(".rating-row")!;
+
+    let isRated = false;
+
+    function setRated(rated: boolean, value?: number) {
+      isRated = rated;
+      ratingClearBtn.hidden = !rated;
+      ratingRowEl.classList.toggle("is-unrated", !rated);
+      if (rated) {
+        const v = value ?? parseFloat(ratingInput.value);
+        ratingInput.value = String(v);
+        ratingValue.textContent = String(v);
+        ratingValue.classList.remove("rating-value--empty");
+      } else {
+        ratingValue.innerHTML = '<i class="bi bi-star"></i>';
+        ratingValue.classList.add("rating-value--empty");
+      }
+    }
+
+    ratingClearBtn.onclick = () => setRated(false);
 
     // ─── Combobox de tipo ──────────────────────────────────────────────────────
 
@@ -588,21 +644,25 @@
     function open(mode: "create" | "edit", restaurantId: string, data?: Dish) {
       errorEl.textContent = "";
       form.reset();
-      ratingInput.value = "7";
-      ratingValue.textContent = "7";
       restaurantIdInput.value = restaurantId;
 
       if (mode === "edit" && data) {
         titleEl.textContent = "Editar plato";
         idInput.value = data.id;
         nameInput.value = data.name;
-        ratingInput.value = String(data.rating);
-        ratingValue.textContent = String(data.rating);
         notesInput.value = data.notes;
+        if (data.rating !== null) {
+          setRated(true, data.rating);
+        } else {
+          ratingInput.value = "7";
+          setRated(false);
+        }
         initTypeCombobox(data.typeId ?? null);
       } else {
         titleEl.textContent = "Nuevo plato";
         idInput.value = "";
+        ratingInput.value = "7";
+        setRated(false);
         initTypeCombobox(null);
       }
 
@@ -622,6 +682,7 @@
     };
 
     ratingInput.oninput = () => {
+      if (!isRated) setRated(true);
       ratingValue.textContent = ratingInput.value;
     };
 
@@ -659,7 +720,7 @@
         return;
       }
 
-      const rating = parseFloat(ratingInput.value);
+      const rating = isRated ? parseFloat(ratingInput.value) : null;
       const notes = notesInput.value.trim();
 
       // Cerrar ANTES de emitir: garantiza que el modal cierra aunque

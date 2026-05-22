@@ -8,6 +8,7 @@ export interface Restaurant {
   status: "visited" | "pending";
   notes: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface Dish {
@@ -15,9 +16,10 @@ export interface Dish {
   restaurantId: string;
   typeId: string | null;
   name: string;
-  rating: number; // 1–10, soporta decimales (ej: 7.5)
+  rating: number | null; // 1–10, soporta decimales (ej: 7.5); null = sin calificar
   notes: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface DishType {
@@ -189,6 +191,7 @@ function toRestaurant(row: Record<string, unknown>): Restaurant {
     status: row.status as "visited" | "pending",
     notes: row.notes as string,
     createdAt: row.created_at as string,
+    updatedAt: (row.updated_at as string | null) ?? (row.created_at as string),
   };
 }
 
@@ -198,9 +201,10 @@ function toDish(row: Record<string, unknown>): Dish {
     restaurantId: row.restaurant_id as string,
     typeId: (row.type_id as string | null) ?? null,
     name: row.name as string,
-    rating: Number(row.rating),
+    rating: row.rating !== null && row.rating !== undefined ? Number(row.rating) : null,
     notes: row.notes as string,
     createdAt: row.created_at as string,
+    updatedAt: (row.updated_at as string | null) ?? (row.created_at as string),
   };
 }
 
@@ -228,12 +232,14 @@ export function getDishes(): Dish[] {
 }
 
 export function createRestaurant(input: Pick<Restaurant, "name" | "notes">): Restaurant {
+  const now = new Date().toISOString();
   const r: Restaurant = {
     id: crypto.randomUUID(),
     name: input.name,
     notes: input.notes,
     status: "pending",
-    createdAt: new Date().toISOString(),
+    createdAt: now,
+    updatedAt: now,
   };
   const cache = getCache();
   cache.restaurants.unshift(r);
@@ -243,7 +249,7 @@ export function createRestaurant(input: Pick<Restaurant, "name" | "notes">): Res
     supabase.from("restaurants").insert({
       id: r.id, user_id: _userId,
       name: r.name, notes: r.notes,
-      status: r.status, created_at: r.createdAt,
+      status: r.status, created_at: r.createdAt, updated_at: r.updatedAt,
     })
   );
   return r;
@@ -256,10 +262,11 @@ export function updateRestaurant(
   const cache = getCache();
   const idx = cache.restaurants.findIndex((r) => r.id === id);
   if (idx === -1) return null;
-  cache.restaurants[idx] = { ...cache.restaurants[idx], ...input };
+  const updatedAt = new Date().toISOString();
+  cache.restaurants[idx] = { ...cache.restaurants[idx], ...input, updatedAt };
   writeCache(cache);
 
-  const patch: Record<string, unknown> = {};
+  const patch: Record<string, unknown> = { updated_at: updatedAt };
   if (input.name !== undefined) patch.name = input.name;
   if (input.notes !== undefined) patch.notes = input.notes;
   if (input.status !== undefined) patch.status = input.status;
@@ -290,7 +297,20 @@ export function getDishesByRestaurant(restaurantId: string): Dish[] {
   return getCache().dishes.filter((d) => d.restaurantId === restaurantId);
 }
 
+/** Actualiza updatedAt del restaurante en caché y Supabase (sin emitir eventos). */
+function bumpRestaurantUpdatedAt(restaurantId: string, updatedAt: string): void {
+  const cache = getCache();
+  const idx = cache.restaurants.findIndex((r) => r.id === restaurantId);
+  if (idx === -1) return;
+  cache.restaurants[idx] = { ...cache.restaurants[idx], updatedAt };
+  writeCache(cache);
+  bgSync(() =>
+    supabase.from("restaurants").update({ updated_at: updatedAt }).eq("id", restaurantId)
+  );
+}
+
 export function createDish(input: Pick<Dish, "restaurantId" | "typeId" | "name" | "rating" | "notes">): Dish {
+  const now = new Date().toISOString();
   const d: Dish = {
     id: crypto.randomUUID(),
     restaurantId: input.restaurantId,
@@ -298,7 +318,8 @@ export function createDish(input: Pick<Dish, "restaurantId" | "typeId" | "name" 
     name: input.name,
     rating: input.rating,
     notes: input.notes,
-    createdAt: new Date().toISOString(),
+    createdAt: now,
+    updatedAt: now,
   };
   const cache = getCache();
   cache.dishes.unshift(d);
@@ -310,9 +331,10 @@ export function createDish(input: Pick<Dish, "restaurantId" | "typeId" | "name" 
       restaurant_id: d.restaurantId,
       type_id: d.typeId,
       name: d.name, rating: d.rating,
-      notes: d.notes, created_at: d.createdAt,
+      notes: d.notes, created_at: d.createdAt, updated_at: d.updatedAt,
     })
   );
+  bumpRestaurantUpdatedAt(d.restaurantId, now);
   return d;
 }
 
@@ -323,24 +345,28 @@ export function updateDish(
   const cache = getCache();
   const idx = cache.dishes.findIndex((d) => d.id === id);
   if (idx === -1) return null;
-  cache.dishes[idx] = { ...cache.dishes[idx], ...input };
+  const updatedAt = new Date().toISOString();
+  cache.dishes[idx] = { ...cache.dishes[idx], ...input, updatedAt };
   writeCache(cache);
 
-  const patch: Record<string, unknown> = {};
+  const patch: Record<string, unknown> = { updated_at: updatedAt };
   if (input.typeId !== undefined) patch.type_id = input.typeId;
   if (input.name !== undefined) patch.name = input.name;
   if (input.rating !== undefined) patch.rating = input.rating;
   if (input.notes !== undefined) patch.notes = input.notes;
   bgSync(() => supabase.from("dishes").update(patch).eq("id", id));
 
+  bumpRestaurantUpdatedAt(cache.dishes[idx].restaurantId, updatedAt);
   return cache.dishes[idx];
 }
 
 export function deleteDish(id: string): void {
   const cache = getCache();
+  const dish = cache.dishes.find((d) => d.id === id);
   cache.dishes = cache.dishes.filter((d) => d.id !== id);
   writeCache(cache);
   bgSync(() => supabase.from("dishes").delete().eq("id", id));
+  if (dish) bumpRestaurantUpdatedAt(dish.restaurantId, new Date().toISOString());
 }
 
 // ─── DishTypes (síncronos — leen del caché) ───────────────────────────────────
@@ -389,8 +415,12 @@ export function deleteDishType(id: string): void {
 // ─── Derived (síncronos) ───────────────────────────────────────────────────────
 
 export function getRestaurantAverage(restaurantId: string): number | null {
-  const dishes = getDishesByRestaurant(restaurantId);
-  if (dishes.length === 0) return null;
-  const sum = dishes.reduce((acc, d) => acc + d.rating, 0);
-  return Math.round((sum / dishes.length) * 10) / 10;
+  const rated = getDishesByRestaurant(restaurantId).filter((d) => d.rating !== null);
+  if (rated.length === 0) return null;
+  const sum = rated.reduce((acc, d) => acc + d.rating!, 0);
+  return Math.round((sum / rated.length) * 10) / 10;
+}
+
+export function hasUnratedDishes(restaurantId: string): boolean {
+  return getDishesByRestaurant(restaurantId).some((d) => d.rating === null);
 }
