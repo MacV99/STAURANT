@@ -62,13 +62,15 @@
             Quitar
           </button>
         </div>
-        <div class="rating-row flex-row">
-          <span class="range-min">1</span>
-          <input type="range" id="df-rating" min="1" max="10" step="0.5" value="7" />
-          <span class="range-max">10</span>
+        <div class="rating-row flex-column">
           <span id="df-rating-value" class="rating-value rating-value--empty flex-row">
             <i class="bi bi-star"></i>
           </span>
+          <div class="rating-slider-wrap flex-row">
+            <span class="range-min">1</span>
+            <input type="range" id="df-rating" min="1" max="10" step="0.5" value="7" />
+            <span class="range-max">10</span>
+          </div>
         </div>
       </div>
 
@@ -160,7 +162,7 @@
     font-size: 0.82rem;
     font-weight: 600;
     letter-spacing: 1px;
-    color: var(--clr-dark2);
+    color: var(--clr-text);
     text-transform: uppercase;
   }
 
@@ -182,12 +184,74 @@
     }
   }
 
+  /* ── Rating card ────────────────────────────────────────────────────────── */
+
   .rating-row {
-    gap: 10px;
     align-items: center;
+    gap: 10px;
+    background: var(--clr-white2);
+    border: 1.5px dashed var(--clr-border2);
+    border-radius: 16px;
+    padding: 16px 14px 14px;
+    cursor: pointer;
+    transition: border-color var(--transition), background var(--transition);
   }
 
-  .rating-row input[type="range"] {
+  .rating-row:not(.is-unrated) {
+    border-style: solid;
+    cursor: default;
+    background: var(--clr-white);
+  }
+
+  /* Big value bubble */
+  .rating-value {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    font-weight: 800;
+    font-size: 1.75rem;
+    letter-spacing: -1px;
+    flex-shrink: 0;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+  }
+
+  .rating-value--empty {
+    background: transparent;
+    color: var(--clr-text);
+    border: 2px dashed var(--clr-border2);
+    font-size: 1.5rem;
+    opacity: 0.65;
+  }
+
+  .rating-value.badge-low {
+    background: var(--clr-danger-bg);
+    color: var(--clr-danger);
+    border: solid 2px color-mix(in srgb, var(--clr-danger-border) 50%, transparent);
+    opacity: 1;
+  }
+
+  .rating-value.badge-mid {
+    background: #fff3d6;
+    color: #a06010;
+    border: solid 2px #e8c55a;
+    opacity: 1;
+  }
+
+  .rating-value.badge-high {
+    background: #d8f5e2;
+    color: #1a7a38;
+    border: solid 2px #7dcf9e;
+    opacity: 1;
+  }
+
+  /* Slider row */
+  .rating-slider-wrap {
+    gap: 10px;
+    align-items: center;
+    width: 100%;
+  }
+
+  .rating-slider-wrap input[type="range"] {
     flex: 1;
     padding: 0;
     border: none;
@@ -197,36 +261,18 @@
     transition: opacity var(--transition);
   }
 
-  .rating-row.is-unrated input[type="range"] {
-    opacity: 0.3;
+  .rating-row.is-unrated .rating-slider-wrap input[type="range"] {
+    opacity: 0.4;
   }
 
   .range-min,
   .range-max {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: var(--clr-text);
-    font-weight: 600;
+    font-weight: 700;
     min-width: 14px;
     text-align: center;
-  }
-
-  .rating-value {
-    background: var(--clr-primary);
-    color: var(--clr-white);
-    font-weight: 700;
-    font-size: 1rem;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-
-  .rating-value--empty {
-    background: var(--clr-white2);
-    color: var(--clr-text);
-    border: solid 1px var(--clr-border);
-    font-size: 1rem;
-    opacity: 0.5;
+    opacity: 0.7;
   }
 
   /* ── Combobox de tipo — elementos estáticos ───────────────────────────── */
@@ -470,22 +516,31 @@
 
     let isRated = false;
 
+    function getRatingBadge(v: number): string {
+      if (v <= 4) return "badge-low";
+      if (v <= 7) return "badge-mid";
+      return "badge-high";
+    }
+
     function setRated(rated: boolean, value?: number) {
       isRated = rated;
       ratingClearBtn.hidden = !rated;
       ratingRowEl.classList.toggle("is-unrated", !rated);
+      ratingValue.classList.remove("badge-low", "badge-mid", "badge-high");
       if (rated) {
         const v = value ?? parseFloat(ratingInput.value);
         ratingInput.value = String(v);
         ratingValue.textContent = String(v);
         ratingValue.classList.remove("rating-value--empty");
+        ratingValue.classList.add(getRatingBadge(v));
       } else {
         ratingValue.innerHTML = '<i class="bi bi-star"></i>';
         ratingValue.classList.add("rating-value--empty");
       }
     }
 
-    ratingClearBtn.onclick = () => setRated(false);
+    ratingClearBtn.onclick = (e) => { e.stopPropagation(); setRated(false); };
+    ratingRowEl.onclick = () => { if (!isRated) setRated(true); };
 
     // ─── Combobox de tipo ──────────────────────────────────────────────────────
 
@@ -683,7 +738,10 @@
 
     ratingInput.oninput = () => {
       if (!isRated) setRated(true);
+      const v = parseFloat(ratingInput.value);
       ratingValue.textContent = ratingInput.value;
+      ratingValue.classList.remove("badge-low", "badge-mid", "badge-high");
+      ratingValue.classList.add(getRatingBadge(v));
     };
 
     nameInput.oninput = () => {
