@@ -28,13 +28,21 @@
   background: rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(6px);
   z-index: 200;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 16px;
+  padding: 48px 16px 16px;
+  overflow-y: auto;
 }
 
 .overlay.is-open {
   display: flex;
+}
+
+@media (min-width: 768px) {
+  .overlay {
+    align-items: center;
+    padding: 16px;
+  }
 }
 
 /* === RATING BADGE === */
