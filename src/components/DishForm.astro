@@ -11,6 +11,7 @@
       <input type="hidden" id="df-id" />
       <input type="hidden" id="df-restaurant-id" />
       <input type="hidden" id="df-type-id" />
+      <input type="hidden" id="df-rating" value="7" />
 
       <div class="type-field flex-column">
         <span class="label-text flex-row"
@@ -66,10 +67,11 @@
           <span id="df-rating-value" class="rating-value rating-value--empty flex-row">
             <i class="bi bi-star"></i>
           </span>
-          <div class="rating-slider-wrap flex-row">
-            <span class="range-min">1</span>
-            <input type="range" id="df-rating" min="1" max="10" step="0.5" value="7" />
-            <span class="range-max">10</span>
+          <div class="rating-ruler-wrap">
+            <div class="ruler-indicator"></div>
+            <div class="rating-ruler" id="df-rating-ruler">
+              <div class="ruler-track" id="df-rating-track"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -244,35 +246,60 @@
     opacity: 1;
   }
 
-  /* Slider row */
-  .rating-slider-wrap {
-    gap: 10px;
-    align-items: center;
+  /* ── Ruler picker ───────────────────────────────────────────────────────── */
+
+  .rating-ruler-wrap {
+    position: relative;
     width: 100%;
   }
 
-  .rating-slider-wrap input[type="range"] {
-    flex: 1;
-    padding: 0;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    accent-color: var(--clr-primary);
-    transition: opacity var(--transition);
+  .ruler-indicator {
+    position: absolute;
+    top: 4px;
+    bottom: 20px;
+    left: 50%;
+    width: 2px;
+    transform: translateX(-50%);
+    background: var(--clr-primary);
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0.5;
   }
 
-  .rating-row.is-unrated .rating-slider-wrap input[type="range"] {
-    opacity: 0.4;
+  .ruler-indicator::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: var(--clr-primary);
+    opacity: 0.5;
   }
 
-  .range-min,
-  .range-max {
-    font-size: 0.78rem;
-    color: var(--clr-text);
-    font-weight: 700;
-    min-width: 14px;
-    text-align: center;
-    opacity: 0.7;
+  .rating-ruler {
+    width: 100%;
+    height: 58px;
+    overflow-x: scroll;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain;
+    cursor: grab;
+    -webkit-mask-image: linear-gradient(to right, transparent, black 16%, black 84%, transparent);
+    mask-image: linear-gradient(to right, transparent, black 16%, black 84%, transparent);
+  }
+
+  .rating-ruler::-webkit-scrollbar { display: none; }
+  .rating-ruler:active { cursor: grabbing; }
+
+  .ruler-track {
+    display: flex;
+    align-items: flex-end;
+    height: 100%;
+    padding: 0 calc(50% - 12px);
   }
 
   /* ── Combobox de tipo — elementos estáticos ───────────────────────────── */
@@ -405,6 +432,54 @@
 </style>
 
 <style is:global>
+
+  /* ── Ruler ticks (created via JS → need global scope) ─────────────────── */
+
+  #df-rating-ruler .ruler-tick {
+    width: 24px;
+    flex-shrink: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    padding-bottom: 6px;
+    gap: 3px;
+    scroll-snap-align: center;
+  }
+
+  #df-rating-ruler .tick-bar {
+    width: 1px;
+    height: 8px;
+    background: var(--clr-border2);
+    border-radius: 2px;
+  }
+
+  #df-rating-ruler .ruler-tick.is-half .tick-bar { height: 14px; }
+
+  #df-rating-ruler .ruler-tick.is-whole .tick-bar {
+    width: 2px;
+    height: 22px;
+  }
+
+  #df-rating-ruler .ruler-tick.is-selected .tick-bar {
+    background: var(--clr-primary);
+    opacity: 0.7;
+  }
+
+  #df-rating-ruler .tick-num {
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--clr-text);
+    opacity: 0.45;
+    line-height: 1;
+    user-select: none;
+  }
+
+  #df-rating-ruler .ruler-tick.is-selected .tick-num { opacity: 0.8; }
+
+  /* ── Type dropdown ─────────────────────────────────────────────────────── */
 
   #df-type-dropdown .type-option {
     padding: 12px 16px;
@@ -722,6 +797,7 @@
       }
 
       overlay.classList.add("is-open");
+      requestAnimationFrame(() => initRulerForValue(parseFloat(ratingInput.value)));
     }
 
     function close() {
@@ -736,13 +812,92 @@
       if (e.target === overlay) close();
     };
 
-    ratingInput.oninput = () => {
-      if (!isRated) setRated(true);
-      const v = parseFloat(ratingInput.value);
-      ratingValue.textContent = ratingInput.value;
-      ratingValue.classList.remove("badge-low", "badge-mid", "badge-high");
-      ratingValue.classList.add(getRatingBadge(v));
-    };
+    // ─── Ruler picker ─────────────────────────────────────────────────────────
+
+    const rulerEl = document.getElementById("df-rating-ruler") as HTMLElement;
+    const rulerTrack = document.getElementById("df-rating-track") as HTMLElement;
+
+    const TICK_W = 24;
+    const MIN_V = 1.0;
+    const MAX_V = 10.0;
+    const NUM_TICKS = 91; // 1.0 → 10.0 at 0.1 steps
+
+    const realTicks: HTMLElement[] = [];
+    let lastTickIdx = -1;
+    let prevRulerV = -1;
+    let rulerBuilt = false;
+
+    function buildRuler() {
+      if (rulerBuilt) return;
+      rulerBuilt = true;
+      rulerTrack.innerHTML = "";
+      realTicks.length = 0;
+      for (let i = 0; i < NUM_TICKS; i++) {
+        const v = parseFloat((MIN_V + i * 0.1).toFixed(1));
+        const tenths = Math.round(v * 10) % 10;
+        const tick = document.createElement("div");
+        tick.className =
+          "ruler-tick" +
+          (tenths === 0 ? " is-whole" : tenths === 5 ? " is-half" : "");
+        const bar = document.createElement("div");
+        bar.className = "tick-bar";
+        tick.appendChild(bar);
+        if (tenths === 0) {
+          const label = document.createElement("span");
+          label.className = "tick-num";
+          label.textContent = String(Math.round(v));
+          tick.appendChild(label);
+        }
+        rulerTrack.appendChild(tick);
+        realTicks.push(tick);
+      }
+    }
+
+    function scrollToValue(v: number, smooth: boolean) {
+      const idx = Math.round((v - MIN_V) * 10);
+      rulerEl.scrollTo({ left: idx * TICK_W, behavior: smooth ? "smooth" : "instant" });
+    }
+
+    function highlightTick(idx: number) {
+      if (idx === lastTickIdx) return;
+      if (lastTickIdx >= 0) realTicks[lastTickIdx]?.classList.remove("is-selected");
+      realTicks[idx]?.classList.add("is-selected");
+      lastTickIdx = idx;
+    }
+
+    rulerEl.addEventListener("scroll", () => {
+      const idx = Math.max(0, Math.min(90, Math.round(rulerEl.scrollLeft / TICK_W)));
+      const v = parseFloat((MIN_V + idx * 0.1).toFixed(1));
+      highlightTick(idx);
+      if (v !== prevRulerV) {
+        prevRulerV = v;
+        if (!isRated) {
+          isRated = true;
+          ratingClearBtn.hidden = false;
+          ratingRowEl.classList.remove("is-unrated");
+        }
+        ratingInput.value = String(v);
+        ratingValue.textContent = String(v);
+        ratingValue.classList.remove("rating-value--empty", "badge-low", "badge-mid", "badge-high");
+        ratingValue.classList.add(getRatingBadge(v));
+        if ("vibrate" in navigator) navigator.vibrate(1);
+      }
+    }, { passive: true });
+
+    // Wheel horizontal support for desktop
+    rulerEl.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      rulerEl.scrollLeft += e.deltaY !== 0 ? e.deltaY : e.deltaX;
+    }, { passive: false });
+
+    function initRulerForValue(v: number) {
+      buildRuler();
+      const idx = Math.round((v - MIN_V) * 10);
+      prevRulerV = v;
+      lastTickIdx = -1;
+      rulerEl.scrollLeft = idx * TICK_W;
+      highlightTick(idx);
+    }
 
     nameInput.oninput = () => {
       const pos = nameInput.selectionStart;
