@@ -28,10 +28,19 @@ const tplRestaurant: Restaurant = {
           id="restaurant-search"
           class="search-input"
           type="search"
-          placeholder="Buscar por nombre o notas..."
+          placeholder="Buscar por nombre, notas o platos..."
           autocomplete="off"
           spellcheck="false"
         />
+        <button
+          id="restaurant-search-clear"
+          class="search-clear"
+          type="button"
+          aria-label="Limpiar búsqueda"
+          hidden
+        >
+          <i class="bi bi-x-circle-fill"></i>
+        </button>
       </div>
 
       <SortBar
@@ -63,13 +72,13 @@ const tplRestaurant: Restaurant = {
     justify-content: flex-start;
     width: 100%;
     max-width: 1100px;
-    padding: 0 0 100px;
+    padding: 0 0 24px;
     gap: 0;
   }
 
   .page-top-sticky {
     position: sticky;
-    top: 60px;
+    top: 80px;
     z-index: 90;
     padding: 12px 16px;
     align-items: stretch;
@@ -113,7 +122,7 @@ const tplRestaurant: Restaurant = {
     border: 1.5px solid var(--clr-border);
     background: var(--clr-white);
     font-size: 0.9rem;
-    color: var(--clr-dark);
+    color: var(--clr-text);
     transition: border-color var(--transition);
   }
 
@@ -130,6 +139,39 @@ const tplRestaurant: Restaurant = {
   /* ocultar el botón nativo de limpiar en Chrome/Safari */
   .search-input::-webkit-search-cancel-button {
     -webkit-appearance: none;
+  }
+
+  .search-input:not(:placeholder-shown) {
+    padding-right: 38px;
+  }
+
+  .search-clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    padding: 6px;
+    color: var(--clr-text);
+    opacity: 0.55;
+    cursor: pointer;
+    font-size: 1.05rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: opacity var(--transition);
+  }
+
+  .search-clear[hidden] {
+    display: none;
+  }
+
+  @media (hover: hover) {
+    .search-clear:hover {
+      opacity: 1;
+    }
   }
 
   @media (min-width: 768px) {
@@ -267,8 +309,16 @@ const tplRestaurant: Restaurant = {
     const all = getRestaurants().filter((r) => {
       if (r.status !== status) return false;
       if (!q) return true;
-      return (
-        r.name.toLowerCase().includes(q) || r.notes.toLowerCase().includes(q)
+      if (
+        r.name.toLowerCase().includes(q) ||
+        r.notes.toLowerCase().includes(q)
+      ) {
+        return true;
+      }
+      return getDishesByRestaurant(r.id).some(
+        (d) =>
+          d.name.toLowerCase().includes(q) ||
+          d.notes.toLowerCase().includes(q),
       );
     });
     const sorted = sortRestaurants(all);
@@ -447,10 +497,29 @@ const tplRestaurant: Restaurant = {
     const searchEl = document.getElementById(
       "restaurant-search",
     ) as HTMLInputElement | null;
+    const clearEl = document.getElementById(
+      "restaurant-search-clear",
+    ) as HTMLButtonElement | null;
+    const syncClear = () => {
+      if (clearEl) clearEl.hidden = searchQuery.length === 0;
+    };
     if (searchEl) {
       searchEl.value = searchQuery;
+      syncClear();
       searchEl.oninput = () => {
         searchQuery = searchEl.value;
+        syncClear();
+        renderBoth();
+      };
+    }
+    if (clearEl) {
+      clearEl.onclick = () => {
+        searchQuery = "";
+        if (searchEl) {
+          searchEl.value = "";
+          searchEl.focus();
+        }
+        syncClear();
         renderBoth();
       };
     }

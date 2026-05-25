@@ -51,6 +51,15 @@ const tplRestaurant: Restaurant = {
           autocomplete="off"
           spellcheck="false"
         />
+        <button
+          id="dish-search-clear"
+          class="dish-search-clear"
+          type="button"
+          aria-label="Limpiar búsqueda"
+          hidden
+        >
+          <i class="bi bi-x-circle-fill"></i>
+        </button>
       </div>
 
       <div class="dishes-controls flex-row">
@@ -216,6 +225,39 @@ const tplRestaurant: Restaurant = {
 
   .dish-search-input::-webkit-search-cancel-button {
     -webkit-appearance: none;
+  }
+
+  .dish-search-input:not(:placeholder-shown) {
+    padding-right: 38px;
+  }
+
+  .dish-search-clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    padding: 6px;
+    color: var(--clr-text);
+    opacity: 0.55;
+    cursor: pointer;
+    font-size: 1.05rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: opacity var(--transition);
+  }
+
+  .dish-search-clear[hidden] {
+    display: none;
+  }
+
+  @media (hover: hover) {
+    .dish-search-clear:hover {
+      opacity: 1;
+    }
   }
 
   .dishes-controls {
@@ -566,17 +608,6 @@ const tplRestaurant: Restaurant = {
       menuPopup.classList.toggle("active");
     });
 
-    // Cerrar menú al hacer click fuera
-    const closeMenuOnClickOutside = (e: Event) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest(".rh-menu")) {
-        document.querySelectorAll(".rh-menu-popup.active").forEach((popup) => {
-          popup.classList.remove("active");
-        });
-      }
-    };
-    document.addEventListener("click", closeMenuOnClickOutside);
-
     return div;
   }
 
@@ -634,19 +665,6 @@ const tplRestaurant: Restaurant = {
       // Toggle menú actual
       menuPopup.classList.toggle("active");
     });
-
-    // Cerrar menú al hacer click fuera
-    const closeMenuOnClickOutside = (e: Event) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest(".dish-menu")) {
-        document.querySelectorAll(".menu-popup.active").forEach((popup) => {
-          popup.classList.remove("active");
-        });
-      }
-    };
-    document.addEventListener("click", closeMenuOnClickOutside);
-
-    // ─────────────────────────────────────────────────────────────────────────
 
     article
       .querySelector<HTMLButtonElement>(".btn-edit-dish")!
@@ -713,6 +731,22 @@ const tplRestaurant: Restaurant = {
   }
 
   // ─── Listeners permanentes a nivel de módulo ──────────────────────────────
+
+  // Cerrar menús abiertos al hacer click fuera. Registrado 1× a nivel módulo
+  // para no acumular listeners en cada render de card/header.
+  document.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement;
+    if (!target.closest(".rh-menu")) {
+      document.querySelectorAll(".rh-menu-popup.active").forEach((p) =>
+        p.classList.remove("active"),
+      );
+    }
+    if (!target.closest(".dish-menu")) {
+      document.querySelectorAll(".menu-popup.active").forEach((p) =>
+        p.classList.remove("active"),
+      );
+    }
+  });
 
   document.addEventListener("dish:created", () => {
     if (!currentRestaurant) return;
@@ -861,10 +895,29 @@ const tplRestaurant: Restaurant = {
     const searchEl = document.getElementById(
       "dish-search",
     ) as HTMLInputElement | null;
+    const clearEl = document.getElementById(
+      "dish-search-clear",
+    ) as HTMLButtonElement | null;
+    const syncClear = () => {
+      if (clearEl) clearEl.hidden = dishSearch.length === 0;
+    };
     if (searchEl) {
       searchEl.value = dishSearch;
+      syncClear();
       searchEl.oninput = () => {
         dishSearch = searchEl.value;
+        syncClear();
+        rerenderRestaurantePage();
+      };
+    }
+    if (clearEl) {
+      clearEl.onclick = () => {
+        dishSearch = "";
+        if (searchEl) {
+          searchEl.value = "";
+          searchEl.focus();
+        }
+        syncClear();
         rerenderRestaurantePage();
       };
     }

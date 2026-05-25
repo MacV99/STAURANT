@@ -22,7 +22,7 @@ const { dish: d, typeName } = Astro.props;
       <button class="btn-menu boton2" data-id={d.id}>
         <i class="bi bi-three-dots-vertical"></i>
       </button>
-      <div class="menu-popup flex-column">
+      <div class="menu-popup">
         <button class="menu-item btn-edit-dish" data-id={d.id}>
           <i class="bi bi-pencil-fill"></i>
           <span>Editar</span>
@@ -85,109 +85,4 @@ const { dish: d, typeName } = Astro.props;
     gap: 6px;
     flex-shrink: 0;
   }
-
-  .dish-menu {
-    position: relative;
-  }
-
-  .btn-menu {
-    font-size: 1.2rem;
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    border-radius: 14px;
-    letter-spacing: 0;
-    background: none;
-    color: var(--clr-primary);
-    border: none;
-  }
-
-  .menu-popup {
-    display: none;
-    position: absolute;
-    top: calc(100% + 4px);
-    right: 0;
-    background: var(--clr-white);
-    border: 1px solid var(--clr-border);
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    z-index: 100;
-    min-width: 140px;
-    overflow: hidden;
-  }
-
-  .menu-popup.active {
-    display: flex;
-  }
-
-  .menu-item {
-    gap: 8px;
-    padding: 10px 14px;
-    background: transparent;
-    border: none;
-    color: var(--clr-text);
-    font-size: 0.9rem;
-    cursor: pointer;
-    text-transform: none;
-    letter-spacing: 0;
-    width: 100%;
-    justify-content: flex-start;
-  }
-
-  .menu-item i {
-    font-size: 0.9rem;
-  }
-
-  .menu-item.btn-delete-dish {
-    color: var(--clr-danger);
-  }
-
-  @media (hover: hover) {
-    .btn-menu:hover {
-      background: var(--clr-white2);
-    }
-
-    .menu-item:hover {
-      background: var(--clr-white2);
-    }
-
-    .menu-item.btn-delete-dish:hover {
-      background: var(--clr-danger-bg);
-    }
-  }
 </style>
-
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const menuButtons = document.querySelectorAll(".btn-menu");
-
-    menuButtons.forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const popup = (btn as HTMLElement).parentElement?.querySelector(
-          ".menu-popup",
-        ) as HTMLElement;
-        if (popup) {
-          // Cerrar otros menús abiertos
-          document.querySelectorAll(".menu-popup.active").forEach((m) => {
-            if (m !== popup) {
-              m.classList.remove("active");
-            }
-          });
-          // Toggle menú actual
-          popup.classList.toggle("active");
-        }
-      });
-    });
-
-    // Cerrar menú al hacer click fuera
-    document.addEventListener("click", (e) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest(".dish-menu")) {
-        document.querySelectorAll(".menu-popup.active").forEach((popup) => {
-          popup.classList.remove("active");
-        });
-      }
-    });
-  });
-</script>

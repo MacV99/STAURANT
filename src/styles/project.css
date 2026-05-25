@@ -229,16 +229,16 @@
 }
 
 .btn-menu {
-  font-size: 0.9rem;
+  font-size: 1.2rem;
   width: 40px;
   height: 40px;
   padding: 0;
   border-radius: 14px;
   letter-spacing: 0;
   text-transform: none;
-  background: var(--clr-white2);
+  background: none;
   color: var(--clr-primary);
-  border: solid 1px var(--clr-border);
+  border: none;
 }
 
 .menu-popup {
@@ -292,7 +292,7 @@
   }
 
   .btn-menu:hover {
-    background: var(--clr-border);
+    background: var(--clr-white2);
   }
 
   .menu-item:hover {

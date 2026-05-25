@@ -146,6 +146,15 @@ import Layout1 from "../layouts/Layout1.astro";
           <p class="top3-empty">Califica platos para ver tus favoritos</p>
         </div>
       </div>
+
+      <div class="dash-card flex-column">
+        <h2 class="dash-title flex-row">
+          <i class="bi bi-fork-knife"></i> Top 3 más probados
+        </h2>
+        <div id="top3-most-tried-list" class="top3-list flex-column">
+          <p class="top3-empty">Añade platos para ver tus favoritos</p>
+        </div>
+      </div>
     </div>
   </div>
 </Layout1>
@@ -284,7 +293,7 @@ import Layout1 from "../layouts/Layout1.astro";
     font-size: 0.78rem;
     font-weight: 600;
     letter-spacing: 1px;
-    color: var(--clr-dark2);
+    color: var(--clr-text);
     text-transform: uppercase;
   }
 
@@ -446,7 +455,7 @@ import Layout1 from "../layouts/Layout1.astro";
   /* ── Hover ── */
 
   @media (hover: hover) {
-    .back-link:hover { color: var(--clr-dark); }
+    .back-link:hover { color: var(--clr-text); }
 
     .btn-edit:hover {
       border-color: var(--clr-border2);
@@ -565,6 +574,37 @@ import Layout1 from "../layouts/Layout1.astro";
     white-space: nowrap;
   }
 
+  .top3-count-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 48px;
+    height: 48px;
+    padding: 4px 8px;
+    background: var(--clr-white);
+    border: solid 1.5px var(--clr-border);
+    color: var(--clr-primary);
+    border-radius: 12px;
+    line-height: 1;
+    gap: 2px;
+  }
+
+  .top3-count-badge .count-num {
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  .top3-count-badge .count-label {
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--clr-text);
+    opacity: 0.5;
+  }
+
   .top3-restaurant {
     font-size: 0.75rem;
     font-weight: 400;
@@ -642,6 +682,33 @@ import Layout1 from "../layouts/Layout1.astro";
                 ${restaurantName ? `<span class="top3-restaurant">${restaurantName}</span>` : ""}
               </span>
               ${getRatingBadgeHTML(d.rating)}
+            </a>`;
+          })
+          .join("");
+      }
+    }
+
+    // ── Top 3 más probados (por cantidad de platos) ──
+    const mostTriedEl = document.getElementById("top3-most-tried-list");
+    if (mostTriedEl) {
+      const top3MostTried = restaurants
+        .map((r) => ({ id: r.id, name: r.name, count: dishesByRestaurant.get(r.id)?.length ?? 0 }))
+        .filter((r) => r.count > 0)
+        .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+        .slice(0, 3);
+      if (top3MostTried.length === 0) {
+        mostTriedEl.innerHTML = '<p class="top3-empty">Añade platos para ver tus favoritos</p>';
+      } else {
+        mostTriedEl.innerHTML = top3MostTried
+          .map((r, i) => {
+            return `<a href="/restaurante?id=${encodeURIComponent(r.id)}" class="top3-item flex-row">
+              <span class="top3-medal">${medals[i]}</span>
+              <span class="top3-info flex-column">
+                <span class="top3-name">${escapeHtml(r.name)}</span>
+              </span>
+              <span class="top3-count-badge">
+                <span class="count-num">${r.count}</span>
+              </span>
             </a>`;
           })
           .join("");

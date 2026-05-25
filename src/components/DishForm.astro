@@ -15,7 +15,7 @@
       <input type="hidden" id="df-id" />
       <input type="hidden" id="df-restaurant-id" />
       <input type="hidden" id="df-type-id" />
-      <input type="hidden" id="df-rating" value="7" />
+      <input type="hidden" id="df-rating" value="5" />
 
       <div class="type-field flex-column">
         <span class="label-text flex-row"
@@ -142,7 +142,7 @@
     font-size: 0.82rem;
     font-weight: 600;
     letter-spacing: 1px;
-    color: var(--clr-dark2);
+    color: var(--clr-text);
     text-transform: uppercase;
     gap: 0;
   }
@@ -224,16 +224,29 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    font-size: 0.85rem;
-    color: var(--clr-text);
-    opacity: 0.45;
+    gap: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--clr-primary);
     pointer-events: none;
     transition: opacity 0.2s ease;
+    animation: drum-hint-pulse 2s ease-in-out infinite;
+  }
+
+  .drum-hint i {
+    font-size: 1.15rem;
   }
 
   .drum-outer:not(.is-unrated) .drum-hint {
     opacity: 0;
+    animation: none;
+  }
+
+  @keyframes drum-hint-pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 0.95; }
   }
 
   .drum-picker {
@@ -242,7 +255,9 @@
     overflow-x: scroll;
     overflow-y: hidden;
     scrollbar-width: none;
-    scroll-snap-type: x mandatory;
+    /* Snap handled fully in JS (debounced on scroll-end). Native mandatory snap
+       on iOS Safari refuses to land on the last item when it's near edge — caused
+       picker to cap at ~9.7. */
     overscroll-behavior-x: contain;
     -webkit-mask-image: linear-gradient(
       to right,
@@ -266,6 +281,11 @@
     cursor: grab;
   }
 
+  /* Sin calificación: ocultar items para que solo se vea el hint */
+  .drum-outer.is-unrated .drum-picker {
+    opacity: 0;
+  }
+
   .drum-picker::-webkit-scrollbar {
     display: none;
   }
@@ -277,7 +297,10 @@
     display: flex;
     align-items: center;
     height: 100%;
-    padding: 0 calc(50% - 26px);
+    /* width: max-content → track se dimensiona al ancho real de sus items + spacers.
+       Sin esto, drum-track adopta ancho del padre y los items desbordan, lo que en
+       iOS Safari hace que scrollWidth no cubra el último ítem. */
+    width: max-content;
   }
 
   /* ── Combobox de tipo — elementos estáticos ───────────────────────────── */
@@ -288,7 +311,7 @@
     font-size: 0.82rem;
     font-weight: 600;
     letter-spacing: 1px;
-    color: var(--clr-dark2);
+    color: var(--clr-text);
     text-transform: uppercase;
   }
 
@@ -421,9 +444,13 @@
     letter-spacing: -1.5px;
     color: var(--clr-text);
     line-height: 1;
-    scroll-snap-align: center;
     user-select: none;
     transform-origin: center;
+    transition:
+      transform 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+      font-size 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      color 0.22s ease;
   }
 
   #df-rating-drum .drum-item.is-center {
@@ -448,9 +475,15 @@
     border-bottom: none;
   }
 
-  #df-type-dropdown .type-option:hover,
-  #df-type-dropdown .type-option:focus {
-    background: var(--clr-white2);
+  @media (hover: hover) {
+    #df-type-dropdown .type-option:hover,
+    #df-type-dropdown .type-option:focus {
+      background: var(--clr-white2);
+    }
+
+    #df-type-dropdown .type-option.is-create:hover {
+      background: var(--clr-white2);
+    }
   }
 
   #df-type-dropdown .type-option.is-selected {
@@ -477,8 +510,9 @@
     gap: 6px;
   }
 
-  #df-type-dropdown .type-option.is-create:hover {
-    background: var(--clr-white2);
+  #df-type-dropdown .type-option.is-create i {
+    font-size: 0.7rem;
+    flex-shrink: 0;
   }
 
   #df-type-dropdown .type-option.is-create .create-name {
@@ -637,7 +671,7 @@
       if (q && !exactMatch) {
         const createOpt = document.createElement("div");
         createOpt.className = "type-option is-create flex-row";
-        createOpt.innerHTML = `<i class="bi bi-plus-lg" style="font-size:0.7rem;flex-shrink:0"></i> Crear "<span class="create-name">${q}</span>"`;
+        createOpt.innerHTML = `<i class="bi bi-plus-lg"></i> Crear "<span class="create-name">${q}</span>"`;
         createOpt.addEventListener("mousedown", (e) => e.preventDefault());
         createOpt.addEventListener("click", () => {
           // Verificar que no exista ya (race condition)
@@ -730,14 +764,14 @@
         if (data.rating !== null) {
           setRated(true, data.rating);
         } else {
-          ratingInput.value = "7";
+          ratingInput.value = "5";
           setRated(false);
         }
         initTypeCombobox(data.typeId ?? null);
       } else {
         titleEl.textContent = "Nuevo plato";
         idInput.value = "";
-        ratingInput.value = "7";
+        ratingInput.value = "5";
         setRated(false);
         initTypeCombobox(null);
       }
@@ -765,17 +799,61 @@
     const ITEM_W = 52;
     const MIN_V = 1.0;
     const NUM_ITEMS = 91; // 1.0 → 10.0 at 0.1 steps
+    // Espacio extra simétrico a cada lado para permitir rebote/overscroll
+    // pasando el 1 (izq) y el 10 (der). El snap JS regresa al item.
+    const OVERSCROLL = Math.round(ITEM_W * 0.55);
 
     const drumItems: HTMLElement[] = [];
     let prevDrumV = -1;
     let prevCenter = -1;
     let drumBuilt = false;
+    let startSpacer: HTMLElement | null = null;
+    let endSpacer: HTMLElement | null = null;
+
+    // scrollLeft que centra el item idx (las dos spacers añaden OVERSCROLL al origen).
+    const scrollLeftFor = (idx: number) => idx * ITEM_W + OVERSCROLL;
+    const idxFromScrollLeft = () =>
+      Math.max(
+        0,
+        Math.min(
+          NUM_ITEMS - 1,
+          Math.round((drumEl.scrollLeft - OVERSCROLL) / ITEM_W),
+        ),
+      );
+
+    function syncDrumPadding() {
+      const w = drumEl.getBoundingClientRect().width;
+      if (w === 0) return; // not laid out yet — wait for ResizeObserver
+      const pad = Math.max(0, w / 2 - ITEM_W / 2);
+      // Spacers simétricos + OVERSCROLL: item 1 e item 10 centran igual,
+      // y queda un poco de cuerda para rebotar a cada lado.
+      const spacer = pad + OVERSCROLL;
+      if (startSpacer) startSpacer.style.flex = `0 0 ${spacer}px`;
+      if (endSpacer) endSpacer.style.flex = `0 0 ${spacer}px`;
+    }
+
+    // Drum-picker width may be 0 at first measurement (modal mid-open, dvh shift,
+    // rotation). Re-sync spacers whenever it resizes and re-anchor the current
+    // value so item 10 stays reachable.
+    const drumResizeObserver = new ResizeObserver(() => {
+      if (!drumBuilt) return;
+      const prevIdx = idxFromScrollLeft();
+      syncDrumPadding();
+      drumEl.scrollLeft = scrollLeftFor(prevIdx);
+    });
+    drumResizeObserver.observe(drumEl);
 
     function buildDrum() {
       if (drumBuilt) return;
       drumBuilt = true;
       drumTrackEl.innerHTML = "";
       drumItems.length = 0;
+
+      startSpacer = document.createElement("div");
+      startSpacer.style.flexShrink = "0";
+      startSpacer.setAttribute("aria-hidden", "true");
+      drumTrackEl.appendChild(startSpacer);
+
       for (let i = 0; i < NUM_ITEMS; i++) {
         const v = parseFloat((MIN_V + i * 0.1).toFixed(1));
         const tenths = Math.round(v * 10) % 10;
@@ -787,6 +865,11 @@
         drumTrackEl.appendChild(item);
         drumItems.push(item);
       }
+
+      endSpacer = document.createElement("div");
+      endSpacer.style.flexShrink = "0";
+      endSpacer.setAttribute("aria-hidden", "true");
+      drumTrackEl.appendChild(endSpacer);
     }
 
     function updateDrumVisuals(centerIdx: number) {
@@ -796,33 +879,43 @@
       const scales = [1, 0.72, 0.52, 0.38, 0.28];
       const lo = Math.max(0, centerIdx - RADIUS);
       const hi = Math.min(NUM_ITEMS - 1, centerIdx + RADIUS);
+      const CENTER_GAP = 8; // px extra separation around the center
       if (prevCenter >= 0) {
         const prevLo = Math.max(0, prevCenter - RADIUS);
         const prevHi = Math.min(NUM_ITEMS - 1, prevCenter + RADIUS);
         for (let i = prevLo; i <= prevHi; i++) {
           if (i < lo || i > hi) {
+            const shift = Math.sign(i - centerIdx) * CENTER_GAP;
             drumItems[i].style.opacity = "0.04";
-            drumItems[i].style.transform = "scale(0.25)";
+            drumItems[i].style.transform = `translateX(${shift}px) scale(0.25)`;
             drumItems[i].classList.remove("is-center");
           }
         }
       }
       for (let i = lo; i <= hi; i++) {
         const dist = Math.abs(i - centerIdx);
+        const shift = Math.sign(i - centerIdx) * CENTER_GAP;
         drumItems[i].style.opacity = String(opacities[dist] ?? 0.04);
-        drumItems[i].style.transform = `scale(${scales[dist] ?? 0.25})`;
+        drumItems[i].style.transform = `translateX(${shift}px) scale(${scales[dist] ?? 0.25})`;
         drumItems[i].classList.toggle("is-center", dist === 0);
       }
       prevCenter = centerIdx;
     }
 
+    let scrollSnapTimer: number | undefined;
+    let isTouching = false;
+
+    function snapToNearest() {
+      const target = scrollLeftFor(idxFromScrollLeft());
+      if (Math.abs(drumEl.scrollLeft - target) > 0.5) {
+        drumEl.scrollTo({ left: target, behavior: "smooth" });
+      }
+    }
+
     drumEl.addEventListener(
       "scroll",
       () => {
-        const idx = Math.max(
-          0,
-          Math.min(NUM_ITEMS - 1, Math.round(drumEl.scrollLeft / ITEM_W)),
-        );
+        const idx = idxFromScrollLeft();
         const v = parseFloat((MIN_V + idx * 0.1).toFixed(1));
         updateDrumVisuals(idx);
         if (v !== prevDrumV) {
@@ -835,32 +928,100 @@
           ratingInput.value = String(v);
           if ("vibrate" in navigator) navigator.vibrate(1);
         }
+
+        // Debounced JS snap (replaces CSS scroll-snap-type: mandatory, que en
+        // iOS no llega al último item). Mientras hay dedo apoyado o mouse drag,
+        // no snappeamos — esperamos a que se suelte.
+        if (scrollSnapTimer) clearTimeout(scrollSnapTimer);
+        scrollSnapTimer = window.setTimeout(() => {
+          if (isDragging || isTouching) return;
+          snapToNearest();
+        }, 120);
       },
       { passive: true },
     );
 
+    // Track de dedo apoyado: sin esto, el timer de 120ms snappea bajo el dedo
+    // si el usuario pausa el movimiento sin soltar.
+    drumEl.addEventListener("touchstart", () => {
+      isTouching = true;
+      if (scrollSnapTimer) clearTimeout(scrollSnapTimer);
+    }, { passive: true });
+    const onTouchRelease = () => {
+      isTouching = false;
+      // Snap inmediato al soltar: ya sabemos que el gesto terminó, no hay nada
+      // que debouncear. El timer del scroll se cancela para que no dispare otro.
+      if (scrollSnapTimer) clearTimeout(scrollSnapTimer);
+      if (!isDragging) snapToNearest();
+    };
+    drumEl.addEventListener("touchend", onTouchRelease, { passive: true });
+    drumEl.addEventListener("touchcancel", onTouchRelease, { passive: true });
+
     // Wheel support for desktop
+    let wheelSnapTimer: number | undefined;
     drumEl.addEventListener(
       "wheel",
       (e) => {
         e.preventDefault();
         drumEl.scrollLeft += e.deltaY !== 0 ? e.deltaY : e.deltaX;
+        // Debounced snap-to-nearest after wheel stops
+        if (wheelSnapTimer) clearTimeout(wheelSnapTimer);
+        wheelSnapTimer = window.setTimeout(() => {
+          drumEl.scrollTo({ left: scrollLeftFor(idxFromScrollLeft()), behavior: "smooth" });
+        }, 120);
       },
       { passive: false },
     );
 
+    // Mouse drag support for desktop (touch already scrolls natively)
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartScroll = 0;
+    let dragMoved = false;
+
+    drumEl.addEventListener("pointerdown", (e) => {
+      if (e.pointerType === "touch") return;
+      if (drumOuterEl.classList.contains("is-unrated")) return;
+      isDragging = true;
+      dragMoved = false;
+      dragStartX = e.clientX;
+      dragStartScroll = drumEl.scrollLeft;
+      try { drumEl.setPointerCapture(e.pointerId); } catch {}
+    });
+
+    const DRAG_SPEED = 1.8; // multiplier so reaching the edges doesn't require a huge drag
+
+    drumEl.addEventListener("pointermove", (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - dragStartX;
+      if (Math.abs(dx) > 2) dragMoved = true;
+      drumEl.scrollLeft = dragStartScroll - dx * DRAG_SPEED;
+    });
+
+    const endDrag = (e: PointerEvent) => {
+      if (!isDragging) return;
+      isDragging = false;
+      try { drumEl.releasePointerCapture(e.pointerId); } catch {}
+      // Custom JS scroll doesn't trigger CSS scroll-snap. Snap to nearest item manually
+      // so releases always land exactly on a value (including the max, 10).
+      drumEl.scrollTo({ left: scrollLeftFor(idxFromScrollLeft()), behavior: "smooth" });
+      if (dragMoved) {
+        const stopClick = (ev: Event) => { ev.stopPropagation(); };
+        window.addEventListener("click", stopClick, { capture: true, once: true });
+      }
+    };
+    drumEl.addEventListener("pointerup", endDrag);
+    drumEl.addEventListener("pointercancel", endDrag);
+
     function initDrumForValue(v: number) {
       buildDrum();
+      syncDrumPadding();
       const idx = Math.round((v - MIN_V) * 10);
       prevDrumV = -1;
       prevCenter = -1;
-      drumEl.scrollLeft = idx * ITEM_W;
+      drumEl.scrollLeft = scrollLeftFor(idx);
       requestAnimationFrame(() => {
-        const ci = Math.max(
-          0,
-          Math.min(NUM_ITEMS - 1, Math.round(drumEl.scrollLeft / ITEM_W)),
-        );
-        updateDrumVisuals(ci);
+        updateDrumVisuals(idxFromScrollLeft());
       });
     }
 
