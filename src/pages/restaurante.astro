@@ -843,6 +843,20 @@ const tplRestaurant: Restaurant = {
       window.location.href = "/login";
       return;
     }
+
+    // Inject dish skeleton cards while cache loads (first visit only)
+    if (!isCacheLoaded()) {
+      const dishesListEl = document.getElementById("dishes-list") as HTMLElement | null;
+      if (dishesListEl) {
+        dishesListEl.innerHTML = "";
+        for (let i = 0; i < 4; i++) {
+          const sk = document.createElement("div");
+          sk.className = "skeleton-card skeleton-dish";
+          dishesListEl.appendChild(sk);
+        }
+      }
+    }
+
     await initCache(session.user.id);
 
     const id = new URLSearchParams(window.location.search).get("id") ?? "";

@@ -72,6 +72,7 @@
   letter-spacing: -0.5px;
 }
 
+
 .badge-empty {
   background: var(--clr-white2);
   color: var(--clr-text);
@@ -323,4 +324,24 @@
   .rating-star {
     font-size: 0.82rem;
   }
+}
+
+/* === SKELETON LOADING === */
+
+.skeleton-card {
+  border-radius: var(--border-radius);
+  background: linear-gradient(90deg, var(--clr-white2) 25%, #e8e3d8 50%, var(--clr-white2) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+  height: 88px;
+  width: 100%;
+}
+
+.skeleton-dish {
+  height: 72px;
+}
+
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }

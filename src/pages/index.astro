@@ -470,6 +470,26 @@ const tplRestaurant: Restaurant = {
       window.location.href = "/login";
       return;
     }
+
+    // Inject skeleton cards while cache loads (first visit only)
+    if (!isCacheLoaded()) {
+      const activeTab = getActiveTab();
+      const skeletonGrid = () => {
+        const grid = document.createElement("div");
+        grid.className = "cards-grid";
+        for (let i = 0; i < 4; i++) {
+          const sk = document.createElement("div");
+          sk.className = "skeleton-card";
+          grid.appendChild(sk);
+        }
+        return grid;
+      };
+      const tv = document.getElementById("tab-visitados") as HTMLElement | null;
+      const tp = document.getElementById("tab-pendientes") as HTMLElement | null;
+      if (tv) { tv.innerHTML = ""; tv.appendChild(skeletonGrid()); tv.hidden = activeTab !== "visitados"; }
+      if (tp) { tp.innerHTML = ""; tp.appendChild(skeletonGrid()); tp.hidden = activeTab !== "pendientes"; }
+    }
+
     await initCache(session.user.id);
 
     document

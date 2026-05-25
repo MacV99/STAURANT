@@ -453,6 +453,18 @@
       color 0.22s ease;
   }
 
+  /* Disable transitions while actively scrolling — avoids visual stickiness */
+  #df-rating-drum.is-scrolling .drum-item {
+    transition: none;
+  }
+
+  /* Decimal part of drum items (e.g. ".5") — smaller than the integer */
+  #df-rating-drum .drum-item .drum-dec {
+    font-size: 0.6em;
+    letter-spacing: -1px;
+    font-weight: 800;
+  }
+
   #df-rating-drum .drum-item.is-center {
     font-size: 2.5rem; /* ← tamaño del número central */
   }
@@ -859,7 +871,11 @@
         const tenths = Math.round(v * 10) % 10;
         const item = document.createElement("div");
         item.className = "drum-item";
-        item.textContent = tenths === 0 ? String(Math.round(v)) : String(v);
+        if (tenths === 0) {
+          item.textContent = String(Math.round(v));
+        } else {
+          item.innerHTML = `<span class="drum-int">${Math.floor(v)}</span><span class="drum-dec">.${tenths}</span>`;
+        }
         item.style.opacity = "0.04";
         item.style.transform = "scale(0.25)";
         drumTrackEl.appendChild(item);
@@ -905,6 +921,11 @@
     let scrollSnapTimer: number | undefined;
     let isTouching = false;
 
+    // Velocity tracking for smart snap (don't fight momentum on fast flick)
+    let lastScrollLeft = 0;
+    let lastScrollTime = 0;
+    let scrollVelocity = 0;
+
     function snapToNearest() {
       const target = scrollLeftFor(idxFromScrollLeft());
       if (Math.abs(drumEl.scrollLeft - target) > 0.5) {
@@ -912,9 +933,19 @@
       }
     }
 
+    function removeIsScrolling() {
+      window.setTimeout(() => drumEl.classList.remove("is-scrolling"), 320);
+    }
+
     drumEl.addEventListener(
       "scroll",
       () => {
+        const now = Date.now();
+        const dt = now - lastScrollTime;
+        if (dt > 0) scrollVelocity = Math.abs(drumEl.scrollLeft - lastScrollLeft) / dt;
+        lastScrollLeft = drumEl.scrollLeft;
+        lastScrollTime = now;
+
         const idx = idxFromScrollLeft();
         const v = parseFloat((MIN_V + idx * 0.1).toFixed(1));
         updateDrumVisuals(idx);
@@ -929,13 +960,22 @@
           if ("vibrate" in navigator) navigator.vibrate(1);
         }
 
-        // Debounced JS snap (replaces CSS scroll-snap-type: mandatory, que en
-        // iOS no llega al último item). Mientras hay dedo apoyado o mouse drag,
-        // no snappeamos — esperamos a que se suelte.
+        // Suppress CSS transitions while scrolling for instant visual response
+        drumEl.classList.add("is-scrolling");
+
+        // Velocity-aware debounced snap: if still moving fast, re-arm once more
         if (scrollSnapTimer) clearTimeout(scrollSnapTimer);
         scrollSnapTimer = window.setTimeout(() => {
           if (isDragging || isTouching) return;
-          snapToNearest();
+          if (scrollVelocity >= 0.3) {
+            // Still has momentum — wait one more beat
+            scrollSnapTimer = window.setTimeout(() => {
+              if (!isDragging && !isTouching) { snapToNearest(); removeIsScrolling(); }
+            }, 80);
+          } else {
+            snapToNearest();
+            removeIsScrolling();
+          }
         }, 120);
       },
       { passive: true },
@@ -946,13 +986,14 @@
     drumEl.addEventListener("touchstart", () => {
       isTouching = true;
       if (scrollSnapTimer) clearTimeout(scrollSnapTimer);
+      drumEl.classList.add("is-scrolling");
     }, { passive: true });
     const onTouchRelease = () => {
       isTouching = false;
       // Snap inmediato al soltar: ya sabemos que el gesto terminó, no hay nada
       // que debouncear. El timer del scroll se cancela para que no dispare otro.
       if (scrollSnapTimer) clearTimeout(scrollSnapTimer);
-      if (!isDragging) snapToNearest();
+      if (!isDragging) { snapToNearest(); removeIsScrolling(); }
     };
     drumEl.addEventListener("touchend", onTouchRelease, { passive: true });
     drumEl.addEventListener("touchcancel", onTouchRelease, { passive: true });
@@ -964,10 +1005,12 @@
       (e) => {
         e.preventDefault();
         drumEl.scrollLeft += e.deltaY !== 0 ? e.deltaY : e.deltaX;
+        drumEl.classList.add("is-scrolling");
         // Debounced snap-to-nearest after wheel stops
         if (wheelSnapTimer) clearTimeout(wheelSnapTimer);
         wheelSnapTimer = window.setTimeout(() => {
           drumEl.scrollTo({ left: scrollLeftFor(idxFromScrollLeft()), behavior: "smooth" });
+          removeIsScrolling();
         }, 120);
       },
       { passive: false },
@@ -1005,6 +1048,7 @@
       // Custom JS scroll doesn't trigger CSS scroll-snap. Snap to nearest item manually
       // so releases always land exactly on a value (including the max, 10).
       drumEl.scrollTo({ left: scrollLeftFor(idxFromScrollLeft()), behavior: "smooth" });
+      removeIsScrolling();
       if (dragMoved) {
         const stopClick = (ev: Event) => { ev.stopPropagation(); };
         window.addEventListener("click", stopClick, { capture: true, once: true });
