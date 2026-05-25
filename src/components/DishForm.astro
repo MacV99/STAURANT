@@ -2,7 +2,11 @@
   <div class="form-box flex-column">
     <div class="form-header flex-row">
       <h2 id="dish-form-title">Nuevo plato</h2>
-      <button id="dish-form-close" class="btn-close btn-icon-close boton2" aria-label="Cerrar">
+      <button
+        id="dish-form-close"
+        class="btn-close btn-icon-close boton2"
+        aria-label="Cerrar"
+      >
         <i class="bi bi-x-lg"></i>
       </button>
     </div>
@@ -58,20 +62,25 @@
 
       <div class="rating-field flex-column">
         <div class="rating-label-row flex-row">
-          <span class="rating-label">Calificación <span class="optional">(opcional)</span></span>
-          <button type="button" id="df-rating-clear" class="rating-clear-link" hidden>
+          <span class="rating-label"
+            >Calificación <span class="optional">(opcional)</span></span
+          >
+          <button
+            type="button"
+            id="df-rating-clear"
+            class="rating-clear-link"
+            hidden
+          >
             Quitar
           </button>
         </div>
-        <div class="rating-row flex-column">
-          <span id="df-rating-value" class="rating-value rating-value--empty flex-row">
+        <div class="drum-outer is-unrated" id="df-drum-outer">
+          <div class="drum-picker" id="df-rating-drum">
+            <div class="drum-track" id="df-drum-track"></div>
+          </div>
+          <div class="drum-hint">
             <i class="bi bi-star"></i>
-          </span>
-          <div class="rating-ruler-wrap">
-            <div class="ruler-indicator"></div>
-            <div class="rating-ruler" id="df-rating-ruler">
-              <div class="ruler-track" id="df-rating-track"></div>
-            </div>
+            <span>Toca para calificar</span>
           </div>
         </div>
       </div>
@@ -186,120 +195,89 @@
     }
   }
 
-  /* ── Rating card ────────────────────────────────────────────────────────── */
+  /* ── Drum picker ─────────────────────────────────────────────────────────── */
 
-  .rating-row {
-    align-items: center;
-    gap: 10px;
+  .drum-outer {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    border-radius: 16px;
     background: var(--clr-white2);
     border: 1.5px dashed var(--clr-border2);
-    border-radius: 16px;
-    padding: 16px 14px 14px;
-    cursor: pointer;
-    transition: border-color var(--transition), background var(--transition);
-  }
-
-  .rating-row:not(.is-unrated) {
-    border-style: solid;
-    cursor: default;
-    background: var(--clr-white);
-  }
-
-  /* Big value bubble */
-  .rating-value {
-    width: 72px;
+    transition:
+      border-color var(--transition),
+      background var(--transition);
     height: 72px;
-    border-radius: 50%;
-    font-weight: 800;
-    font-size: 1.75rem;
-    letter-spacing: -1px;
-    flex-shrink: 0;
-    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+    overflow: hidden;
+    cursor: pointer;
   }
 
-  .rating-value--empty {
-    background: transparent;
+  .drum-outer:not(.is-unrated) {
+    border-style: solid;
+    background: var(--clr-white);
+    cursor: default;
+  }
+
+  .drum-hint {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 0.85rem;
     color: var(--clr-text);
-    border: 2px dashed var(--clr-border2);
-    font-size: 1.5rem;
-    opacity: 0.65;
-  }
-
-  .rating-value.badge-low {
-    background: var(--clr-danger-bg);
-    color: var(--clr-danger);
-    border: solid 2px color-mix(in srgb, var(--clr-danger-border) 50%, transparent);
-    opacity: 1;
-  }
-
-  .rating-value.badge-mid {
-    background: #fff3d6;
-    color: #a06010;
-    border: solid 2px #e8c55a;
-    opacity: 1;
-  }
-
-  .rating-value.badge-high {
-    background: #d8f5e2;
-    color: #1a7a38;
-    border: solid 2px #7dcf9e;
-    opacity: 1;
-  }
-
-  /* ── Ruler picker ───────────────────────────────────────────────────────── */
-
-  .rating-ruler-wrap {
-    position: relative;
-    width: 100%;
-  }
-
-  .ruler-indicator {
-    position: absolute;
-    top: 4px;
-    bottom: 20px;
-    left: 50%;
-    width: 2px;
-    transform: translateX(-50%);
-    background: var(--clr-primary);
-    border-radius: 2px;
+    opacity: 0.45;
     pointer-events: none;
-    z-index: 2;
-    opacity: 0.5;
+    transition: opacity 0.2s ease;
   }
 
-  .ruler-indicator::after {
-    content: '';
-    position: absolute;
-    bottom: -5px;
-    left: 50%;
-    transform: translateX(-50%);
-    border: 4px solid transparent;
-    border-top-color: var(--clr-primary);
-    opacity: 0.5;
+  .drum-outer:not(.is-unrated) .drum-hint {
+    opacity: 0;
   }
 
-  .rating-ruler {
-    width: 100%;
-    height: 58px;
+  .drum-picker {
+    flex: 1;
+    min-width: 0;
     overflow-x: scroll;
     overflow-y: hidden;
     scrollbar-width: none;
-    -ms-overflow-style: none;
     scroll-snap-type: x mandatory;
     overscroll-behavior-x: contain;
-    cursor: grab;
-    -webkit-mask-image: linear-gradient(to right, transparent, black 16%, black 84%, transparent);
-    mask-image: linear-gradient(to right, transparent, black 16%, black 84%, transparent);
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      black 22%,
+      black 78%,
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      black 22%,
+      black 78%,
+      transparent
+    );
+    pointer-events: none;
   }
 
-  .rating-ruler::-webkit-scrollbar { display: none; }
-  .rating-ruler:active { cursor: grabbing; }
+  .drum-outer:not(.is-unrated) .drum-picker {
+    pointer-events: auto;
+    cursor: grab;
+  }
 
-  .ruler-track {
+  .drum-picker::-webkit-scrollbar {
+    display: none;
+  }
+  .drum-outer:not(.is-unrated) .drum-picker:active {
+    cursor: grabbing;
+  }
+
+  .drum-track {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     height: 100%;
-    padding: 0 calc(50% - 12px);
+    padding: 0 calc(50% - 26px);
   }
 
   /* ── Combobox de tipo — elementos estáticos ───────────────────────────── */
@@ -432,52 +410,25 @@
 </style>
 
 <style is:global>
+  /* ── Drum items (created via JS → need global scope) ──────────────────── */
 
-  /* ── Ruler ticks (created via JS → need global scope) ─────────────────── */
-
-  #df-rating-ruler .ruler-tick {
-    width: 24px;
+  #df-rating-drum .drum-item {
+    width: 52px;
     flex-shrink: 0;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-end;
-    padding-bottom: 6px;
-    gap: 3px;
-    scroll-snap-align: center;
-  }
-
-  #df-rating-ruler .tick-bar {
-    width: 1px;
-    height: 8px;
-    background: var(--clr-border2);
-    border-radius: 2px;
-  }
-
-  #df-rating-ruler .ruler-tick.is-half .tick-bar { height: 14px; }
-
-  #df-rating-ruler .ruler-tick.is-whole .tick-bar {
-    width: 2px;
-    height: 22px;
-  }
-
-  #df-rating-ruler .ruler-tick.is-selected .tick-bar {
-    background: var(--clr-primary);
-    opacity: 0.7;
-  }
-
-  #df-rating-ruler .tick-num {
-    font-size: 0.6rem;
-    font-weight: 700;
-    letter-spacing: -0.5px;
+    text-align: center;
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -1.5px;
     color: var(--clr-text);
-    opacity: 0.45;
     line-height: 1;
+    scroll-snap-align: center;
     user-select: none;
+    transform-origin: center;
   }
 
-  #df-rating-ruler .ruler-tick.is-selected .tick-num { opacity: 0.8; }
+  #df-rating-drum .drum-item.is-center {
+    font-size: 2.5rem; /* ← tamaño del número central */
+  }
 
   /* ── Type dropdown ─────────────────────────────────────────────────────── */
 
@@ -579,43 +530,38 @@
     const ratingInput = document.getElementById(
       "df-rating",
     ) as HTMLInputElement;
-    const ratingValue = document.getElementById("df-rating-value")!;
     const notesInput = document.getElementById(
       "df-notes",
     ) as HTMLTextAreaElement;
     const errorEl = document.getElementById("df-error")!;
     const closeBtn = document.getElementById("dish-form-close")!;
     const cancelBtn = document.getElementById("dish-form-cancel")!;
-    const ratingClearBtn = document.getElementById("df-rating-clear") as HTMLButtonElement;
-    const ratingRowEl = document.querySelector<HTMLElement>(".rating-row")!;
+    const ratingClearBtn = document.getElementById(
+      "df-rating-clear",
+    ) as HTMLButtonElement;
+    const drumOuterEl = document.getElementById("df-drum-outer") as HTMLElement;
+    const drumEl = document.getElementById("df-rating-drum") as HTMLElement;
+    const drumTrackEl = document.getElementById("df-drum-track") as HTMLElement;
 
     let isRated = false;
-
-    function getRatingBadge(v: number): string {
-      if (v <= 4) return "badge-low";
-      if (v <= 7) return "badge-mid";
-      return "badge-high";
-    }
 
     function setRated(rated: boolean, value?: number) {
       isRated = rated;
       ratingClearBtn.hidden = !rated;
-      ratingRowEl.classList.toggle("is-unrated", !rated);
-      ratingValue.classList.remove("badge-low", "badge-mid", "badge-high");
+      drumOuterEl.classList.toggle("is-unrated", !rated);
       if (rated) {
         const v = value ?? parseFloat(ratingInput.value);
         ratingInput.value = String(v);
-        ratingValue.textContent = String(v);
-        ratingValue.classList.remove("rating-value--empty");
-        ratingValue.classList.add(getRatingBadge(v));
-      } else {
-        ratingValue.innerHTML = '<i class="bi bi-star"></i>';
-        ratingValue.classList.add("rating-value--empty");
       }
     }
 
-    ratingClearBtn.onclick = (e) => { e.stopPropagation(); setRated(false); };
-    ratingRowEl.onclick = () => { if (!isRated) setRated(true); };
+    ratingClearBtn.onclick = (e) => {
+      e.stopPropagation();
+      setRated(false);
+    };
+    drumOuterEl.onclick = () => {
+      if (!isRated) setRated(true);
+    };
 
     // ─── Combobox de tipo ──────────────────────────────────────────────────────
 
@@ -797,7 +743,9 @@
       }
 
       overlay.classList.add("is-open");
-      requestAnimationFrame(() => initRulerForValue(parseFloat(ratingInput.value)));
+      requestAnimationFrame(() =>
+        initDrumForValue(parseFloat(ratingInput.value)),
+      );
     }
 
     function close() {
@@ -812,91 +760,108 @@
       if (e.target === overlay) close();
     };
 
-    // ─── Ruler picker ─────────────────────────────────────────────────────────
+    // ─── Drum picker ──────────────────────────────────────────────────────────
 
-    const rulerEl = document.getElementById("df-rating-ruler") as HTMLElement;
-    const rulerTrack = document.getElementById("df-rating-track") as HTMLElement;
-
-    const TICK_W = 24;
+    const ITEM_W = 52;
     const MIN_V = 1.0;
-    const MAX_V = 10.0;
-    const NUM_TICKS = 91; // 1.0 → 10.0 at 0.1 steps
+    const NUM_ITEMS = 91; // 1.0 → 10.0 at 0.1 steps
 
-    const realTicks: HTMLElement[] = [];
-    let lastTickIdx = -1;
-    let prevRulerV = -1;
-    let rulerBuilt = false;
+    const drumItems: HTMLElement[] = [];
+    let prevDrumV = -1;
+    let prevCenter = -1;
+    let drumBuilt = false;
 
-    function buildRuler() {
-      if (rulerBuilt) return;
-      rulerBuilt = true;
-      rulerTrack.innerHTML = "";
-      realTicks.length = 0;
-      for (let i = 0; i < NUM_TICKS; i++) {
+    function buildDrum() {
+      if (drumBuilt) return;
+      drumBuilt = true;
+      drumTrackEl.innerHTML = "";
+      drumItems.length = 0;
+      for (let i = 0; i < NUM_ITEMS; i++) {
         const v = parseFloat((MIN_V + i * 0.1).toFixed(1));
         const tenths = Math.round(v * 10) % 10;
-        const tick = document.createElement("div");
-        tick.className =
-          "ruler-tick" +
-          (tenths === 0 ? " is-whole" : tenths === 5 ? " is-half" : "");
-        const bar = document.createElement("div");
-        bar.className = "tick-bar";
-        tick.appendChild(bar);
-        if (tenths === 0) {
-          const label = document.createElement("span");
-          label.className = "tick-num";
-          label.textContent = String(Math.round(v));
-          tick.appendChild(label);
-        }
-        rulerTrack.appendChild(tick);
-        realTicks.push(tick);
+        const item = document.createElement("div");
+        item.className = "drum-item";
+        item.textContent = tenths === 0 ? String(Math.round(v)) : String(v);
+        item.style.opacity = "0.04";
+        item.style.transform = "scale(0.25)";
+        drumTrackEl.appendChild(item);
+        drumItems.push(item);
       }
     }
 
-    function scrollToValue(v: number, smooth: boolean) {
-      const idx = Math.round((v - MIN_V) * 10);
-      rulerEl.scrollTo({ left: idx * TICK_W, behavior: smooth ? "smooth" : "instant" });
-    }
-
-    function highlightTick(idx: number) {
-      if (idx === lastTickIdx) return;
-      if (lastTickIdx >= 0) realTicks[lastTickIdx]?.classList.remove("is-selected");
-      realTicks[idx]?.classList.add("is-selected");
-      lastTickIdx = idx;
-    }
-
-    rulerEl.addEventListener("scroll", () => {
-      const idx = Math.max(0, Math.min(90, Math.round(rulerEl.scrollLeft / TICK_W)));
-      const v = parseFloat((MIN_V + idx * 0.1).toFixed(1));
-      highlightTick(idx);
-      if (v !== prevRulerV) {
-        prevRulerV = v;
-        if (!isRated) {
-          isRated = true;
-          ratingClearBtn.hidden = false;
-          ratingRowEl.classList.remove("is-unrated");
+    function updateDrumVisuals(centerIdx: number) {
+      if (centerIdx === prevCenter) return;
+      const RADIUS = 4;
+      const opacities = [1, 0.55, 0.28, 0.14, 0.07];
+      const scales = [1, 0.72, 0.52, 0.38, 0.28];
+      const lo = Math.max(0, centerIdx - RADIUS);
+      const hi = Math.min(NUM_ITEMS - 1, centerIdx + RADIUS);
+      if (prevCenter >= 0) {
+        const prevLo = Math.max(0, prevCenter - RADIUS);
+        const prevHi = Math.min(NUM_ITEMS - 1, prevCenter + RADIUS);
+        for (let i = prevLo; i <= prevHi; i++) {
+          if (i < lo || i > hi) {
+            drumItems[i].style.opacity = "0.04";
+            drumItems[i].style.transform = "scale(0.25)";
+            drumItems[i].classList.remove("is-center");
+          }
         }
-        ratingInput.value = String(v);
-        ratingValue.textContent = String(v);
-        ratingValue.classList.remove("rating-value--empty", "badge-low", "badge-mid", "badge-high");
-        ratingValue.classList.add(getRatingBadge(v));
-        if ("vibrate" in navigator) navigator.vibrate(1);
       }
-    }, { passive: true });
+      for (let i = lo; i <= hi; i++) {
+        const dist = Math.abs(i - centerIdx);
+        drumItems[i].style.opacity = String(opacities[dist] ?? 0.04);
+        drumItems[i].style.transform = `scale(${scales[dist] ?? 0.25})`;
+        drumItems[i].classList.toggle("is-center", dist === 0);
+      }
+      prevCenter = centerIdx;
+    }
 
-    // Wheel horizontal support for desktop
-    rulerEl.addEventListener("wheel", (e) => {
-      e.preventDefault();
-      rulerEl.scrollLeft += e.deltaY !== 0 ? e.deltaY : e.deltaX;
-    }, { passive: false });
+    drumEl.addEventListener(
+      "scroll",
+      () => {
+        const idx = Math.max(
+          0,
+          Math.min(NUM_ITEMS - 1, Math.round(drumEl.scrollLeft / ITEM_W)),
+        );
+        const v = parseFloat((MIN_V + idx * 0.1).toFixed(1));
+        updateDrumVisuals(idx);
+        if (v !== prevDrumV) {
+          prevDrumV = v;
+          if (!isRated) {
+            isRated = true;
+            ratingClearBtn.hidden = false;
+            drumOuterEl.classList.remove("is-unrated");
+          }
+          ratingInput.value = String(v);
+          if ("vibrate" in navigator) navigator.vibrate(1);
+        }
+      },
+      { passive: true },
+    );
 
-    function initRulerForValue(v: number) {
-      buildRuler();
+    // Wheel support for desktop
+    drumEl.addEventListener(
+      "wheel",
+      (e) => {
+        e.preventDefault();
+        drumEl.scrollLeft += e.deltaY !== 0 ? e.deltaY : e.deltaX;
+      },
+      { passive: false },
+    );
+
+    function initDrumForValue(v: number) {
+      buildDrum();
       const idx = Math.round((v - MIN_V) * 10);
-      prevRulerV = v;
-      lastTickIdx = -1;
-      rulerEl.scrollLeft = idx * TICK_W;
-      highlightTick(idx);
+      prevDrumV = -1;
+      prevCenter = -1;
+      drumEl.scrollLeft = idx * ITEM_W;
+      requestAnimationFrame(() => {
+        const ci = Math.max(
+          0,
+          Math.min(NUM_ITEMS - 1, Math.round(drumEl.scrollLeft / ITEM_W)),
+        );
+        updateDrumVisuals(ci);
+      });
     }
 
     nameInput.oninput = () => {
