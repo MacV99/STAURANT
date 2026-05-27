@@ -18,7 +18,12 @@ const isPending = r.status === "pending";
   style={`view-transition-name: restaurant-${r.id}`}
 >
   <div class="card-body flex-column">
-    <h3>{r.name}</h3>
+    <h3>
+      {r.name}
+      {r.officialRestaurantId && (
+        <i class="bi bi-patch-check-fill verified-badge" title="Restaurante verificado" />
+      )}
+    </h3>
     {
       !isPending && (
         <span class="dish-count-pill">

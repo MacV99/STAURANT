@@ -136,6 +136,15 @@
   padding: 2px 8px;
 }
 
+/* === VERIFIED BADGE (perfil oficial) === */
+
+.verified-badge {
+  color: var(--clr-primary);
+  font-size: 0.85em;
+  margin-left: 4px;
+  vertical-align: baseline;
+}
+
 /* === CARDS GRID === */
 
 .cards-grid {

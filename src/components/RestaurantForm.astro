@@ -18,15 +18,21 @@
 
     <form id="restaurant-form" class="flex-column" novalidate>
       <input type="hidden" id="rf-id" />
+      <input type="hidden" id="rf-official-id" />
 
       <label for="rf-name">
         <span class="label-text flex-row">Nombre <span class="required">*</span></span>
-        <input
-          type="text"
-          id="rf-name"
-          required
-          placeholder="El Cielo, La Plaza..."
-        />
+        <div class="name-combobox" id="rf-name-combobox">
+          <input
+            type="text"
+            id="rf-name"
+            required
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="El Cielo, La Plaza..."
+          />
+          <div id="rf-name-dropdown" class="name-dropdown" hidden></div>
+        </div>
       </label>
 
       <label for="rf-notes">
@@ -125,6 +131,27 @@
     margin-top: 6px;
   }
 
+  /* ── Autocomplete oficial ─────────────────────────────────────────────── */
+
+  .name-combobox {
+    position: relative;
+  }
+
+  .name-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--clr-white);
+    border: 1.5px solid var(--clr-border);
+    border-radius: var(--border-radius);
+    z-index: 250;
+    max-height: 260px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  }
+
   @media (min-width: 768px) {
     .form-box {
       padding: 28px 28px;
@@ -132,9 +159,66 @@
   }
 </style>
 
+<style is:global>
+  /* Options son creadas via JS → necesitan scope global */
+
+  #rf-name-dropdown .name-option {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--clr-border);
+    transition: background 0.1s ease;
+  }
+
+  #rf-name-dropdown .name-option:last-child {
+    border-bottom: none;
+  }
+
+  @media (hover: hover) {
+    #rf-name-dropdown .name-option:hover {
+      background: var(--clr-white2);
+    }
+  }
+
+  #rf-name-dropdown .name-option-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--clr-text);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  #rf-name-dropdown .name-option-sub {
+    font-size: 0.75rem;
+    color: var(--clr-text);
+    opacity: 0.6;
+  }
+
+  #rf-name-dropdown .name-option.is-loading,
+  #rf-name-dropdown .name-option.is-empty {
+    text-align: center;
+    color: var(--clr-text);
+    opacity: 0.55;
+    font-size: 0.82rem;
+    cursor: default;
+    padding: 14px;
+  }
+</style>
+
 <script>
-  import type { Restaurant } from "../lib/data.ts";
-  import { createRestaurant, updateRestaurant, getRestaurants } from "../lib/data.ts";
+  import type { Restaurant, OfficialRestaurant } from "../lib/data.ts";
+  import {
+    createRestaurant,
+    updateRestaurant,
+    getRestaurants,
+    searchOfficialRestaurants,
+    adoptOfficialRestaurant,
+  } from "../lib/data.ts";
   import { emit } from "../scripts/store.ts";
 
   // Re-inicializar en cada navegación para que open/close siempre
@@ -147,15 +231,93 @@
     const form       = document.getElementById("restaurant-form") as HTMLFormElement;
     const titleEl    = document.getElementById("restaurant-form-title")!;
     const idInput    = document.getElementById("rf-id") as HTMLInputElement;
+    const officialIdInput = document.getElementById("rf-official-id") as HTMLInputElement;
     const nameInput  = document.getElementById("rf-name") as HTMLInputElement;
     const notesInput = document.getElementById("rf-notes") as HTMLTextAreaElement;
     const errorEl    = document.getElementById("rf-error")!;
     const closeBtn   = document.getElementById("restaurant-form-close")!;
     const cancelBtn  = document.getElementById("restaurant-form-cancel")!;
+    const dropdownEl = document.getElementById("rf-name-dropdown") as HTMLElement;
+    const submitBtn  = document.getElementById("rf-submit") as HTMLButtonElement;
+
+    function showDropdown(): void {
+      dropdownEl.hidden = false;
+    }
+    function hideDropdown(): void {
+      dropdownEl.hidden = true;
+    }
+
+    function renderResults(results: OfficialRestaurant[]): void {
+      dropdownEl.innerHTML = "";
+      if (results.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "name-option is-empty";
+        empty.textContent = "Sin coincidencias oficiales";
+        dropdownEl.appendChild(empty);
+        showDropdown();
+        return;
+      }
+      results.forEach((o) => {
+        const opt = document.createElement("div");
+        opt.className = "name-option";
+        const title = document.createElement("div");
+        title.className = "name-option-title";
+        title.innerHTML = `${o.name} <i class="bi bi-patch-check-fill verified-badge" title="Restaurante verificado"></i>`;
+        opt.appendChild(title);
+        if (o.city || o.address) {
+          const sub = document.createElement("div");
+          sub.className = "name-option-sub";
+          sub.textContent = [o.city, o.address].filter(Boolean).join(" · ");
+          opt.appendChild(sub);
+        }
+        // mousedown + preventDefault: evita blur del input antes del click
+        opt.addEventListener("mousedown", (e) => e.preventDefault());
+        opt.addEventListener("click", () => void adoptAndClose(o));
+        dropdownEl.appendChild(opt);
+      });
+      showDropdown();
+    }
+
+    function renderLoading(): void {
+      dropdownEl.innerHTML = "";
+      const loading = document.createElement("div");
+      loading.className = "name-option is-loading";
+      loading.textContent = "Buscando...";
+      dropdownEl.appendChild(loading);
+      showDropdown();
+    }
+
+    async function adoptAndClose(o: OfficialRestaurant): Promise<void> {
+      // Bloquear UI mientras se clona la carta
+      submitBtn.disabled = true;
+      hideDropdown();
+      close();
+      const created = await adoptOfficialRestaurant(o.id);
+      submitBtn.disabled = false;
+      if (created) emit("restaurant:created", created);
+      else errorEl.textContent = "No se pudo cargar el restaurante oficial.";
+    }
+
+    let searchToken = 0;
+    let searchTimer: number | undefined;
+    function scheduleSearch(query: string): void {
+      if (searchTimer) clearTimeout(searchTimer);
+      const q = query.trim();
+      if (q.length < 2) { hideDropdown(); return; }
+      searchTimer = window.setTimeout(async () => {
+        const token = ++searchToken;
+        renderLoading();
+        const results = await searchOfficialRestaurants(q);
+        if (token !== searchToken) return; // respuesta obsoleta
+        renderResults(results);
+      }, 220);
+    }
 
     function open(mode: "create" | "edit", data?: Restaurant) {
       errorEl.textContent = "";
       form.reset();
+      officialIdInput.value = "";
+      hideDropdown();
       if (mode === "edit" && data) {
         titleEl.textContent = "Editar restaurante";
         idInput.value   = data.id;
@@ -169,6 +331,7 @@
     }
 
     function close() {
+      hideDropdown();
       overlay.classList.remove("is-open");
     }
 
@@ -181,6 +344,23 @@
       const pos = nameInput.selectionStart;
       nameInput.value = nameInput.value.toUpperCase();
       nameInput.setSelectionRange(pos, pos);
+      // Solo buscar oficiales en modo creación (no edición)
+      if (idInput.value) return;
+      scheduleSearch(nameInput.value);
+    };
+
+    nameInput.onblur = () => {
+      // delay para permitir click en opciones (mousedown ya previene blur,
+      // pero por seguridad cerramos al perder foco fuera del combobox)
+      setTimeout(() => {
+        const combobox = document.getElementById("rf-name-combobox");
+        if (!combobox?.contains(document.activeElement)) hideDropdown();
+      }, 150);
+    };
+
+    nameInput.onfocus = () => {
+      if (idInput.value) return;
+      if (nameInput.value.trim().length >= 2) scheduleSearch(nameInput.value);
     };
 
     form.onsubmit = (e) => {

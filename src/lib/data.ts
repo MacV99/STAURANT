@@ -9,6 +9,7 @@ export interface Restaurant {
   notes: string;
   createdAt: string;
   updatedAt: string;
+  officialRestaurantId: string | null;
 }
 
 export interface Dish {
@@ -20,6 +21,23 @@ export interface Dish {
   notes: string;
   createdAt: string;
   updatedAt: string;
+  officialDishId: string | null;
+}
+
+export interface OfficialRestaurant {
+  id: string;
+  name: string;
+  city: string | null;
+  address: string | null;
+  notes: string | null;
+}
+
+export interface OfficialDish {
+  id: string;
+  officialRestaurantId: string;
+  typeName: string | null;
+  name: string;
+  notes: string | null;
 }
 
 export interface DishType {
@@ -192,6 +210,7 @@ function toRestaurant(row: Record<string, unknown>): Restaurant {
     notes: row.notes as string,
     createdAt: row.created_at as string,
     updatedAt: (row.updated_at as string | null) ?? (row.created_at as string),
+    officialRestaurantId: (row.official_restaurant_id as string | null) ?? null,
   };
 }
 
@@ -205,6 +224,7 @@ function toDish(row: Record<string, unknown>): Dish {
     notes: row.notes as string,
     createdAt: row.created_at as string,
     updatedAt: (row.updated_at as string | null) ?? (row.created_at as string),
+    officialDishId: (row.official_dish_id as string | null) ?? null,
   };
 }
 
@@ -231,7 +251,9 @@ export function getDishes(): Dish[] {
   return getCache().dishes;
 }
 
-export function createRestaurant(input: Pick<Restaurant, "name" | "notes">): Restaurant {
+export function createRestaurant(
+  input: Pick<Restaurant, "name" | "notes"> & { officialRestaurantId?: string | null },
+): Restaurant {
   const now = new Date().toISOString();
   const r: Restaurant = {
     id: crypto.randomUUID(),
@@ -240,6 +262,7 @@ export function createRestaurant(input: Pick<Restaurant, "name" | "notes">): Res
     status: "pending",
     createdAt: now,
     updatedAt: now,
+    officialRestaurantId: input.officialRestaurantId ?? null,
   };
   const cache = getCache();
   cache.restaurants.unshift(r);
@@ -250,6 +273,7 @@ export function createRestaurant(input: Pick<Restaurant, "name" | "notes">): Res
       id: r.id, user_id: _userId,
       name: r.name, notes: r.notes,
       status: r.status, created_at: r.createdAt, updated_at: r.updatedAt,
+      official_restaurant_id: r.officialRestaurantId,
     })
   );
   return r;
@@ -309,7 +333,11 @@ function bumpRestaurantUpdatedAt(restaurantId: string, updatedAt: string): void 
   );
 }
 
-export function createDish(input: Pick<Dish, "restaurantId" | "typeId" | "name" | "rating" | "notes">): Dish {
+export function createDish(
+  input: Pick<Dish, "restaurantId" | "typeId" | "name" | "rating" | "notes"> & {
+    officialDishId?: string | null;
+  },
+): Dish {
   const now = new Date().toISOString();
   const d: Dish = {
     id: crypto.randomUUID(),
@@ -320,6 +348,7 @@ export function createDish(input: Pick<Dish, "restaurantId" | "typeId" | "name" 
     notes: input.notes,
     createdAt: now,
     updatedAt: now,
+    officialDishId: input.officialDishId ?? null,
   };
   const cache = getCache();
   cache.dishes.unshift(d);
@@ -332,6 +361,7 @@ export function createDish(input: Pick<Dish, "restaurantId" | "typeId" | "name" 
       type_id: d.typeId,
       name: d.name, rating: d.rating,
       notes: d.notes, created_at: d.createdAt, updated_at: d.updatedAt,
+      official_dish_id: d.officialDishId,
     })
   );
   bumpRestaurantUpdatedAt(d.restaurantId, now);
@@ -423,4 +453,87 @@ export function getRestaurantAverage(restaurantId: string): number | null {
 
 export function hasUnratedDishes(restaurantId: string): boolean {
   return getDishesByRestaurant(restaurantId).some((d) => d.rating === null);
+}
+
+// ─── Official (global) ────────────────────────────────────────────────────────
+
+function toOfficialRestaurant(row: Record<string, unknown>): OfficialRestaurant {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    city: (row.city as string | null) ?? null,
+    address: (row.address as string | null) ?? null,
+    notes: (row.notes as string | null) ?? null,
+  };
+}
+
+function toOfficialDish(row: Record<string, unknown>): OfficialDish {
+  return {
+    id: row.id as string,
+    officialRestaurantId: row.official_restaurant_id as string,
+    typeName: (row.type_name as string | null) ?? null,
+    name: row.name as string,
+    notes: (row.notes as string | null) ?? null,
+  };
+}
+
+/** Búsqueda async (no cacheada) en la tabla global de restaurantes oficiales. */
+export async function searchOfficialRestaurants(query: string): Promise<OfficialRestaurant[]> {
+  const q = query.trim();
+  if (q.length < 2) return [];
+  const { data, error } = await supabase
+    .from("official_restaurants")
+    .select("*")
+    .ilike("name", `%${q}%`)
+    .order("name", { ascending: true })
+    .limit(8);
+  if (error) { console.error("[searchOfficialRestaurants]", error); return []; }
+  return (data ?? []).map(toOfficialRestaurant);
+}
+
+/** Crea un Restaurant personal a partir de un oficial, clonando todos sus platos
+ *  como dishes sin calificar en el espacio del usuario. */
+export async function adoptOfficialRestaurant(officialId: string): Promise<Restaurant | null> {
+  const [officialRes, dishesRes] = await Promise.all([
+    supabase.from("official_restaurants").select("*").eq("id", officialId).single(),
+    supabase.from("official_dishes").select("*").eq("official_restaurant_id", officialId),
+  ]);
+  if (officialRes.error || !officialRes.data) {
+    console.error("[adoptOfficialRestaurant]", officialRes.error);
+    return null;
+  }
+  const official = toOfficialRestaurant(officialRes.data);
+  const officialDishes = (dishesRes.data ?? []).map(toOfficialDish);
+
+  const restaurant = createRestaurant({
+    name: official.name,
+    notes: official.notes ?? "",
+    officialRestaurantId: official.id,
+  });
+
+  // Mapeo de typeName → DishType personal (creando si no existe)
+  const typeCache = new Map<string, string | null>();
+  function resolveType(typeName: string | null): string | null {
+    if (!typeName) return null;
+    const upper = typeName.trim().toUpperCase();
+    if (!upper) return null;
+    if (typeCache.has(upper)) return typeCache.get(upper)!;
+    const existing = getDishTypes().find((t) => t.name === upper);
+    const id = existing ? existing.id : createDishType(upper).id;
+    typeCache.set(upper, id);
+    return id;
+  }
+
+  for (const od of officialDishes) {
+    createDish({
+      restaurantId: restaurant.id,
+      typeId: resolveType(od.typeName),
+      name: od.name,
+      rating: null,
+      notes: od.notes ?? "",
+      officialDishId: od.id,
+    });
+  }
+
+  return restaurant;
 }

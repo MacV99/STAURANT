@@ -14,6 +14,7 @@ const tplRestaurant: Restaurant = {
   notes: "",
   createdAt: "",
   updatedAt: "",
+  officialRestaurantId: null,
 };
 ---
 
@@ -277,7 +278,15 @@ const tplRestaurant: Restaurant = {
 
     article.setAttribute("data-href", `/restaurante?id=${r.id}`);
     article.setAttribute("style", `view-transition-name: restaurant-${r.id}`);
-    article.querySelector("h3")!.textContent = r.name;
+    const h3 = article.querySelector("h3")!;
+    h3.textContent = r.name;
+    if (r.officialRestaurantId) {
+      const badge = document.createElement("i");
+      badge.className = "bi bi-patch-check-fill verified-badge";
+      badge.title = "Restaurante verificado";
+      h3.appendChild(document.createTextNode(" "));
+      h3.appendChild(badge);
+    }
 
     const pill = article.querySelector(".dish-count-pill");
     if (pill) {

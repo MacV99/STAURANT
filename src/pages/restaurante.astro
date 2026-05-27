@@ -17,6 +17,7 @@ const tplDish: Dish = {
   notes: " ",
   createdAt: "",
   updatedAt: "",
+  officialDishId: null,
 };
 const tplRestaurant: Restaurant = {
   id: "",
@@ -25,6 +26,7 @@ const tplRestaurant: Restaurant = {
   notes: " ",
   createdAt: "",
   updatedAt: "",
+  officialRestaurantId: null,
 };
 ---
 
@@ -541,7 +543,15 @@ const tplRestaurant: Restaurant = {
       ".rh-card",
     )!;
     div.setAttribute("style", `view-transition-name: restaurant-${r.id}`);
-    div.querySelector("h1")!.textContent = r.name;
+    const h1 = div.querySelector("h1")!;
+    h1.textContent = r.name;
+    if (r.officialRestaurantId) {
+      const badge = document.createElement("i");
+      badge.className = "bi bi-patch-check-fill verified-badge";
+      badge.title = "Restaurante verificado";
+      h1.appendChild(document.createTextNode(" "));
+      h1.appendChild(badge);
+    }
     const dishes = getDishesByRestaurant(r.id);
     const pill = div.querySelector(".dish-count-pill");
     if (r.status === "pending") {

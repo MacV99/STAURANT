@@ -16,7 +16,12 @@ const isPending = r.status === "pending";
   <div class="rh-top flex-row">
     <RatingBadge score={avg} />
     <div class="rh-meta flex-column">
-      <h1 class="rh-name">{r.name}</h1>
+      <h1 class="rh-name">
+        {r.name}
+        {r.officialRestaurantId && (
+          <i class="bi bi-patch-check-fill verified-badge" title="Restaurante verificado" />
+        )}
+      </h1>
       <div class="rh-pills flex-row">
         {
           isPending ? (
