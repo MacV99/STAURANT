@@ -357,6 +357,8 @@ const tplRestaurant: Restaurant = {
     markAsVisited,
     markAsPending,
     getDishTypes,
+    getOfficialDishStat,
+    getOfficialRestaurantStat,
   } from "../lib/data.ts";
   import type { Restaurant, Dish } from "../lib/data.ts";
   import { getRatingClass, emit } from "../scripts/store.ts";
@@ -535,6 +537,15 @@ const tplRestaurant: Restaurant = {
 
   // ─── Generadores de HTML (nivel módulo) ────────────────────────────────────
 
+  function buildGlobalRatingPill(avgRating: number, ratingsCount: number): HTMLElement {
+    const pill = document.createElement("span");
+    pill.className = "global-rating-pill";
+    pill.title = `Promedio global basado en ${ratingsCount} ${ratingsCount === 1 ? "calificación" : "calificaciones"}`;
+    pill.innerHTML = `<i class="bi bi-globe2"></i> ${avgRating} <span class="grp-count">· ${ratingsCount}</span>`;
+    return pill;
+  }
+
+
   function buildHeaderElement(r: Restaurant, avg: number | null): Element {
     const tpl = document.getElementById(
       "tpl-restaurant-header",
@@ -543,14 +554,24 @@ const tplRestaurant: Restaurant = {
       ".rh-card",
     )!;
     div.setAttribute("style", `view-transition-name: restaurant-${r.id}`);
+    div.classList.toggle("is-official", !!r.officialRestaurantId);
     const h1 = div.querySelector("h1")!;
-    h1.textContent = r.name;
+    h1.textContent = "";
     if (r.officialRestaurantId) {
+      const idx = r.name.lastIndexOf(" ");
+      const head = idx === -1 ? "" : r.name.slice(0, idx + 1);
+      const tail = idx === -1 ? r.name : r.name.slice(idx + 1);
+      if (head) h1.appendChild(document.createTextNode(head));
+      const tailSpan = document.createElement("span");
+      tailSpan.className = "name-tail-nowrap";
+      tailSpan.textContent = tail;
       const badge = document.createElement("i");
       badge.className = "bi bi-patch-check-fill verified-badge";
       badge.title = "Restaurante verificado";
-      h1.appendChild(document.createTextNode(" "));
-      h1.appendChild(badge);
+      tailSpan.appendChild(badge);
+      h1.appendChild(tailSpan);
+    } else {
+      h1.textContent = r.name;
     }
     const dishes = getDishesByRestaurant(r.id);
     const pill = div.querySelector(".dish-count-pill");
@@ -571,6 +592,15 @@ const tplRestaurant: Restaurant = {
       badge.className = `rating-badge ${getRatingClass(avg)}`;
       badge.innerHTML = `<span class="rating-num">${avg}</span>`;
     }
+    // Pill de rating global (solo si es oficial y hay calificaciones agregadas)
+    if (r.officialRestaurantId) {
+      const stat = getOfficialRestaurantStat(r.officialRestaurantId);
+      if (stat && stat.ratingsCount > 0) {
+        const pillsRow = div.querySelector<HTMLElement>(".rh-pills");
+        pillsRow?.appendChild(buildGlobalRatingPill(stat.avgRating, stat.ratingsCount));
+      }
+    }
+
     const notesEl = div.querySelector<HTMLElement>(".rh-notes");
     if (r.notes) {
       notesEl!.textContent = r.notes;
@@ -640,6 +670,15 @@ const tplRestaurant: Restaurant = {
     } else {
       typeTagEl?.remove();
     }
+    // Pill de rating global del plato (solo si es oficial y hay agregados)
+    if (d.officialDishId) {
+      const stat = getOfficialDishStat(d.officialDishId);
+      if (stat && stat.ratingsCount > 0) {
+        const infoEl = article.querySelector<HTMLElement>(".dish-info");
+        infoEl?.appendChild(buildGlobalRatingPill(stat.avgRating, stat.ratingsCount));
+      }
+    }
+
     const notesEl = article.querySelector<HTMLElement>(".dish-notes");
     if (d.notes) {
       notesEl!.textContent = d.notes;
@@ -780,6 +819,27 @@ const tplRestaurant: Restaurant = {
   });
 
   document.addEventListener("dish:updated", () => rerenderRestaurantePage());
+
+  // Auto-promueve pending → visitado SOLO cuando un plato pasa por primera vez
+  // de sin calificar a calificado. No reacciona a edits de notas / nombre, así
+  // un pending puesto manualmente por el usuario no se revierte.
+  document.addEventListener("dish:first-rated", () => {
+    if (!currentRestaurant || currentRestaurant.status !== "pending") return;
+    try {
+      const updated = markAsVisited(currentRestaurant.id);
+      if (updated) {
+        currentRestaurant = updated;
+        const bl = document.getElementById(
+          "back-link",
+        ) as HTMLAnchorElement | null;
+        if (bl) bl.href = "/?tab=visitados";
+        emit("restaurant:visited", updated);
+      }
+    } catch (err) {
+      console.error("[dish:first-rated] markAsVisited error:", err);
+    }
+    rerenderRestaurantePage();
+  });
   document.addEventListener("dish:deleted", () => {
     if (currentRestaurant?.status === "visited") {
       const remaining = getDishesByRestaurant(currentRestaurant.id);
@@ -813,6 +873,10 @@ const tplRestaurant: Restaurant = {
     const fresh = getRestaurants().find((r) => r.id === currentRestaurant!.id);
     if (fresh) currentRestaurant = fresh;
     rerenderRestaurantePage();
+  });
+
+  document.addEventListener("stats:synced", () => {
+    if (currentRestaurant) rerenderRestaurantePage();
   });
 
   // ─── PRE-RENDER en astro:after-swap ────────────────────────────────────────

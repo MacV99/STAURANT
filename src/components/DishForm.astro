@@ -1111,8 +1111,21 @@
       close();
 
       if (id) {
+        // Capturar rating previo desde el cache ANTES del update para detectar
+        // la transición null → número (única señal real de "primera calificación").
+        const prevRating = getDishesByRestaurant(restaurantId).find(
+          (d) => d.id === id,
+        )?.rating ?? null;
         const updated = updateDish(id, { name, rating, notes, typeId });
-        if (updated) emit("dish:updated", updated);
+        if (updated) {
+          emit("dish:updated", updated);
+          // Solo dispara "primera calificación" en transición null → número.
+          // El auto-promote a "visitado" se suscribe a este evento, no a dish:updated,
+          // para no revertir un pending elegido manualmente por el usuario.
+          if (prevRating === null && updated.rating !== null) {
+            emit("dish:first-rated", updated);
+          }
+        }
       } else {
         emit(
           "dish:created",

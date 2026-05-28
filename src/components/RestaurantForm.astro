@@ -220,6 +220,7 @@
     adoptOfficialRestaurant,
   } from "../lib/data.ts";
   import { emit } from "../scripts/store.ts";
+  import { navigate } from "astro:transitions/client";
 
   // Re-inicializar en cada navegación para que open/close siempre
   // operen sobre los elementos del DOM ACTUAL (no los del swap anterior).
@@ -250,11 +251,7 @@
     function renderResults(results: OfficialRestaurant[]): void {
       dropdownEl.innerHTML = "";
       if (results.length === 0) {
-        const empty = document.createElement("div");
-        empty.className = "name-option is-empty";
-        empty.textContent = "Sin coincidencias oficiales";
-        dropdownEl.appendChild(empty);
-        showDropdown();
+        hideDropdown();
         return;
       }
       results.forEach((o) => {
@@ -288,14 +285,29 @@
     }
 
     async function adoptAndClose(o: OfficialRestaurant): Promise<void> {
-      // Bloquear UI mientras se clona la carta
+      // Guarda la misma invariante de unicidad de nombre que el flujo manual.
+      const duplicate = getRestaurants().find(
+        (r) => r.name.trim().toLowerCase() === o.name.trim().toLowerCase(),
+      );
+      if (duplicate) {
+        errorEl.textContent = `Ya tienes "${o.name}" en tu lista.`;
+        hideDropdown();
+        return;
+      }
+      // Bloquear UI mientras se clona la carta. NO cerrar el modal todavía:
+      // si la adopción falla queremos seguir mostrando el error dentro del form.
       submitBtn.disabled = true;
       hideDropdown();
-      close();
+      errorEl.textContent = "";
       const created = await adoptOfficialRestaurant(o.id);
       submitBtn.disabled = false;
-      if (created) emit("restaurant:created", created);
-      else errorEl.textContent = "No se pudo cargar el restaurante oficial.";
+      if (created) {
+        close();
+        emit("restaurant:created", created);
+        navigate(`/restaurante?id=${created.id}`);
+      } else {
+        errorEl.textContent = "No se pudo cargar el restaurante oficial. Intenta de nuevo.";
+      }
     }
 
     let searchToken = 0;

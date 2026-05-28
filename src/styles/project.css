@@ -110,16 +110,57 @@
   }
 }
 
-/* === UNRATED INDICATORS === */
+/* === RATING STATUS DOT (en pill de conteo de platos) ===
+   - status-dot-ok        → verde, todos los platos calificados
+   - status-dot-pending   → rojo, restaurante personal con pendientes
+   - status-dot-official  → naranja, restaurante oficial con pendientes */
 
-.unrated-dot {
+.status-dot {
   display: inline-block;
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #f59e0b;
   flex-shrink: 0;
   vertical-align: middle;
+  margin-left: 4px;
+}
+
+.status-dot-ok       { background: #22a06b; }
+.status-dot-pending  { background: #dc2626; }
+.status-dot-official { background: #f59e0b; }
+
+/* === PILL DE RATING GLOBAL (restaurante/plato oficial) === */
+
+.global-rating-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: var(--clr-primary);
+  background: var(--clr-white2);
+  border: solid 1px var(--clr-border);
+  border-radius: 20px;
+  padding: 2px 8px;
+  width: fit-content;
+}
+
+.global-rating-pill .grp-count {
+  font-weight: 500;
+  opacity: 0.6;
+}
+
+/* === RESTAURANTE OFICIAL — gradiente dorado sutil ===================
+   Selectores con clase doble para ganarle a los estilos scoped de
+   .restaurant-card (RestaurantCard.astro) y .rh-card (RestaurantHeader.astro). */
+
+.restaurant-card.is-official,
+.rh-card.is-official {
+  background:
+    linear-gradient(315deg, rgba(212, 160, 23, 0.14) 0%, rgba(255, 248, 230, 0) 60%),
+    var(--clr-white) !important;
+  border-color: rgba(212, 160, 23, 0.5) !important;
 }
 
 .unrated-tag {
@@ -139,10 +180,20 @@
 /* === VERIFIED BADGE (perfil oficial) === */
 
 .verified-badge {
-  color: var(--clr-primary);
-  font-size: 0.85em;
-  margin-left: 4px;
-  vertical-align: baseline;
+  color: #1d9bf0;
+  display: inline-block;
+  font-size: 0.8em;
+  margin-left: 2px;
+  /* Sube el badge para centrarlo con la altura de las mayúsculas
+     (los nombres siempre van en UPPERCASE). */
+  vertical-align: 0.15em;
+  line-height: 1;
+}
+
+/* Mantiene el último word del nombre junto al badge para que no caiga
+   en una línea propia cuando el nombre llena el ancho del contenedor. */
+.name-tail-nowrap {
+  white-space: nowrap;
 }
 
 /* === CARDS GRID === */

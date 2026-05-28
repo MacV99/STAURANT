@@ -13,16 +13,26 @@ const isPending = r.status === "pending";
 ---
 
 <article
-  class="restaurant-card card-clickable flex-row"
+  class:list={["restaurant-card card-clickable flex-row", { "is-official": r.officialRestaurantId }]}
   data-href={`/restaurante?id=${r.id}`}
   style={`view-transition-name: restaurant-${r.id}`}
 >
   <div class="card-body flex-column">
     <h3>
-      {r.name}
-      {r.officialRestaurantId && (
-        <i class="bi bi-patch-check-fill verified-badge" title="Restaurante verificado" />
-      )}
+      {r.officialRestaurantId ? (() => {
+        const idx = r.name.lastIndexOf(" ");
+        const head = idx === -1 ? "" : r.name.slice(0, idx + 1);
+        const tail = idx === -1 ? r.name : r.name.slice(idx + 1);
+        return (
+          <>
+            {head}
+            <span class="name-tail-nowrap">
+              {tail}
+              <i class="bi bi-patch-check-fill verified-badge" title="Restaurante verificado" />
+            </span>
+          </>
+        );
+      })() : r.name}
     </h3>
     {
       !isPending && (
@@ -61,6 +71,8 @@ const isPending = r.status === "pending";
     font-weight: 700;
     letter-spacing: 0.3px;
     color: var(--clr-text);
+    word-break: break-word;
+    line-height: 1.25;
   }
 
   @media (hover: hover) {

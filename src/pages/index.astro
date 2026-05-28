@@ -192,6 +192,7 @@ const tplRestaurant: Restaurant = {
     getDishesByRestaurant,
     getRestaurantAverage,
     hasUnratedDishes,
+    getOfficialRestaurantStat,
     type Restaurant,
   } from "../lib/data.ts";
   import { getRatingClass } from "../scripts/store.ts";
@@ -278,24 +279,59 @@ const tplRestaurant: Restaurant = {
 
     article.setAttribute("data-href", `/restaurante?id=${r.id}`);
     article.setAttribute("style", `view-transition-name: restaurant-${r.id}`);
+    article.classList.toggle("is-official", !!r.officialRestaurantId);
     const h3 = article.querySelector("h3")!;
-    h3.textContent = r.name;
+    h3.textContent = "";
     if (r.officialRestaurantId) {
+      const idx = r.name.lastIndexOf(" ");
+      const head = idx === -1 ? "" : r.name.slice(0, idx + 1);
+      const tail = idx === -1 ? r.name : r.name.slice(idx + 1);
+      if (head) h3.appendChild(document.createTextNode(head));
+      const tailSpan = document.createElement("span");
+      tailSpan.className = "name-tail-nowrap";
+      tailSpan.textContent = tail;
       const badge = document.createElement("i");
       badge.className = "bi bi-patch-check-fill verified-badge";
       badge.title = "Restaurante verificado";
-      h3.appendChild(document.createTextNode(" "));
-      h3.appendChild(badge);
+      tailSpan.appendChild(badge);
+      h3.appendChild(tailSpan);
+    } else {
+      h3.textContent = r.name;
     }
 
-    const pill = article.querySelector(".dish-count-pill");
+    const pill = article.querySelector(".dish-count-pill") as HTMLElement | null;
     if (pill) {
       pill.innerHTML = `<i class="bi bi-journal-text"></i> ${dishCount} ${dishCount === 1 ? "plato" : "platos"}`;
-      if (hasUnratedDishes(r.id)) {
+      if (dishCount > 0) {
         const dot = document.createElement("span");
-        dot.className = "unrated-dot";
-        dot.title = "Hay platos sin calificar";
+        const hasUnrated = hasUnratedDishes(r.id);
+        if (!hasUnrated) {
+          dot.className = "status-dot status-dot-ok";
+          dot.title = "Todos los platos calificados";
+        } else if (r.officialRestaurantId) {
+          dot.className = "status-dot status-dot-official";
+          dot.title = "Hay platos sin calificar";
+        } else {
+          dot.className = "status-dot status-dot-pending";
+          dot.title = "Hay platos sin calificar";
+        }
         pill.appendChild(dot);
+      }
+    }
+
+    // Pill de rating global junto al de cantidad de platos
+    if (r.officialRestaurantId && pill) {
+      const stat = getOfficialRestaurantStat(r.officialRestaurantId);
+      if (stat && stat.ratingsCount > 0 && pill.parentElement) {
+        const wrapper = document.createElement("div");
+        wrapper.style.cssText = "display:flex; flex-direction:row; flex-wrap:wrap; gap:6px;";
+        pill.parentElement.insertBefore(wrapper, pill);
+        wrapper.appendChild(pill);
+        const gp = document.createElement("span");
+        gp.className = "global-rating-pill";
+        gp.title = `Promedio global basado en ${stat.ratingsCount} ${stat.ratingsCount === 1 ? "calificación" : "calificaciones"}`;
+        gp.innerHTML = `<i class="bi bi-globe2"></i> ${stat.avgRating} <span class="grp-count">· ${stat.ratingsCount}</span>`;
+        wrapper.appendChild(gp);
       }
     }
 
@@ -422,6 +458,7 @@ const tplRestaurant: Restaurant = {
   document.addEventListener("restaurant:updated", () => renderBoth());
   document.addEventListener("restaurant:visited", () => renderBoth());
   document.addEventListener("cache:synced", () => renderBoth());
+  document.addEventListener("stats:synced", () => renderBoth());
 
   // ─── PRE-RENDER en astro:after-swap ─────────────────────────────────────────
 

@@ -21,6 +21,7 @@ type AppEvent =
   | "restaurant:visited"
   | "dish:created"
   | "dish:updated"
+  | "dish:first-rated"
   | "dish:deleted";
 
 export function emit(event: AppEvent, detail?: unknown): void {

@@ -40,6 +40,11 @@ export interface OfficialDish {
   notes: string | null;
 }
 
+export interface OfficialStat {
+  avgRating: number;
+  ratingsCount: number;
+}
+
 export interface DishType {
   id: string;
   name: string;
@@ -56,7 +61,24 @@ interface AppCache {
 }
 
 const CACHE_KEY = "staurant_cache_v4";
+const STATS_CACHE_KEY = "staurant_official_stats_v1";
 let _userId: string | null = null;
+
+// Cache de stats globales (compartido entre usuarios, sin user_id)
+interface OfficialStatsCache {
+  dishes: Record<string, OfficialStat>;
+  restaurants: Record<string, OfficialStat>;
+}
+let _statsMem: OfficialStatsCache = { dishes: {}, restaurants: {} };
+
+function loadStatsFromLocalStorage(): void {
+  try {
+    const raw = localStorage.getItem(STATS_CACHE_KEY);
+    if (raw) _statsMem = JSON.parse(raw) as OfficialStatsCache;
+  } catch {
+    /* ignore */
+  }
+}
 // Caché en memoria: evita JSON.parse de localStorage en cada lectura.
 // Se sincroniza con localStorage solo en escritura y en el primer initCache.
 let _mem: AppCache | null = null;
@@ -147,6 +169,11 @@ async function refreshCacheInBackground(): Promise<void> {
     writeCache(remote);
     document.dispatchEvent(new CustomEvent("cache:synced"));
   }
+
+  // Sincronizar carta de oficiales después de tener el estado fresco
+  await syncOfficialMenus();
+  // Refrescar stats globales (cambian cuando otros users califican)
+  bgSync(fetchOfficialStats);
 }
 
 /** Llama esto al inicio de cada página protegida, pasando el userId de la sesión.
@@ -154,6 +181,8 @@ async function refreshCacheInBackground(): Promise<void> {
  *  - Siempre lanza un refresh en background para sincronizar cambios de otros dispositivos. */
 export async function initCache(userId: string): Promise<void> {
   _userId = userId;
+  loadStatsFromLocalStorage();
+  bgSync(fetchOfficialStats);
 
   // Si ya tenemos datos en memoria para este usuario → fast path, refresh en background.
   if (_mem?.userId === _userId) {
@@ -177,6 +206,9 @@ export async function initCache(userId: string): Promise<void> {
   if (fresh.dishTypes.length === 0) {
     ["HAMBURGUESA", "PERRO CALIENTE", "PIZZA"].forEach(name => createDishType(name));
   }
+
+  // Pull de la carta oficial en background tras la carga inicial
+  bgSync(syncOfficialMenus);
 }
 
 /** Borra el caché local (llamar en logout). */
@@ -337,6 +369,7 @@ export function createDish(
   input: Pick<Dish, "restaurantId" | "typeId" | "name" | "rating" | "notes"> & {
     officialDishId?: string | null;
   },
+  options?: { skipBump?: boolean },
 ): Dish {
   const now = new Date().toISOString();
   const d: Dish = {
@@ -364,7 +397,9 @@ export function createDish(
       official_dish_id: d.officialDishId,
     })
   );
-  bumpRestaurantUpdatedAt(d.restaurantId, now);
+  // skipBump evita que la sincronización automática de cartas oficiales
+  // emita N UPDATEs y altere updated_at del restaurante sin acción del usuario.
+  if (!options?.skipBump) bumpRestaurantUpdatedAt(d.restaurantId, now);
   return d;
 }
 
@@ -477,14 +512,17 @@ function toOfficialDish(row: Record<string, unknown>): OfficialDish {
   };
 }
 
-/** Búsqueda async (no cacheada) en la tabla global de restaurantes oficiales. */
+/** Búsqueda async (no cacheada) en la tabla global de restaurantes oficiales.
+ *  Los wildcards SQL del usuario (%, _) y el escape \\ se neutralizan para que
+ *  el patrón ilike solo busque la subcadena literal. */
 export async function searchOfficialRestaurants(query: string): Promise<OfficialRestaurant[]> {
   const q = query.trim();
   if (q.length < 2) return [];
+  const escaped = q.replace(/([\\%_])/g, "\\$1");
   const { data, error } = await supabase
     .from("official_restaurants")
     .select("*")
-    .ilike("name", `%${q}%`)
+    .ilike("name", `%${escaped}%`)
     .order("name", { ascending: true })
     .limit(8);
   if (error) { console.error("[searchOfficialRestaurants]", error); return []; }
@@ -492,26 +530,33 @@ export async function searchOfficialRestaurants(query: string): Promise<Official
 }
 
 /** Crea un Restaurant personal a partir de un oficial, clonando todos sus platos
- *  como dishes sin calificar en el espacio del usuario. */
+ *  como dishes sin calificar en el espacio del usuario.
+ *
+ *  La persistencia en Supabase es ATÓMICA y AWAITED:
+ *  - se inserta el restaurante primero (respetando FK)
+ *  - luego todos los dishes en un solo batch insert
+ *  - si algo falla se hace rollback del cache local
+ *
+ *  Esto evita que un refresh en segundo plano sobreescriba la adopción antes
+ *  de que se persista (race contra refreshCacheInBackground). */
 export async function adoptOfficialRestaurant(officialId: string): Promise<Restaurant | null> {
   const [officialRes, dishesRes] = await Promise.all([
     supabase.from("official_restaurants").select("*").eq("id", officialId).single(),
     supabase.from("official_dishes").select("*").eq("official_restaurant_id", officialId),
   ]);
   if (officialRes.error || !officialRes.data) {
-    console.error("[adoptOfficialRestaurant]", officialRes.error);
+    console.error("[adoptOfficialRestaurant] official fetch failed", officialRes.error);
+    return null;
+  }
+  if (dishesRes.error) {
+    console.error("[adoptOfficialRestaurant] dishes fetch failed", dishesRes.error);
     return null;
   }
   const official = toOfficialRestaurant(officialRes.data);
   const officialDishes = (dishesRes.data ?? []).map(toOfficialDish);
 
-  const restaurant = createRestaurant({
-    name: official.name,
-    notes: official.notes ?? "",
-    officialRestaurantId: official.id,
-  });
-
-  // Mapeo de typeName → DishType personal (creando si no existe)
+  // Mapeo de typeName → DishType personal (creando si no existe).
+  // createDishType escribe al cache + bgSync, ok que sea fire-and-forget para tipos.
   const typeCache = new Map<string, string | null>();
   function resolveType(typeName: string | null): string | null {
     if (!typeName) return null;
@@ -524,16 +569,179 @@ export async function adoptOfficialRestaurant(officialId: string): Promise<Resta
     return id;
   }
 
-  for (const od of officialDishes) {
-    createDish({
-      restaurantId: restaurant.id,
-      typeId: resolveType(od.typeName),
-      name: od.name,
-      rating: null,
-      notes: od.notes ?? "",
-      officialDishId: od.id,
+  // Construir restaurante + dishes en memoria
+  const now = new Date().toISOString();
+  const restaurant: Restaurant = {
+    id: crypto.randomUUID(),
+    name: official.name,
+    notes: official.notes ?? "",
+    status: "pending",
+    createdAt: now,
+    updatedAt: now,
+    officialRestaurantId: official.id,
+  };
+  const dishes: Dish[] = officialDishes.map((od) => ({
+    id: crypto.randomUUID(),
+    restaurantId: restaurant.id,
+    typeId: resolveType(od.typeName),
+    name: od.name,
+    rating: null,
+    notes: od.notes ?? "",
+    createdAt: now,
+    updatedAt: now,
+    officialDishId: od.id,
+  }));
+
+  // Aplicar al cache local (optimistic)
+  const cache = getCache();
+  cache.restaurants.unshift(restaurant);
+  cache.dishes.unshift(...dishes);
+  writeCache(cache);
+
+  // Persistir en Supabase: restaurante PRIMERO (FK), luego dishes en batch.
+  try {
+    const rRes = await supabase.from("restaurants").insert({
+      id: restaurant.id, user_id: _userId,
+      name: restaurant.name, notes: restaurant.notes,
+      status: restaurant.status,
+      created_at: restaurant.createdAt, updated_at: restaurant.updatedAt,
+      official_restaurant_id: restaurant.officialRestaurantId,
     });
+    if (rRes.error) throw rRes.error;
+
+    if (dishes.length > 0) {
+      const dRes = await supabase.from("dishes").insert(
+        dishes.map((d) => ({
+          id: d.id, user_id: _userId,
+          restaurant_id: d.restaurantId, type_id: d.typeId,
+          name: d.name, rating: d.rating, notes: d.notes,
+          created_at: d.createdAt, updated_at: d.updatedAt,
+          official_dish_id: d.officialDishId,
+        })),
+      );
+      if (dRes.error) throw dRes.error;
+    }
+  } catch (err) {
+    console.error("[adoptOfficialRestaurant] persist error — rolling back local cache", err);
+    const cur = getCache();
+    cur.restaurants = cur.restaurants.filter((r) => r.id !== restaurant.id);
+    cur.dishes = cur.dishes.filter((d) => d.restaurantId !== restaurant.id);
+    writeCache(cur);
+    return null;
   }
 
   return restaurant;
+}
+
+/** Para cada restaurante personal vinculado a uno oficial, agrega los platos
+ *  que existan en la carta oficial pero no en la copia local del usuario.
+ *  Solo AÑADE — nunca borra ni renombra para no destruir calificaciones.
+ *  Dispara "cache:synced" si se crearon platos. */
+export async function syncOfficialMenus(): Promise<void> {
+  const cache = getCache();
+  const linked = cache.restaurants.filter((r) => r.officialRestaurantId);
+  if (linked.length === 0) return;
+
+  const officialIds = [...new Set(linked.map((r) => r.officialRestaurantId!))];
+  const { data, error } = await supabase
+    .from("official_dishes")
+    .select("*")
+    .in("official_restaurant_id", officialIds);
+  if (error || !data) { console.error("[syncOfficialMenus]", error); return; }
+
+  const officialDishes = data.map(toOfficialDish);
+  const byOfficial = new Map<string, OfficialDish[]>();
+  for (const od of officialDishes) {
+    const list = byOfficial.get(od.officialRestaurantId) ?? [];
+    list.push(od);
+    byOfficial.set(od.officialRestaurantId, list);
+  }
+
+  let didCreate = false;
+  for (const r of linked) {
+    const personalDishes = cache.dishes.filter((d) => d.restaurantId === r.id);
+    const haveOfficialIds = new Set(
+      personalDishes.map((d) => d.officialDishId).filter((id): id is string => !!id),
+    );
+    const officialList = byOfficial.get(r.officialRestaurantId!) ?? [];
+    const missing = officialList.filter((od) => !haveOfficialIds.has(od.id));
+    if (missing.length === 0) continue;
+
+    for (const od of missing) {
+      let typeId: string | null = null;
+      const upper = od.typeName?.trim().toUpperCase();
+      if (upper) {
+        const existing = getDishTypes().find((t) => t.name === upper);
+        typeId = existing ? existing.id : createDishType(upper).id;
+      }
+      createDish(
+        {
+          restaurantId: r.id,
+          typeId,
+          name: od.name,
+          rating: null,
+          notes: od.notes ?? "",
+          officialDishId: od.id,
+        },
+        { skipBump: true },
+      );
+      didCreate = true;
+    }
+  }
+
+  if (didCreate) document.dispatchEvent(new CustomEvent("cache:synced"));
+}
+
+/** Fetch agregaciones globales (RPCs Supabase) y guarda en cache local.
+ *  Dispara "stats:synced" si cambia algo. */
+export async function fetchOfficialStats(): Promise<void> {
+  const [dishRes, restRes] = await Promise.all([
+    supabase.rpc("get_official_dish_stats"),
+    supabase.rpc("get_official_restaurant_stats"),
+  ]);
+  if (dishRes.error || restRes.error) {
+    console.error("[fetchOfficialStats]", dishRes.error ?? restRes.error);
+    return;
+  }
+  const next: OfficialStatsCache = { dishes: {}, restaurants: {} };
+  for (const row of (dishRes.data ?? []) as Array<{ official_dish_id: string; avg_rating: number | string; ratings_count: number | string }>) {
+    next.dishes[row.official_dish_id] = {
+      avgRating: Number(row.avg_rating),
+      ratingsCount: Number(row.ratings_count),
+    };
+  }
+  for (const row of (restRes.data ?? []) as Array<{ official_restaurant_id: string; avg_rating: number | string; ratings_count: number | string }>) {
+    next.restaurants[row.official_restaurant_id] = {
+      avgRating: Number(row.avg_rating),
+      ratingsCount: Number(row.ratings_count),
+    };
+  }
+  const changed = !sameStats(_statsMem, next);
+  _statsMem = next;
+  localStorage.setItem(STATS_CACHE_KEY, JSON.stringify(next));
+  if (changed) document.dispatchEvent(new CustomEvent("stats:synced"));
+}
+
+/** Compara por valor — JSON.stringify es sensible al orden de inserción de claves,
+ *  y los RPCs de Postgres no garantizan orden estable sin ORDER BY. */
+function sameStats(a: OfficialStatsCache, b: OfficialStatsCache): boolean {
+  return sameStatMap(a.dishes, b.dishes) && sameStatMap(a.restaurants, b.restaurants);
+}
+function sameStatMap(a: Record<string, OfficialStat>, b: Record<string, OfficialStat>): boolean {
+  const aKeys = Object.keys(a);
+  if (aKeys.length !== Object.keys(b).length) return false;
+  for (const k of aKeys) {
+    const av = a[k], bv = b[k];
+    if (!bv) return false;
+    if (av.avgRating !== bv.avgRating || av.ratingsCount !== bv.ratingsCount) return false;
+  }
+  return true;
+}
+
+export function getOfficialDishStat(officialDishId: string): OfficialStat | null {
+  return _statsMem.dishes[officialDishId] ?? null;
+}
+
+export function getOfficialRestaurantStat(officialRestaurantId: string): OfficialStat | null {
+  return _statsMem.restaurants[officialRestaurantId] ?? null;
 }
