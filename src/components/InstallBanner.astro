@@ -1,0 +1,337 @@
+---
+---
+
+<!-- Floating install banner -->
+<div id="install-banner" class="install-banner" style="display:none" aria-live="polite">
+  <div class="install-banner-inner flex-row">
+    <img src="/img/icon.png" alt="" class="install-banner-icon" />
+    <div class="install-banner-text flex-column">
+      <span class="install-banner-title">Instalar STAURANT</span>
+      <span class="install-banner-sub">Accede rápido desde tu teléfono</span>
+    </div>
+    <button id="install-banner-btn" class="install-banner-action">Instalar</button>
+    <button id="install-banner-dismiss" class="install-banner-dismiss" aria-label="Cerrar banner">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+</div>
+
+<!-- iOS instructions modal -->
+<div id="ios-install-overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="ios-modal-title">
+  <div class="ios-install-modal flex-column">
+    <div class="ios-modal-header flex-row">
+      <h2 class="ios-modal-title" id="ios-modal-title">Agregar a inicio</h2>
+      <button id="ios-modal-close" class="modal-close btn-icon-close boton2" aria-label="Cerrar">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <div class="ios-steps flex-column">
+      <div class="ios-step flex-row">
+        <div class="ios-step-num">1</div>
+        <div class="ios-step-text">
+          Toca el ícono de compartir
+          <span class="ios-share-icon"><i class="bi bi-box-arrow-up"></i></span>
+          en la barra inferior de Safari
+        </div>
+      </div>
+      <div class="ios-step flex-row">
+        <div class="ios-step-num">2</div>
+        <div class="ios-step-text">
+          Desliza y toca <strong>"Agregar a pantalla de inicio"</strong>
+        </div>
+      </div>
+      <div class="ios-step flex-row">
+        <div class="ios-step-num">3</div>
+        <div class="ios-step-text">
+          Toca <strong>"Agregar"</strong> en la esquina superior derecha
+        </div>
+      </div>
+    </div>
+    <p class="ios-modal-hint">Solo disponible en Safari</p>
+  </div>
+</div>
+
+<style>
+  .install-banner {
+    position: fixed;
+    bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 32px);
+    max-width: 480px;
+    z-index: 120;
+    background: var(--clr-primary);
+    border-radius: 16px;
+    padding: 10px 12px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.22);
+    animation: banner-up 0.22s ease;
+  }
+
+  @keyframes banner-up {
+    from { transform: translateX(-50%) translateY(16px); opacity: 0; }
+    to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
+  }
+
+  .install-banner-inner {
+    gap: 10px;
+    align-items: center;
+  }
+
+  .install-banner-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
+    flex-shrink: 0;
+  }
+
+  .install-banner-text {
+    flex: 1;
+    gap: 2px;
+    min-width: 0;
+    align-items: flex-start;
+  }
+
+  .install-banner-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--clr-white);
+    line-height: 1.2;
+  }
+
+  .install-banner-sub {
+    font-size: 0.72rem;
+    color: var(--clr-white);
+    opacity: 0.6;
+    line-height: 1.2;
+  }
+
+  .install-banner-action {
+    background: var(--clr-white);
+    color: var(--clr-primary);
+    border: none;
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: var(--transition);
+  }
+
+  .install-banner-dismiss {
+    background: transparent;
+    border: none;
+    color: var(--clr-white);
+    opacity: 0.45;
+    font-size: 0.75rem;
+    padding: 4px 2px;
+    cursor: pointer;
+    flex-shrink: 0;
+    line-height: 1;
+    letter-spacing: 0;
+    text-transform: none;
+    transition: var(--transition);
+  }
+
+  /* iOS modal */
+  .ios-install-modal {
+    background: var(--clr-white);
+    border-radius: 20px;
+    padding: 24px 20px;
+    width: 100%;
+    max-width: 380px;
+    align-items: stretch;
+    gap: 20px;
+  }
+
+  .ios-modal-header {
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .ios-modal-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--clr-text);
+    margin: 0;
+  }
+
+  .ios-steps {
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .ios-step {
+    gap: 12px;
+    align-items: flex-start;
+    background: var(--clr-white2);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+
+  .ios-step-num {
+    min-width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--clr-primary);
+    color: var(--clr-white);
+    font-size: 0.72rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .ios-step-text {
+    font-size: 0.88rem;
+    color: var(--clr-text);
+    line-height: 1.55;
+  }
+
+  .ios-share-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 21px;
+    height: 21px;
+    background: #007aff;
+    color: #fff;
+    border-radius: 5px;
+    font-size: 0.75rem;
+    vertical-align: middle;
+    margin: 0 2px;
+  }
+
+  .ios-modal-hint {
+    font-size: 0.75rem;
+    color: var(--clr-text);
+    opacity: 0.38;
+    text-align: center;
+    margin: 0;
+  }
+
+  @media (hover: hover) {
+    .install-banner-action:hover { filter: brightness(0.93); }
+    .install-banner-dismiss:hover { opacity: 1; }
+  }
+
+  @media (min-width: 768px) {
+    .install-banner {
+      bottom: 20px;
+    }
+  }
+</style>
+
+<script>
+  // Module-level — persists across ViewTransitions
+  let deferredPrompt: Event | null = null;
+  const DISMISSED_KEY = "staurant_banner_dismissed";
+
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+  });
+
+  window.addEventListener("appinstalled", () => {
+    deferredPrompt = null;
+    hideBanner();
+    updateProfileCard();
+  });
+
+  function isStandalone(): boolean {
+    return (
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (navigator as any).standalone === true
+    );
+  }
+
+  function getInstallPlatform(): "android" | "ios" | "none" {
+    if (isStandalone()) return "none";
+    if (deferredPrompt) return "android";
+    const ua = navigator.userAgent;
+    if (/iphone|ipad|ipod/i.test(ua) && !(window as any).MSStream) return "ios";
+    return "none";
+  }
+
+  function showIOSModal(): void {
+    document.getElementById("ios-install-overlay")?.classList.add("is-open");
+  }
+
+  function hideIOSModal(): void {
+    document.getElementById("ios-install-overlay")?.classList.remove("is-open");
+  }
+
+  async function triggerInstall(): Promise<void> {
+    const platform = getInstallPlatform();
+    if (platform === "android" && deferredPrompt) {
+      (deferredPrompt as any).prompt();
+      const { outcome } = await (deferredPrompt as any).userChoice;
+      if (outcome === "accepted") {
+        deferredPrompt = null;
+        hideBanner();
+        updateProfileCard();
+      }
+    } else if (platform === "ios") {
+      showIOSModal();
+    }
+  }
+
+  function hideBanner(): void {
+    const banner = document.getElementById("install-banner");
+    if (banner) banner.style.display = "none";
+  }
+
+  function updateBanner(): void {
+    const banner = document.getElementById("install-banner");
+    if (!banner) return;
+
+    const platform = getInstallPlatform();
+    const dismissed = localStorage.getItem(DISMISSED_KEY);
+
+    if (platform === "none" || dismissed) {
+      banner.style.display = "none";
+      return;
+    }
+
+    banner.style.display = "";
+    const actionBtn = document.getElementById("install-banner-btn");
+    if (actionBtn) {
+      actionBtn.textContent = platform === "ios" ? "Cómo instalar" : "Instalar";
+    }
+  }
+
+  function updateProfileCard(): void {
+    const card = document.getElementById("install-profile-card");
+    if (!card) return;
+    card.onclick = () => triggerInstall();
+    card.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") triggerInstall(); };
+  }
+
+  // Exposed for profile page script
+  (window as any).pwaInstall = { trigger: triggerInstall };
+
+  document.addEventListener("astro:page-load", () => {
+    updateBanner();
+    updateProfileCard();
+
+    document.getElementById("install-banner-btn")!.onclick = () => triggerInstall();
+
+    document.getElementById("install-banner-dismiss")!.onclick = () => {
+      localStorage.setItem(DISMISSED_KEY, "1");
+      hideBanner();
+    };
+
+    document.getElementById("ios-modal-close")!.onclick = hideIOSModal;
+
+    const iosOverlay = document.getElementById("ios-install-overlay");
+    if (iosOverlay) {
+      iosOverlay.onclick = (e) => {
+        if (e.target === iosOverlay) hideIOSModal();
+      };
+    }
+
+  });
+</script>

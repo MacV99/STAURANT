@@ -103,6 +103,16 @@ import Layout1 from "../layouts/Layout1.astro";
       </div>
     </div>
 
+    <!-- Instalar app -->
+    <div class="dash-card install-card-btn flex-row" id="install-profile-card" role="button" tabindex="0" aria-label="Instalar STAURANT">
+      <img src="/img/icon.png" alt="" class="install-card-icon" />
+      <div class="install-card-text flex-column">
+        <span class="install-card-heading">Instalar STAURANT</span>
+        <span class="install-card-sub">Agrega la app a tu pantalla de inicio</span>
+      </div>
+      <i class="bi bi-chevron-right install-card-arrow"></i>
+    </div>
+
     <!-- Columna derecha: stats + top 3 -->
     <div class="dash-col flex-column">
       <div class="dash-card flex-column">
@@ -452,6 +462,50 @@ import Layout1 from "../layouts/Layout1.astro";
     padding: 8px 0;
   }
 
+  /* ── Install card ── */
+
+  .install-card-btn {
+    cursor: pointer;
+    gap: 14px;
+    align-items: center;
+    transition: var(--transition);
+    padding: 16px 20px;
+    user-select: none;
+  }
+
+  .install-card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+
+  .install-card-text {
+    gap: 3px;
+    flex: 1;
+    align-items: flex-start;
+  }
+
+  .install-card-heading {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--clr-text);
+  }
+
+  .install-card-sub {
+    font-size: 0.8rem;
+    color: var(--clr-text);
+    opacity: 0.5;
+    line-height: 1.45;
+  }
+
+  .install-card-arrow {
+    font-size: 0.85rem;
+    color: var(--clr-text);
+    opacity: 0.3;
+    flex-shrink: 0;
+  }
+
   /* ── Hover ── */
 
   @media (hover: hover) {
@@ -470,6 +524,10 @@ import Layout1 from "../layouts/Layout1.astro";
     .btn-danger-outline:hover { background: #fce8e8; }
 
     .pw-toggle:hover { opacity: 0.85; }
+    .install-card-btn:hover {
+      border-color: var(--clr-border2);
+      background: var(--clr-white2);
+    }
   }
 
   @media (min-width: 768px) {
