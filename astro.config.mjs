@@ -18,15 +18,15 @@ export default defineConfig({
         orientation: 'portrait-primary',
         icons: [
           {
-            src: '/img/icon.png',
+            src: '/img/icon.avif',
             sizes: '192x192',
-            type: 'image/png',
+            type: 'image/avif',
             purpose: 'any',
           },
           {
-            src: '/img/icon.png',
+            src: '/img/icon.avif',
             sizes: '512x512',
-            type: 'image/png',
+            type: 'image/avif',
             purpose: 'maskable',
           },
         ],
@@ -35,7 +35,7 @@ export default defineConfig({
         // No fallback para navegación — la app requiere red (auth Supabase)
         navigateFallback: null,
         // Cachear solo assets estáticos
-        globPatterns: ['**/*.{css,js,html,svg,png,jpg,jpeg,ico,webp,woff,woff2}'],
+        globPatterns: ['**/*.{css,js,html,svg,png,jpg,jpeg,ico,webp,avif,woff,woff2}'],
         runtimeCaching: [
           {
             // Supabase: siempre desde la red (auth + datos en tiempo real)
