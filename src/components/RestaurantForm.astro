@@ -1,136 +1,37 @@
-<div
-  id="restaurant-form-overlay"
-  class="overlay"
-  aria-modal="true"
-  role="dialog"
->
-  <div class="form-box flex-column">
-    <div class="form-header flex-row">
-      <h2 id="restaurant-form-title">Nuevo restaurante</h2>
-      <button
-        id="restaurant-form-close"
-        class="btn-close btn-icon-close boton2"
-        aria-label="Cerrar"
-      >
-        <i class="bi bi-x-lg"></i>
-      </button>
+---
+import FormModal from "./FormModal.astro";
+---
+
+<FormModal id="restaurant-form" title="Nuevo restaurante" maxWidth="460px">
+  <input type="hidden" id="rf-id" />
+  <input type="hidden" id="rf-official-id" />
+
+  <label for="rf-name">
+    <span class="label-text flex-row">Nombre <span class="required">*</span></span>
+    <div class="name-combobox" id="rf-name-combobox">
+      <input
+        type="text"
+        id="rf-name"
+        required
+        autocomplete="off"
+        spellcheck="false"
+        placeholder="El Cielo, La Plaza..."
+      />
+      <div id="rf-name-dropdown" class="name-dropdown" hidden></div>
     </div>
+  </label>
 
-    <form id="restaurant-form" class="flex-column" novalidate>
-      <input type="hidden" id="rf-id" />
-      <input type="hidden" id="rf-official-id" />
-
-      <label for="rf-name">
-        <span class="label-text flex-row">Nombre <span class="required">*</span></span>
-        <div class="name-combobox" id="rf-name-combobox">
-          <input
-            type="text"
-            id="rf-name"
-            required
-            autocomplete="off"
-            spellcheck="false"
-            placeholder="El Cielo, La Plaza..."
-          />
-          <div id="rf-name-dropdown" class="name-dropdown" hidden></div>
-        </div>
-      </label>
-
-      <label for="rf-notes">
-        <span class="label-text flex-row">Notas</span>
-        <textarea
-          id="rf-notes"
-          rows="3"
-          placeholder="Ambiente, ubicación, lo que quieras recordar..."
-        ></textarea>
-      </label>
-
-      <p id="rf-error" class="form-error" aria-live="polite"></p>
-
-      <div class="form-footer flex-row">
-        <button type="button" id="restaurant-form-cancel" class="boton2"
-          >Cancelar</button
-        >
-        <button type="submit" class="boton" id="rf-submit">Guardar</button>
-      </div>
-    </form>
-  </div>
-</div>
+  <label for="rf-notes">
+    <span class="label-text flex-row">Notas</span>
+    <textarea
+      id="rf-notes"
+      rows="3"
+      placeholder="Ambiente, ubicación, lo que quieras recordar..."
+    ></textarea>
+  </label>
+</FormModal>
 
 <style>
-  .form-box {
-    background: var(--clr-white);
-    border: solid 1px var(--clr-border);
-    border-radius: 20px;
-    padding: 24px 20px;
-    width: 92%;
-    max-width: 460px;
-    align-items: stretch;
-    gap: 0;
-    max-height: 90dvh;
-    overflow-y: auto;
-  }
-
-  .form-header {
-    justify-content: space-between;
-    margin-bottom: 20px;
-  }
-
-  .form-header h2 {
-    font-size: 1.1rem;
-    letter-spacing: 1px;
-    color: var(--clr-text);
-  }
-
-  form {
-    align-items: stretch;
-    gap: 14px;
-  }
-
-  label {
-    font-size: 0.82rem;
-    font-weight: 600;
-    letter-spacing: 1px;
-    color: var(--clr-text);
-    text-transform: uppercase;
-    gap: 0;
-  }
-
-  .label-text {
-    justify-content: flex-start;
-    gap: 3px;
-    margin-bottom: 5px;
-  }
-
-  label input,
-  label textarea {
-    border-radius: var(--border-radius);
-    width: 100%;
-  }
-
-  .required {
-    color: #e05050;
-    font-weight: 700;
-  }
-
-  .optional {
-    font-weight: 400;
-    color: var(--clr-text);
-    text-transform: none;
-    letter-spacing: 0;
-  }
-
-  .form-error {
-    font-size: 0.85rem;
-    color: #e05050;
-    min-height: 1.2em;
-  }
-
-  .form-footer {
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 6px;
-  }
-
   /* ── Autocomplete oficial ─────────────────────────────────────────────── */
 
   .name-combobox {
@@ -150,12 +51,6 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-  }
-
-  @media (min-width: 768px) {
-    .form-box {
-      padding: 28px 28px;
-    }
   }
 </style>
 
@@ -219,15 +114,17 @@
     searchOfficialRestaurants,
     adoptOfficialRestaurant,
   } from "../lib/data.ts";
-  import { emit } from "../scripts/store.ts";
+  import { emit, forceUppercase, createOverlay } from "../scripts/store.ts";
   import { navigate } from "astro:transitions/client";
 
   // Re-inicializar en cada navegación para que open/close siempre
   // operen sobre los elementos del DOM ACTUAL (no los del swap anterior).
   document.addEventListener("astro:page-load", () => {
-    const overlayEl = document.getElementById("restaurant-form-overlay");
-    if (!overlayEl) return; // no está en esta página
-    const overlay: HTMLElement = overlayEl;
+    const overlayApi = createOverlay("restaurant-form-overlay", {
+      onClose: () => hideDropdown(),
+    });
+    if (!overlayApi) return; // no está en esta página
+    const { overlay, close } = overlayApi;
 
     const form       = document.getElementById("restaurant-form") as HTMLFormElement;
     const titleEl    = document.getElementById("restaurant-form-title")!;
@@ -235,11 +132,11 @@
     const officialIdInput = document.getElementById("rf-official-id") as HTMLInputElement;
     const nameInput  = document.getElementById("rf-name") as HTMLInputElement;
     const notesInput = document.getElementById("rf-notes") as HTMLTextAreaElement;
-    const errorEl    = document.getElementById("rf-error")!;
+    const errorEl    = document.getElementById("restaurant-form-error")!;
     const closeBtn   = document.getElementById("restaurant-form-close")!;
     const cancelBtn  = document.getElementById("restaurant-form-cancel")!;
     const dropdownEl = document.getElementById("rf-name-dropdown") as HTMLElement;
-    const submitBtn  = document.getElementById("rf-submit") as HTMLButtonElement;
+    const submitBtn  = document.getElementById("restaurant-form-submit") as HTMLButtonElement;
 
     function showDropdown(): void {
       dropdownEl.hidden = false;
@@ -342,20 +239,12 @@
       overlay.classList.add("is-open");
     }
 
-    function close() {
-      hideDropdown();
-      overlay.classList.remove("is-open");
-    }
-
     // .onclick evita acumulación de listeners si el módulo re-ejecuta
     closeBtn.onclick  = close;
     cancelBtn.onclick = close;
-    overlay.onclick   = (e) => { if (e.target === overlay) close(); };
 
     nameInput.oninput = () => {
-      const pos = nameInput.selectionStart;
-      nameInput.value = nameInput.value.toUpperCase();
-      nameInput.setSelectionRange(pos, pos);
+      forceUppercase(nameInput);
       // Solo buscar oficiales en modo creación (no edición)
       if (idInput.value) return;
       scheduleSearch(nameInput.value);

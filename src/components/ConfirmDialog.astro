@@ -59,15 +59,19 @@
 </style>
 
 <script>
+  import { createOverlay } from "../scripts/store.ts";
+
   // _onConfirm vive a nivel de módulo para persistir entre renders
   let _onConfirm: (() => void) | null = null;
 
   // Re-inicializar en cada navegación para que show/hide siempre
   // operen sobre los elementos del DOM ACTUAL (no los del swap anterior).
   document.addEventListener("astro:page-load", () => {
-    const overlayEl = document.getElementById("confirm-overlay");
-    if (!overlayEl) return; // no está en esta página
-    const overlay: HTMLElement = overlayEl;
+    const overlayApi = createOverlay("confirm-overlay", {
+      onClose: () => { _onConfirm = null; },
+    });
+    if (!overlayApi) return; // no está en esta página
+    const { open, close } = overlayApi;
 
     const msgEl = document.getElementById("confirm-message")!;
     const cancelBtn = document.getElementById("confirm-cancel")!;
@@ -76,25 +80,17 @@
     function show(message: string, onConfirm: () => void) {
       msgEl.textContent = message;
       _onConfirm = onConfirm;
-      overlay.classList.add("is-open");
-    }
-
-    function hide() {
-      overlay.classList.remove("is-open");
-      _onConfirm = null;
+      open();
     }
 
     // .onclick evita acumulación de listeners si el módulo re-ejecuta
-    cancelBtn.onclick = hide;
+    cancelBtn.onclick = close;
     okBtn.onclick = () => {
       _onConfirm?.();
-      hide();
-    };
-    overlay.onclick = (e) => {
-      if (e.target === overlay) hide();
+      close();
     };
 
     // Actualizar API global con referencias frescas al DOM actual
-    (window as any).confirmDialog = { show, hide };
+    (window as any).confirmDialog = { show, hide: close };
   });
 </script>

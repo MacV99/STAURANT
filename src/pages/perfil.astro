@@ -684,7 +684,7 @@ import Layout1 from "../layouts/Layout1.astro";
 <script>
   import { navigate } from "astro:transitions/client";
   import { supabase } from "../lib/supabase.ts";
-  import { getRatingBadgeHTML } from "../scripts/store.ts";
+  import { getRatingBadgeHTML, createOverlay } from "../scripts/store.ts";
   import {
     clearCache,
     initCache,
@@ -857,7 +857,6 @@ import Layout1 from "../layouts/Layout1.astro";
     const nameDisplay = document.getElementById("profile-name-display")!;
     const msgEl = document.getElementById("profile-msg")!;
     const avatarEl = document.getElementById("profile-avatar")!;
-    const overlay = document.getElementById("edit-overlay")!;
     const pwNewInput = document.getElementById("pw-new") as HTMLInputElement;
     const pwConfirmInput = document.getElementById("pw-confirm") as HTMLInputElement;
 
@@ -880,19 +879,20 @@ import Layout1 from "../layouts/Layout1.astro";
     const pwFields = document.getElementById("pw-fields")!;
     if (hasEmailIdentity) pwFields.style.display = "flex";
 
-    // Modal open/close
-    const openModal = () => { overlay.classList.add("is-open"); msgEl.textContent = ""; msgEl.classList.remove("error"); };
-    const closeModal = () => {
-      overlay.classList.remove("is-open");
-      pwNewInput.value = "";
-      pwConfirmInput.value = "";
-      msgEl.textContent = "";
-      msgEl.classList.remove("error");
-    };
+    // Modal open/close (ciclo de overlay vía helper compartido)
+    const modal = createOverlay("edit-overlay", {
+      onClose: () => {
+        pwNewInput.value = "";
+        pwConfirmInput.value = "";
+        msgEl.textContent = "";
+        msgEl.classList.remove("error");
+      },
+    })!;
+    const openModal = () => { modal.open(); msgEl.textContent = ""; msgEl.classList.remove("error"); };
+    const closeModal = modal.close;
 
     document.getElementById("btn-edit-profile")!.onclick = openModal;
     document.getElementById("btn-modal-close")!.onclick = closeModal;
-    overlay.onclick = (e) => { if (e.target === overlay) closeModal(); };
 
     // Password toggles
     function setupPwToggle(inputId: string, btnId: string) {

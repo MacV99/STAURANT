@@ -1,17 +1,8 @@
-<div id="dish-form-overlay" class="overlay" aria-modal="true" role="dialog">
-  <div class="form-box flex-column">
-    <div class="form-header flex-row">
-      <h2 id="dish-form-title">Nuevo plato</h2>
-      <button
-        id="dish-form-close"
-        class="btn-close btn-icon-close boton2"
-        aria-label="Cerrar"
-      >
-        <i class="bi bi-x-lg"></i>
-      </button>
-    </div>
+---
+import FormModal from "./FormModal.astro";
+---
 
-    <form id="dish-form" class="flex-column" novalidate>
+<FormModal id="dish-form" title="Nuevo plato" maxWidth="420px">
       <input type="hidden" id="df-id" />
       <input type="hidden" id="df-restaurant-id" />
       <input type="hidden" id="df-type-id" />
@@ -94,70 +85,11 @@
         ></textarea>
       </label>
 
-      <p id="df-error" class="form-error" aria-live="polite"></p>
-
-      <div class="form-footer flex-row">
-        <button type="button" id="dish-form-cancel" class="boton2"
-          >Cancelar</button
-        >
-        <button type="submit" class="boton">Guardar</button>
-      </div>
-    </form>
-  </div>
-</div>
+</FormModal>
 
 <style>
-  /* Elementos renderizados estáticamente en el template → scoped normal */
-
-  .form-box {
-    background: var(--clr-white);
-    border: solid 1px var(--clr-border);
-    border-radius: 20px;
-    padding: 24px 20px;
-    width: 92%;
-    max-width: 420px;
-    max-height: 90dvh;
-    overflow-y: auto;
-    align-items: stretch;
-    gap: 0;
-  }
-
-  .form-header {
-    justify-content: space-between;
-    margin-bottom: 20px;
-  }
-
-  .form-header h2 {
-    font-size: 1.1rem;
-    letter-spacing: 1px;
-    color: var(--clr-text);
-  }
-
-  form {
-    align-items: stretch;
-    gap: 14px;
-  }
-
-  label {
-    font-size: 0.82rem;
-    font-weight: 600;
-    letter-spacing: 1px;
-    color: var(--clr-text);
-    text-transform: uppercase;
-    gap: 0;
-  }
-
-  .label-text {
-    justify-content: flex-start;
-    gap: 3px;
-    margin-bottom: 5px;
-  }
-
-  label input,
-  label textarea {
-    border-radius: var(--border-radius);
-    width: 100%;
-  }
+  /* Estilos base de form/label/footer viven en project.css (.form-box …).
+     Aquí solo lo específico de este formulario (rating, drum, combobox tipo). */
 
   .rating-field {
     align-items: stretch;
@@ -393,41 +325,9 @@
     overscroll-behavior: contain;
   }
 
-  /* ── Resto ──────────────────────────────────────────────────────────────── */
-
-  .required {
-    color: #e05050;
-    font-weight: 700;
-  }
-
-  .optional {
-    font-weight: 400;
-    color: var(--clr-text);
-    text-transform: none;
-    letter-spacing: 0;
-  }
-
-  .form-error {
-    font-size: 0.85rem;
-    color: #e05050;
-    min-height: 1.2em;
-  }
-
-  .form-footer {
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 6px;
-  }
-
   @media (hover: hover) {
     .type-clear-btn:hover {
       opacity: 1;
-    }
-  }
-
-  @media (min-width: 768px) {
-    .form-box {
-      padding: 28px 28px;
     }
   }
 </style>
@@ -554,14 +454,16 @@
     getDishTypes,
     createDishType,
   } from "../lib/data.ts";
-  import { emit } from "../scripts/store.ts";
+  import { emit, forceUppercase, createOverlay } from "../scripts/store.ts";
 
   // Re-inicializar en cada navegación para que open/close siempre
   // operen sobre los elementos del DOM ACTUAL (no los del swap anterior).
   document.addEventListener("astro:page-load", () => {
-    const overlayEl = document.getElementById("dish-form-overlay");
-    if (!overlayEl) return; // no está en esta página
-    const overlay: HTMLElement = overlayEl;
+    const overlayApi = createOverlay("dish-form-overlay", {
+      onClose: () => closeDropdown(),
+    });
+    if (!overlayApi) return; // no está en esta página
+    const { overlay, close } = overlayApi;
 
     const form = document.getElementById("dish-form") as HTMLFormElement;
     const titleEl = document.getElementById("dish-form-title")!;
@@ -579,7 +481,7 @@
     const notesInput = document.getElementById(
       "df-notes",
     ) as HTMLTextAreaElement;
-    const errorEl = document.getElementById("df-error")!;
+    const errorEl = document.getElementById("dish-form-error")!;
     const closeBtn = document.getElementById("dish-form-close")!;
     const cancelBtn = document.getElementById("dish-form-cancel")!;
     const ratingClearBtn = document.getElementById(
@@ -709,10 +611,7 @@
 
     // Input: filtra mientras escribe
     searchInput.addEventListener("input", () => {
-      // Forzar UPPERCASE
-      const pos = searchInput.selectionStart;
-      searchInput.value = searchInput.value.toUpperCase();
-      searchInput.setSelectionRange(pos, pos);
+      forceUppercase(searchInput);
       // Limpiar selección actual si el usuario está escribiendo algo nuevo
       selectedTypeId = null;
       typeIdInput.value = "";
@@ -794,17 +693,10 @@
       );
     }
 
-    function close() {
-      closeDropdown();
-      overlay.classList.remove("is-open");
-    }
-
-    // .onclick evita acumulación de listeners si el módulo re-ejecuta
+    // close() y el cierre por click-fuera los provee createOverlay (arriba);
+    // onClose ejecuta closeDropdown(). .onclick evita acumular listeners.
     closeBtn.onclick = close;
     cancelBtn.onclick = close;
-    overlay.onclick = (e) => {
-      if (e.target === overlay) close();
-    };
 
     // ─── Drum picker ──────────────────────────────────────────────────────────
 
@@ -1070,9 +962,7 @@
     }
 
     nameInput.oninput = () => {
-      const pos = nameInput.selectionStart;
-      nameInput.value = nameInput.value.toUpperCase();
-      nameInput.setSelectionRange(pos, pos);
+      forceUppercase(nameInput);
     };
 
     form.onsubmit = (e) => {

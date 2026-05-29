@@ -1,0 +1,47 @@
+---
+/**
+ * Shell reutilizable de modal-formulario: overlay + caja + header (título +
+ * botón cerrar) + <form> + error + footer (Cancelar / Guardar).
+ *
+ * Los IDs se derivan de `id` para que el <script> del componente consumidor
+ * pueda tomar referencias frescas en cada `astro:page-load`:
+ *   {id}-overlay  {id}  {id}-title  {id}-close  {id}-cancel  {id}-submit  {id}-error
+ *
+ * El consumidor proyecta SOLO los campos (inputs, labels, hidden inputs) en el
+ * slot por defecto. El CSS compartido vive en project.css (.form-box …).
+ */
+interface Props {
+  id: string;
+  title: string;
+  maxWidth?: string;
+  submitLabel?: string;
+}
+
+const { id, title, maxWidth = "460px", submitLabel = "Guardar" } = Astro.props;
+---
+
+<div id={`${id}-overlay`} class="overlay" aria-modal="true" role="dialog">
+  <div class="form-box flex-column" style={`max-width:${maxWidth}`}>
+    <div class="form-header flex-row">
+      <h2 id={`${id}-title`}>{title}</h2>
+      <button
+        id={`${id}-close`}
+        class="btn-close btn-icon-close boton2"
+        aria-label="Cerrar"
+      >
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <form id={id} class="flex-column" novalidate>
+      <slot />
+
+      <p id={`${id}-error`} class="form-error" aria-live="polite"></p>
+
+      <div class="form-footer flex-row">
+        <button type="button" id={`${id}-cancel`} class="boton2">Cancelar</button>
+        <button type="submit" id={`${id}-submit`} class="boton">{submitLabel}</button>
+      </div>
+    </form>
+  </div>
+</div>

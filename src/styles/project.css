@@ -45,6 +45,91 @@
   }
 }
 
+/* === FORM MODAL (FormModal.astro shell + contenido en slot) ===
+   Scoped bajo .form-box porque varios selectores (label, .label-text, .required…)
+   estilizan contenido proyectado en el slot, que NO recibe el CSS scoped del
+   componente. Mantener global aquí evita duplicarlo en cada formulario. */
+
+.form-box {
+  background: var(--clr-white);
+  border: solid 1px var(--clr-border);
+  border-radius: 20px;
+  padding: 24px 20px;
+  width: 92%;
+  max-width: 460px;
+  align-items: stretch;
+  gap: 0;
+  max-height: 90dvh;
+  overflow-y: auto;
+}
+
+.form-box .form-header {
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.form-box .form-header h2 {
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+  color: var(--clr-text);
+}
+
+.form-box form {
+  align-items: stretch;
+  gap: 14px;
+}
+
+.form-box label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: var(--clr-text);
+  text-transform: uppercase;
+  gap: 0;
+}
+
+.form-box .label-text {
+  justify-content: flex-start;
+  gap: 3px;
+  margin-bottom: 5px;
+}
+
+.form-box label input,
+.form-box label textarea {
+  border-radius: var(--border-radius);
+  width: 100%;
+}
+
+.form-box .required {
+  color: #e05050;
+  font-weight: 700;
+}
+
+.form-box .optional {
+  font-weight: 400;
+  color: var(--clr-text);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.form-box .form-error {
+  font-size: 0.85rem;
+  color: #e05050;
+  min-height: 1.2em;
+}
+
+.form-box .form-footer {
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+@media (min-width: 768px) {
+  .form-box {
+    padding: 28px;
+  }
+}
+
 /* === RATING BADGE === */
 
 .rating-badge {
