@@ -4,7 +4,7 @@
 <!-- Floating install banner -->
 <div id="install-banner" class="install-banner" style="display:none" aria-live="polite">
   <div class="install-banner-inner flex-row">
-    <img src="/img/icon.avif" alt="" class="install-banner-icon" />
+    <img src="/img/icon-192.png" alt="" class="install-banner-icon" />
     <div class="install-banner-text flex-column">
       <span class="install-banner-title">Instalar STAURANT</span>
       <span class="install-banner-sub">Accede rápido desde tu teléfono</span>
@@ -306,6 +306,10 @@
   function updateProfileCard(): void {
     const card = document.getElementById("install-profile-card");
     if (!card) return;
+    if (getInstallPlatform() === "none") {
+      card.style.display = "none";
+      return;
+    }
     card.onclick = () => triggerInstall();
     card.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") triggerInstall(); };
   }
