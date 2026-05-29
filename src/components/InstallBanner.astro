@@ -51,6 +51,17 @@
   </div>
 </div>
 
+<!-- Debug modal -->
+<div id="pwa-debug-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;padding:20px">
+  <div style="background:#1a1a1a;color:#e0e0e0;border-radius:16px;padding:20px;width:100%;max-width:400px;font-family:monospace;font-size:0.8rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <strong style="color:#fff">PWA Debug</strong>
+      <button onclick="document.getElementById('pwa-debug-modal').style.display='none'" style="background:transparent;border:none;color:#fff;font-size:1.2rem;cursor:pointer">✕</button>
+    </div>
+    <pre id="pwa-debug-body" style="white-space:pre-wrap;margin:0;line-height:1.7;color:#a8ff78"></pre>
+  </div>
+</div>
+
 <style>
   .install-banner {
     position: fixed;
@@ -264,6 +275,24 @@
     document.getElementById("ios-install-overlay")?.classList.remove("is-open");
   }
 
+  function showDebugModal(): void {
+    const ua = navigator.userAgent;
+    const lines = [
+      `standalone: ${isStandalone()}`,
+      `deferredPrompt: ${deferredPrompt ? "SI" : "NO"}`,
+      `platform: ${getInstallPlatform()}`,
+      `dismissed: ${localStorage.getItem(DISMISSED_KEY) ?? "no"}`,
+      `SW: ${"serviceWorker" in navigator ? "soportado" : "NO soportado"}`,
+      `UA: ${ua.slice(0, 80)}`,
+    ];
+    const el = document.getElementById("pwa-debug-modal");
+    const body = document.getElementById("pwa-debug-body");
+    if (el && body) {
+      body.textContent = lines.join("\n");
+      el.style.display = "flex";
+    }
+  }
+
   async function triggerInstall(): Promise<void> {
     const platform = getInstallPlatform();
     if (platform === "android" && deferredPrompt) {
@@ -276,6 +305,8 @@
       }
     } else if (platform === "ios") {
       showIOSModal();
+    } else {
+      showDebugModal();
     }
   }
 
