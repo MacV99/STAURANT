@@ -337,10 +337,6 @@
   function updateProfileCard(): void {
     const card = document.getElementById("install-profile-card");
     if (!card) return;
-    if (getInstallPlatform() === "none") {
-      card.style.display = "none";
-      return;
-    }
     card.onclick = () => triggerInstall();
     card.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") triggerInstall(); };
   }
