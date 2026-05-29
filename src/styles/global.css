@@ -6,6 +6,7 @@
 
   /* EFECTOS Y TIMING */
   --transition: 0.12s ease;
+  --transition-bounce: 0.34s cubic-bezier(0.34, 1.56, 0.64, 1);
   --border-radius: 12px;
 }
 
@@ -235,6 +236,19 @@ input[type="file"] {
   cursor: pointer;
 }
 
+/* === PRESS FEEDBACK (táctil, funciona en touch sin hover) ===
+   Solo en clases sin transform de posicionamiento (evita romper botones
+   absolutos que usan translate). FAB y sidebar-create se manejan aparte. */
+.boton:active,
+.boton2:active,
+.tab-btn:active,
+.sort-pill:active,
+.type-pill:active,
+.menu-item:active,
+.btn-menu:active {
+  transform: scale(0.95);
+}
+
 /* === HOVER STATES === */
 @media (hover: hover) {
 
@@ -280,5 +294,24 @@ input[type="file"] {
 
   p {
     font-size: 1.05rem;
+  }
+}
+
+/* === ACCESIBILIDAD: respetar "reducir movimiento" ===
+   Mata todas las animaciones/transiciones para usuarios que lo piden. */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
   }
 }

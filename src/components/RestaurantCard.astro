@@ -75,6 +75,10 @@ const isPending = r.status === "pending";
     line-height: 1.25;
   }
 
+  .restaurant-card.card-clickable:active {
+    transform: scale(0.97);
+  }
+
   @media (hover: hover) {
     .restaurant-card.card-clickable:hover {
       border-color: var(--clr-border2);

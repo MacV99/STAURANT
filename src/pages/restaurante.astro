@@ -534,6 +534,8 @@ const tplRestaurant: Restaurant = {
   let currentRestaurant: Restaurant | undefined;
   let dishSearch = "";
   let dishTypeFilter = "";
+  // id del plato cuyo badge debe hacer "pop" en el próximo render (recién calificado/editado).
+  let popDishId: string | null = null;
 
   // ─── Generadores de HTML (nivel módulo) ────────────────────────────────────
 
@@ -693,6 +695,7 @@ const tplRestaurant: Restaurant = {
       badge.className = `rating-badge ${getRatingClass(d.rating)} badge-btn`;
       badge.innerHTML = `<span class="rating-num">${d.rating}</span>`;
     }
+    if (d.id === popDishId) badge.classList.add("badge-pop");
     badge.addEventListener("click", (e) => {
       e.stopPropagation();
       (window as any).dishForm.open("edit", d.restaurantId, d);
@@ -758,6 +761,8 @@ const tplRestaurant: Restaurant = {
       return;
     }
     dishesListEl.innerHTML = "";
+    // Stagger solo sin filtros activos (evita parpadeo al buscar/filtrar).
+    dishesListEl.classList.toggle("stagger-in", !dishSearch && !dishTypeFilter);
     filtered.forEach((d) => dishesListEl.appendChild(buildDishCardElement(d)));
   }
 
@@ -777,6 +782,7 @@ const tplRestaurant: Restaurant = {
     headerEl.replaceChildren(buildHeaderElement(currentRestaurant, avg));
     renderDishes(filtered, total, dishesListEl, sortBarEl);
     updateTypeSelect();
+    popDishId = null; // el pop ya se aplicó en este render
   }
 
   // ─── Listeners permanentes a nivel de módulo ──────────────────────────────
@@ -797,8 +803,9 @@ const tplRestaurant: Restaurant = {
     }
   });
 
-  document.addEventListener("dish:created", () => {
+  document.addEventListener("dish:created", (e) => {
     if (!currentRestaurant) return;
+    popDishId = ((e as CustomEvent).detail as Dish | undefined)?.id ?? null;
     try {
       if (currentRestaurant.status === "pending") {
         const updated = markAsVisited(currentRestaurant.id);
@@ -818,13 +825,17 @@ const tplRestaurant: Restaurant = {
     rerenderRestaurantePage();
   });
 
-  document.addEventListener("dish:updated", () => rerenderRestaurantePage());
+  document.addEventListener("dish:updated", (e) => {
+    popDishId = ((e as CustomEvent).detail as Dish | undefined)?.id ?? null;
+    rerenderRestaurantePage();
+  });
 
   // Auto-promueve pending → visitado SOLO cuando un plato pasa por primera vez
   // de sin calificar a calificado. No reacciona a edits de notas / nombre, así
   // un pending puesto manualmente por el usuario no se revierte.
-  document.addEventListener("dish:first-rated", () => {
+  document.addEventListener("dish:first-rated", (e) => {
     if (!currentRestaurant || currentRestaurant.status !== "pending") return;
+    popDishId = ((e as CustomEvent).detail as Dish | undefined)?.id ?? null;
     try {
       const updated = markAsVisited(currentRestaurant.id);
       if (updated) {

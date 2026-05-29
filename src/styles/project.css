@@ -189,6 +189,10 @@
   cursor: pointer;
 }
 
+.badge-btn:active {
+  transform: scale(0.92);
+}
+
 @media (hover: hover) {
   .badge-btn:hover {
     filter: brightness(0.92);
@@ -489,4 +493,93 @@
 @keyframes skeleton-shimmer {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+/* === ENTRADA ESCALONADA DE LISTAS (stagger) ====================
+   Aplicar .stagger-in al contenedor (.cards-grid, #dishes-list).
+   Solo transform + opacity → sin reflow. Se omite durante búsqueda
+   para evitar parpadeo en cada tecla. */
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.stagger-in > * {
+  animation: card-in 0.32s ease both;
+}
+
+.stagger-in > *:nth-child(1) { animation-delay: 0.02s; }
+.stagger-in > *:nth-child(2) { animation-delay: 0.05s; }
+.stagger-in > *:nth-child(3) { animation-delay: 0.08s; }
+.stagger-in > *:nth-child(4) { animation-delay: 0.11s; }
+.stagger-in > *:nth-child(5) { animation-delay: 0.14s; }
+.stagger-in > *:nth-child(6) { animation-delay: 0.17s; }
+.stagger-in > *:nth-child(7) { animation-delay: 0.20s; }
+.stagger-in > *:nth-child(8) { animation-delay: 0.23s; }
+/* a partir de la 9ª entran juntas (delay 0) para no alargar la espera */
+
+/* === APERTURA DE MODAL (overlay + caja) ========================
+   El overlay pasa de display:none a flex con .is-open; la animación
+   corre al añadir la clase. */
+
+@keyframes overlay-fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes box-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+}
+
+.overlay.is-open {
+  animation: overlay-fade-in 0.18s ease;
+}
+
+.overlay.is-open .form-box,
+.overlay.is-open .confirm-box {
+  animation: box-pop-in 0.26s var(--transition-bounce) both;
+}
+
+/* === APERTURA DE POPUPS (menú de plato / header) =============== */
+
+@keyframes popup-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+}
+
+.menu-popup.active,
+.rh-menu-popup.active {
+  transform-origin: top right;
+  animation: popup-in 0.14s ease;
+}
+
+/* === POP DE BADGE DE RATING (al crear/editar calificación) ===== */
+
+@keyframes badge-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+.rating-badge.badge-pop {
+  animation: badge-pop 0.34s var(--transition-bounce);
+}
+
+/* === BUMP DE CONTADORES (tabs / conteo de platos) ============== */
+
+@keyframes count-bump {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+.count-bump {
+  animation: count-bump 0.3s var(--transition-bounce);
 }

@@ -415,6 +415,15 @@ const fabIcon = pathname.includes("/restaurante")
     font-size: 2.8rem;
   }
 
+  /* ── Press feedback (mantiene el translateY del FAB) ───────────── */
+  .nav-fab:active {
+    transform: translateY(-22px) scale(0.92);
+  }
+
+  .sidebar-create:active {
+    transform: scale(0.96);
+  }
+
   /* ── Hover (pointer devices only) ──────────────────────────────── */
   @media (hover: hover) {
     .sidebar-item:not(.sidebar-create):hover {

@@ -100,6 +100,18 @@ const tplRestaurant: Restaurant = {
     padding: 16px 16px 0;
   }
 
+  /* Cross-fade corto al activar una pestaña (al cambiar de tab). */
+  .tab-content:not([hidden]) {
+    animation: tab-fade 0.22s ease;
+  }
+
+  @keyframes tab-fade {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+  }
+
   .search-wrap {
     position: relative;
     width: 100%;
@@ -385,6 +397,8 @@ const tplRestaurant: Restaurant = {
     container.innerHTML = "";
     const grid = document.createElement("div");
     grid.className = "cards-grid";
+    // Stagger solo en render normal; durante búsqueda se omite para no parpadear.
+    if (!q) grid.classList.add("stagger-in");
     sorted.forEach((r) => {
       const card = buildRestaurantCardElement(
         r,
@@ -397,14 +411,25 @@ const tplRestaurant: Restaurant = {
     container.appendChild(grid);
   }
 
+  // Actualiza el contador y dispara un bump solo si el número cambió.
+  function bumpCount(el: HTMLElement | null, value: string) {
+    if (!el || el.textContent === value) return;
+    el.textContent = value;
+    el.classList.remove("count-bump");
+    void el.offsetWidth; // reinicia la animación
+    el.classList.add("count-bump");
+  }
+
   function updateCounts() {
     const all = getRestaurants();
-    const cv = document.getElementById("count-visitados");
-    const cp = document.getElementById("count-pendientes");
-    if (cv)
-      cv.textContent = String(all.filter((r) => r.status === "visited").length);
-    if (cp)
-      cp.textContent = String(all.filter((r) => r.status === "pending").length);
+    bumpCount(
+      document.getElementById("count-visitados"),
+      String(all.filter((r) => r.status === "visited").length),
+    );
+    bumpCount(
+      document.getElementById("count-pendientes"),
+      String(all.filter((r) => r.status === "pending").length),
+    );
   }
 
   function updateSortBarVisibility() {
