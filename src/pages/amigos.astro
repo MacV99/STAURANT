@@ -1,0 +1,764 @@
+---
+import Layout1 from "../layouts/Layout1.astro";
+---
+
+<Layout1 title="Amigos · STAURANT">
+  <div class="friends-page flex-column">
+    <div class="friends-top-sticky texture-dotted flex-column">
+      <h1 class="friends-title flex-row">
+        <i class="bi bi-people-fill"></i> Amigos
+      </h1>
+
+      <div class="friends-tabs" role="tablist">
+        <button class="ftab active" data-tab="amigos" role="tab" aria-selected="true">
+          <i class="bi bi-person-heart tab-icon"></i>
+          <span class="tab-label">Mis amigos</span>
+          <span class="tab-count" id="ftab-count-amigos">0</span>
+        </button>
+        <button class="ftab" data-tab="buscar" role="tab" aria-selected="false">
+          <i class="bi bi-search tab-icon"></i>
+          <span class="tab-label">Buscar</span>
+        </button>
+      </div>
+
+      <!-- Buscador: solo visible en la pestaña Buscar, fijado arriba -->
+      <div class="friends-search-wrap" id="friends-search-wrap" hidden>
+        <i class="bi bi-search-fill friends-search-icon"></i>
+        <input
+          id="friends-search"
+          class="friends-search-input"
+          type="search"
+          placeholder="Buscar por nombre o usuario..."
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+    </div>
+
+    <!-- Tab: Mis amigos -->
+    <div id="tab-amigos" class="ftab-panel flex-column" role="tabpanel">
+      <div id="requests-section" class="friends-section flex-column" hidden>
+        <h2 class="friends-section-title">
+          <i class="bi bi-envelope-paper-heart"></i> Solicitudes recibidas
+          <span class="req-badge" id="requests-count"></span>
+        </h2>
+        <div id="requests-list" class="user-list flex-column"></div>
+      </div>
+
+      <div class="friends-section flex-column">
+        <h2 class="friends-section-title"><i class="bi bi-people"></i> Tus amigos</h2>
+        <div id="friends-list" class="user-list flex-column"></div>
+      </div>
+    </div>
+
+    <!-- Tab: Buscar -->
+    <div id="tab-buscar" class="ftab-panel flex-column" role="tabpanel" hidden>
+      <div id="search-results" class="user-list flex-column"></div>
+    </div>
+  </div>
+</Layout1>
+
+<style>
+  /* `hidden` debe ganar sobre `.flex-column { display:flex }`, si no los
+     paneles y secciones ocultas siguen mostrándose. */
+  [hidden] {
+    display: none !important;
+  }
+
+  .friends-page {
+    width: 100%;
+    max-width: 760px;
+    padding: 0 0 24px;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0;
+  }
+
+  /* Cabecera + tabs pegajosas, mismo patrón que index.astro */
+  .friends-top-sticky {
+    position: sticky;
+    top: 80px;
+    z-index: 90;
+    padding: 12px 16px;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 12px;
+    border-bottom: solid 1px var(--clr-border);
+  }
+
+  .friends-title {
+    justify-content: flex-start;
+    gap: 8px;
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: var(--clr-text);
+  }
+
+  .friends-title i {
+    color: var(--clr-primary);
+  }
+
+  /* Tabs idénticas a las de Visitados/Pendientes (TabBar) */
+  .friends-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .ftab {
+    gap: 8px;
+    padding: 12px 16px;
+    border-radius: 14px;
+    border: 1.5px solid var(--clr-border);
+    background: var(--clr-white);
+    color: var(--clr-text);
+    letter-spacing: 0;
+    text-transform: none;
+    text-indent: 0;
+    transition: 0.18s ease;
+  }
+
+  .ftab.active {
+    background: var(--clr-primary);
+    border-color: var(--clr-primary);
+    color: var(--clr-white);
+  }
+
+  .ftab .tab-icon {
+    font-size: 1rem;
+  }
+
+  .ftab .tab-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+
+  .ftab .tab-count {
+    font-size: 0.72rem;
+    font-weight: 700;
+    min-width: 20px;
+    height: 20px;
+    line-height: 20px;
+    padding: 0 6px;
+    border-radius: 20px;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.1);
+    letter-spacing: 1px;
+  }
+
+  .ftab.active .tab-count {
+    background: rgba(255, 255, 255, 0.25);
+  }
+
+  .ftab-panel {
+    width: 100%;
+    padding: 16px 16px 0;
+    align-items: stretch;
+    gap: 26px;
+  }
+
+  .ftab-panel:not([hidden]) {
+    animation: tab-fade 0.22s ease;
+  }
+
+  @keyframes tab-fade {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+  }
+
+  .friends-section {
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .friends-section-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--clr-text);
+    opacity: 0.55;
+  }
+
+  .friends-section-title i {
+    font-size: 0.92rem;
+    opacity: 0.9;
+  }
+
+  .req-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--clr-white);
+    background: var(--clr-danger);
+    border-radius: 20px;
+    padding: 1px 7px;
+    margin-left: 2px;
+  }
+
+  .user-list {
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  /* Búsqueda con la misma identidad que la de Explorar */
+  .friends-search-wrap {
+    position: relative;
+    width: 100%;
+  }
+
+  .friends-search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--clr-text);
+    opacity: 0.45;
+    font-size: 0.95rem;
+    pointer-events: none;
+  }
+
+  .friends-search-input {
+    width: 100%;
+    padding: 11px 16px 11px 38px;
+    border-radius: var(--border-radius);
+    border: 1.5px solid var(--clr-border);
+    background: var(--clr-white);
+    font-size: 0.9rem;
+    color: var(--clr-text);
+    transition: border-color var(--transition);
+  }
+
+  .friends-search-input::placeholder {
+    color: var(--clr-text);
+    opacity: 0.5;
+  }
+
+  .friends-search-input:focus {
+    border-color: var(--clr-border2);
+  }
+
+  .friends-search-input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+  }
+
+  @media (hover: hover) {
+    .ftab:not(.active):hover {
+      border-color: var(--clr-border2);
+      color: var(--clr-primary);
+    }
+  }
+
+  @media (min-width: 768px) {
+    .friends-page {
+      padding: 0 24px 100px;
+    }
+
+    .friends-top-sticky {
+      top: 0;
+      padding: 20px 16px 10px;
+    }
+
+    .ftab-panel {
+      padding: 18px 0 0;
+    }
+
+    .ftab {
+      padding: 13px 20px;
+    }
+
+    .ftab .tab-label {
+      font-size: 0.88rem;
+    }
+  }
+</style>
+
+<style is:global>
+  .user-row {
+    background: var(--clr-white);
+    border: 1px solid var(--clr-border);
+    border-radius: 18px;
+    padding: 12px 14px;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: center;
+    transition: var(--transition);
+  }
+
+  .user-row.is-clickable {
+    cursor: pointer;
+  }
+
+  .user-row.is-clickable:active {
+    transform: scale(0.985);
+  }
+
+  .user-row .ur-left {
+    flex: 1;
+    min-width: 0;
+    gap: 12px;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .user-row .ur-avatar {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: var(--clr-white2);
+    border: solid 1.5px var(--clr-border);
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--clr-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    text-transform: uppercase;
+  }
+
+  .user-row .ur-info {
+    min-width: 0;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .user-row .ur-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    color: var(--clr-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  .user-row .ur-username {
+    font-size: 0.78rem;
+    color: var(--clr-text);
+    opacity: 0.55;
+  }
+
+  .user-row .ur-actions {
+    flex-shrink: 0;
+    gap: 6px;
+    align-items: center;
+  }
+
+  /* Botones tipo "pill" alineados con la identidad del proyecto */
+  .ur-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 8px 14px;
+    border-radius: 50px;
+    border: solid 1.5px var(--clr-border);
+    background: var(--clr-white2);
+    color: var(--clr-primary);
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    text-transform: none;
+    text-indent: 0;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: var(--transition);
+  }
+
+  .ur-btn.ur-btn-primary {
+    background: var(--clr-primary);
+    border-color: var(--clr-primary);
+    color: var(--clr-white);
+  }
+
+  .ur-btn.ur-btn-danger {
+    background: var(--clr-danger-bg);
+    border-color: var(--clr-danger-border);
+    color: var(--clr-danger);
+  }
+
+  .ur-btn:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+
+  .ur-btn:active {
+    transform: scale(0.94);
+  }
+
+  .ur-btn-icon {
+    padding: 8px 11px;
+  }
+
+  /* Etiquetas de estado (Amigos / Pendiente) */
+  .ur-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    padding: 6px 12px;
+    border-radius: 50px;
+    white-space: nowrap;
+  }
+
+  .ur-state-friends {
+    color: #1a7a38;
+    background: #d8f5e2;
+    border: 1px solid #a8e0b8;
+  }
+
+  .ur-state-pending {
+    color: var(--clr-text);
+    background: transparent;
+    border: 1px solid var(--clr-border);
+    opacity: 0.7;
+  }
+
+  .user-row .ur-chevron {
+    color: var(--clr-text);
+    opacity: 0.3;
+    font-size: 1rem;
+    flex-shrink: 0;
+    padding-right: 2px;
+  }
+
+  @media (hover: hover) {
+    .user-row.is-clickable:hover {
+      border-color: var(--clr-border2);
+    }
+
+    .ur-btn:not(.ur-btn-primary):not(.ur-btn-danger):hover {
+      border-color: var(--clr-border2);
+    }
+
+    .ur-btn.ur-btn-primary:hover,
+    .ur-btn.ur-btn-danger:hover {
+      filter: brightness(1.05);
+    }
+  }
+</style>
+
+<script>
+  import { navigate } from "astro:transitions/client";
+  import { supabase } from "../lib/supabase.ts";
+  import { initCache } from "../lib/data.ts";
+  import {
+    getFriends,
+    getIncomingRequests,
+    getOutgoingRequests,
+    searchUsers,
+    sendFriendRequest,
+    acceptRequest,
+    deleteFriendship,
+    type PublicUser,
+    type FriendRequest,
+  } from "../lib/social.ts";
+
+  // ─── Estado de módulo ───────────────────────────────────────────────────────
+  let friends: PublicUser[] = [];
+  let incoming: FriendRequest[] = [];
+  let outgoing: FriendRequest[] = [];
+  let searchResults: PublicUser[] = [];
+  let searchQuery = "";
+  let searchTimer: number | undefined;
+
+  function getActiveTab(): "amigos" | "buscar" {
+    return (
+      (new URLSearchParams(window.location.search).get("tab") as
+        | "amigos"
+        | "buscar") ?? "amigos"
+    );
+  }
+
+  function initials(u: PublicUser): string {
+    const base = u.name.trim() || u.username?.trim() || "?";
+    return base.charAt(0).toUpperCase();
+  }
+
+  type Relation =
+    | { status: "friends" }
+    | { status: "outgoing"; friendshipId: string }
+    | { status: "incoming"; friendshipId: string }
+    | { status: "none" };
+
+  function relationOf(userId: string): Relation {
+    if (friends.some((f) => f.id === userId)) return { status: "friends" };
+    const out = outgoing.find((r) => r.id === userId);
+    if (out) return { status: "outgoing", friendshipId: out.friendshipId };
+    const inc = incoming.find((r) => r.id === userId);
+    if (inc) return { status: "incoming", friendshipId: inc.friendshipId };
+    return { status: "none" };
+  }
+
+  // ─── Construcción de filas de usuario ───────────────────────────────────────
+
+  function buildAvatarAndInfo(user: PublicUser): HTMLElement {
+    const left = document.createElement("div");
+    left.className = "ur-left flex-row";
+
+    const avatar = document.createElement("div");
+    avatar.className = "ur-avatar";
+    avatar.textContent = initials(user);
+    left.appendChild(avatar);
+
+    const info = document.createElement("div");
+    info.className = "ur-info flex-column";
+    const name = document.createElement("span");
+    name.className = "ur-name";
+    name.textContent = user.name || "Usuario";
+    info.appendChild(name);
+    if (user.username) {
+      const uname = document.createElement("span");
+      uname.className = "ur-username";
+      uname.textContent = `@${user.username}`;
+      info.appendChild(uname);
+    }
+    left.appendChild(info);
+    return left;
+  }
+
+  function userRow(user: PublicUser, actions: HTMLElement): HTMLElement {
+    const row = document.createElement("article");
+    row.className = "user-row is-clickable flex-row";
+    row.appendChild(buildAvatarAndInfo(user));
+    row.appendChild(actions);
+    row.addEventListener("click", () => navigate(`/usuario?id=${user.id}`));
+    return row;
+  }
+
+  function actionsWrap(): HTMLElement {
+    const el = document.createElement("div");
+    el.className = "ur-actions flex-row";
+    // Los clics en los botones no deben navegar al perfil.
+    el.addEventListener("click", (e) => e.stopPropagation());
+    return el;
+  }
+
+  function iconBtn(
+    cls: string,
+    icon: string,
+    label: string,
+    onClick: () => void,
+  ): HTMLButtonElement {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `ur-btn ${cls}`;
+    btn.innerHTML = icon ? `<i class="bi ${icon}"></i>` : "";
+    if (label) btn.appendChild(document.createTextNode(label));
+    btn.onclick = onClick;
+    return btn;
+  }
+
+  // ─── Refresco de datos ──────────────────────────────────────────────────────
+
+  async function reloadFriendsData() {
+    [friends, incoming, outgoing] = await Promise.all([
+      getFriends(),
+      getIncomingRequests(),
+      getOutgoingRequests(),
+    ]);
+    renderFriendsTab();
+    if (getActiveTab() === "buscar") renderSearchResults();
+  }
+
+  // ─── Render: Tab Amigos ─────────────────────────────────────────────────────
+
+  function renderFriendsTab() {
+    const reqSection = document.getElementById("requests-section")!;
+    const reqList = document.getElementById("requests-list")!;
+    const reqCount = document.getElementById("requests-count")!;
+    const friendsList = document.getElementById("friends-list")!;
+    const tabCount = document.getElementById("ftab-count-amigos")!;
+
+    // Solicitudes recibidas
+    reqSection.hidden = incoming.length === 0;
+    reqCount.textContent = String(incoming.length);
+    reqList.innerHTML = "";
+    incoming.forEach((req) => {
+      const actions = actionsWrap();
+      const accept = iconBtn("ur-btn-primary", "bi-check-lg", "Aceptar", async () => {
+        accept.disabled = true;
+        await acceptRequest(req.friendshipId);
+        await reloadFriendsData();
+      });
+      const reject = iconBtn("ur-btn-danger ur-btn-icon", "bi-x-lg", "", async () => {
+        reject.disabled = true;
+        await deleteFriendship(req.friendshipId);
+        await reloadFriendsData();
+      });
+      reject.title = "Rechazar";
+      actions.append(accept, reject);
+      reqList.appendChild(userRow(req, actions));
+    });
+
+    // Mis amigos
+    tabCount.textContent = String(friends.length);
+
+    friendsList.innerHTML = "";
+    if (friends.length === 0) {
+      friendsList.innerHTML = `<div class="empty-state flex-column">
+           <i class="bi bi-people"></i>
+           <p>Aún no tienes amigos.</p>
+           <p class="empty-hint">Usa la pestaña <strong>Buscar</strong> para encontrar usuarios.</p>
+         </div>`;
+      return;
+    }
+    friends.forEach((f) => {
+      const actions = actionsWrap();
+      const chevron = document.createElement("i");
+      chevron.className = "bi bi-chevron-right ur-chevron";
+      actions.appendChild(chevron);
+      friendsList.appendChild(userRow(f, actions));
+    });
+  }
+
+  // ─── Render: Tab Buscar ─────────────────────────────────────────────────────
+
+  function searchActionFor(user: PublicUser): HTMLElement {
+    const actions = actionsWrap();
+    const rel = relationOf(user.id);
+
+    if (rel.status === "friends") {
+      const tag = document.createElement("span");
+      tag.className = "ur-state ur-state-friends";
+      tag.innerHTML = `<i class="bi bi-check-circle-fill"></i> Amigos`;
+      actions.appendChild(tag);
+    } else if (rel.status === "outgoing") {
+      const tag = document.createElement("span");
+      tag.className = "ur-state ur-state-pending";
+      tag.innerHTML = `<i class="bi bi-clock-history"></i> Pendiente`;
+      actions.appendChild(tag);
+    } else if (rel.status === "incoming") {
+      const accept = iconBtn("ur-btn-primary", "bi-check-lg", "Aceptar", async () => {
+        accept.disabled = true;
+        await acceptRequest(rel.friendshipId);
+        await reloadFriendsData();
+      });
+      actions.appendChild(accept);
+    } else {
+      const add = iconBtn("ur-btn-primary", "bi-person-plus", "Agregar", async () => {
+        add.disabled = true;
+        await sendFriendRequest(user.id);
+        await reloadFriendsData();
+      });
+      actions.appendChild(add);
+    }
+    return actions;
+  }
+
+  function renderSearchResults() {
+    const listEl = document.getElementById("search-results");
+    if (!listEl) return;
+
+    if (searchQuery.trim().length < 2) {
+      listEl.innerHTML = `<div class="empty-state flex-column">
+           <i class="bi bi-search"></i>
+           <p>Escribe al menos 2 caracteres para buscar.</p>
+         </div>`;
+      return;
+    }
+
+    if (searchResults.length === 0) {
+      listEl.innerHTML = `<div class="empty-state flex-column">
+           <i class="bi bi-person-x"></i>
+           <p>Sin resultados.</p>
+         </div>`;
+      return;
+    }
+
+    listEl.innerHTML = "";
+    searchResults.forEach((u) => {
+      listEl.appendChild(userRow(u, searchActionFor(u)));
+    });
+  }
+
+  async function runSearch() {
+    const q = searchQuery;
+    const results = await searchUsers(q);
+    // Evitar pisar resultados si el usuario siguió escribiendo.
+    if (q !== searchQuery) return;
+    searchResults = results;
+    renderSearchResults();
+  }
+
+  // ─── Tabs ───────────────────────────────────────────────────────────────────
+
+  function activateTab(tab: "amigos" | "buscar") {
+    document.getElementById("tab-amigos")!.hidden = tab !== "amigos";
+    document.getElementById("tab-buscar")!.hidden = tab !== "buscar";
+    // El buscador (fijo arriba) solo se muestra en la pestaña Buscar.
+    document.getElementById("friends-search-wrap")!.hidden = tab !== "buscar";
+    document.querySelectorAll<HTMLButtonElement>(".ftab").forEach((btn) => {
+      const active = btn.dataset.tab === tab;
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-selected", String(active));
+    });
+    history.replaceState(null, "", `/amigos?tab=${tab}`);
+    if (tab === "buscar") {
+      const input = document.getElementById("friends-search") as HTMLInputElement | null;
+      input?.focus();
+    }
+  }
+
+  // ─── Init ───────────────────────────────────────────────────────────────────
+
+  document.addEventListener("astro:page-load", async () => {
+    const panel = document.getElementById("tab-amigos");
+    if (!panel) return;
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      window.location.href = "/login";
+      return;
+    }
+    await initCache(session.user.id);
+
+    // Tabs
+    document.querySelectorAll<HTMLButtonElement>(".ftab").forEach((btn) => {
+      btn.onclick = () => activateTab(btn.dataset.tab as "amigos" | "buscar");
+    });
+
+    // Búsqueda con debounce
+    const searchEl = document.getElementById("friends-search") as HTMLInputElement | null;
+    if (searchEl) {
+      searchEl.value = searchQuery;
+      searchEl.oninput = () => {
+        searchQuery = searchEl.value;
+        window.clearTimeout(searchTimer);
+        if (searchQuery.trim().length < 2) {
+          searchResults = [];
+          renderSearchResults();
+          return;
+        }
+        searchTimer = window.setTimeout(runSearch, 250);
+      };
+    }
+
+    activateTab(getActiveTab());
+    renderSearchResults();
+
+    // Skeleton mientras cargan los amigos
+    const friendsList = document.getElementById("friends-list");
+    if (friendsList && friends.length === 0 && incoming.length === 0) {
+      friendsList.innerHTML = "";
+      for (let i = 0; i < 3; i++) {
+        const sk = document.createElement("div");
+        sk.className = "skeleton-card";
+        friendsList.appendChild(sk);
+      }
+    }
+
+    await reloadFriendsData();
+  });
+</script>

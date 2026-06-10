@@ -226,7 +226,10 @@ import Layout1 from "../layouts/Layout1.astro";
 
   function buildCard(o: OfficialRestaurant): HTMLElement {
     // ¿El usuario ya tiene este oficial en su colección?
-    const adopted = getRestaurants().some((r) => r.officialRestaurantId === o.id);
+    const adoptedRestaurant = getRestaurants().find(
+      (r) => r.officialRestaurantId === o.id,
+    );
+    const adopted = !!adoptedRestaurant;
     const stat = getOfficialRestaurantStat(o.id);
 
     const card = document.createElement("article");
@@ -276,7 +279,15 @@ import Layout1 from "../layouts/Layout1.astro";
     chevron.className = "bi bi-chevron-right ec-chevron";
     card.appendChild(chevron);
 
-    card.addEventListener("click", () => navigate(`/oficial?id=${o.id}`));
+    // Si ya lo tienes → abre directo TU restaurante en su sección.
+    // Si no → abre la vista oficial para descubrirlo y agregarlo.
+    card.addEventListener("click", () =>
+      navigate(
+        adoptedRestaurant
+          ? `/restaurante?id=${adoptedRestaurant.id}`
+          : `/oficial?id=${o.id}`,
+      ),
+    );
     return card;
   }
 

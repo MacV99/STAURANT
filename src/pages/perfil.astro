@@ -51,6 +51,19 @@ import Layout1 from "../layouts/Layout1.astro";
             />
           </label>
 
+          <label for="profile-username" class="flex-column">
+            <span class="field-label">Nombre de usuario</span>
+            <input
+              type="text"
+              id="profile-username"
+              autocomplete="username"
+              placeholder="tu_usuario"
+              autocapitalize="off"
+              spellcheck="false"
+            />
+            <span class="field-hint">Para que otros te encuentren. Solo letras, números y _</span>
+          </label>
+
           <!-- Campos de contraseña: solo para usuarios email -->
           <div id="pw-fields">
             <div class="form-section-label flex-row">
@@ -845,7 +858,7 @@ import Layout1 from "../layouts/Layout1.astro";
 
     const [, { data: profile }] = await Promise.all([
       initCache(session.user.id),
-      supabase.from("profiles").select("name").eq("id", session.user.id).single(),
+      supabase.from("profiles").select("name, username").eq("id", session.user.id).single(),
     ]);
 
     const fromTab = new URLSearchParams(window.location.search).get("from") ?? "visitados";
@@ -854,6 +867,7 @@ import Layout1 from "../layouts/Layout1.astro";
 
     const user = session.user;
     const nameInput = document.getElementById("profile-name") as HTMLInputElement;
+    const usernameInput = document.getElementById("profile-username") as HTMLInputElement;
     const nameDisplay = document.getElementById("profile-name-display")!;
     const msgEl = document.getElementById("profile-msg")!;
     const avatarEl = document.getElementById("profile-avatar")!;
@@ -867,6 +881,16 @@ import Layout1 from "../layouts/Layout1.astro";
       nameInput.value = profile.name;
       avatarEl.textContent = profile.name.charAt(0).toUpperCase();
     }
+    if (profile?.username) usernameInput.value = profile.username;
+
+    // Saneo del username: minúsculas, sin espacios, solo [a-z0-9_].
+    usernameInput.oninput = () => {
+      const pos = usernameInput.selectionStart;
+      usernameInput.value = usernameInput.value
+        .toLowerCase()
+        .replace(/[^a-z0-9_]/g, "");
+      if (pos !== null) usernameInput.setSelectionRange(pos, pos);
+    };
 
     localStorage.setItem(PROFILE_CACHE_KEY,
       JSON.stringify({ email: user.email ?? "", name: profile?.name ?? "" }));
@@ -914,6 +938,7 @@ import Layout1 from "../layouts/Layout1.astro";
       msgEl.classList.remove("error");
 
       const name = nameInput.value.trim();
+      const username = usernameInput.value.trim();
       const newPw = pwNewInput.value;
       const confirmPw = pwConfirmInput.value;
 
@@ -934,8 +959,20 @@ import Layout1 from "../layouts/Layout1.astro";
       btn.disabled = true;
       btn.textContent = "Guardando...";
 
+      // username vacío → null (libera el handle y respeta el índice único).
       const { error: nameError } = await supabase
-        .from("profiles").update({ name }).eq("id", user.id);
+        .from("profiles")
+        .update({ name, username: username || null })
+        .eq("id", user.id);
+
+      // 23505 = violación de unicidad (username ya tomado).
+      if (nameError && (nameError as { code?: string }).code === "23505") {
+        msgEl.textContent = "Ese nombre de usuario ya existe.";
+        msgEl.classList.add("error");
+        btn.disabled = false;
+        btn.textContent = "Guardar cambios";
+        return;
+      }
 
       let pwError = null;
       if (newPw && !nameError) {

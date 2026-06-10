@@ -1,0 +1,638 @@
+---
+import Layout1 from "../layouts/Layout1.astro";
+import SortBar from "../components/SortBar.astro";
+import RestaurantCard from "../components/RestaurantCard.astro";
+import type { Restaurant } from "../lib/data";
+
+const tplRestaurant: Restaurant = {
+  id: "",
+  name: "",
+  status: "visited",
+  notes: "",
+  createdAt: "",
+  updatedAt: "",
+  officialRestaurantId: null,
+};
+---
+
+<Layout1 title="Perfil · STAURANT">
+  <div class="usuario-page flex-column">
+    <a id="usuario-back" href="/amigos" class="back-link flex-row">
+      <i class="bi bi-arrow-left"></i> Amigos
+    </a>
+
+    <div id="usuario-header" class="usuario-header"></div>
+
+    <!-- Vista lista de restaurantes -->
+    <div id="usuario-list-view" class="flex-column">
+      <div class="usuario-sort-wrap" id="usuario-sort-wrap" hidden>
+        <SortBar
+          pills={[
+            { field: "rating", label: "Rating" },
+            { field: "name", label: "Nombre" },
+            { field: "date", label: "Creación" },
+          ]}
+        />
+      </div>
+      <div id="usuario-restaurants" class="flex-column"></div>
+    </div>
+
+    <!-- Vista detalle de un restaurante (solo lectura) -->
+    <div id="usuario-detail-view" class="flex-column" hidden>
+      <button id="usuario-detail-back" type="button" class="back-link flex-row">
+        <i class="bi bi-arrow-left"></i> <span>Volver</span>
+      </button>
+      <div id="usuario-detail-header" class="usuario-detail-header"></div>
+      <div id="usuario-detail-dishes" class="flex-column"></div>
+    </div>
+  </div>
+
+  <template id="tpl-user-restaurant-card">
+    <RestaurantCard restaurant={tplRestaurant} avg={null} dishCount={0} />
+  </template>
+</Layout1>
+
+<style>
+  /* `hidden` debe ganar sobre `.flex-column { display:flex }`. */
+  [hidden] {
+    display: none !important;
+  }
+
+  .usuario-page {
+    width: 100%;
+    max-width: 760px;
+    padding: 20px 16px 100px;
+    align-items: stretch;
+    gap: 20px;
+  }
+
+  .back-link {
+    justify-content: flex-start;
+    gap: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--clr-primary);
+    letter-spacing: 1px;
+    width: fit-content;
+    padding: 6px 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  #usuario-list-view,
+  #usuario-detail-view {
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  #usuario-restaurants,
+  #usuario-detail-dishes {
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .usuario-detail-title {
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    color: var(--clr-text);
+    word-break: break-word;
+  }
+
+  @media (hover: hover) {
+    .back-link:hover {
+      color: var(--clr-text);
+    }
+  }
+
+  @media (min-width: 768px) {
+    .usuario-page {
+      padding: 28px 24px 80px;
+    }
+  }
+</style>
+
+<style is:global>
+  /* ── Cabecera de perfil público ── */
+  .usuario-card {
+    background: var(--clr-white);
+    border: solid 1px var(--clr-border);
+    border-radius: 20px;
+    padding: 22px 20px;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .usuario-card .u-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--clr-white2);
+    border: solid 2px var(--clr-border);
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: var(--clr-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    text-transform: uppercase;
+  }
+
+  .usuario-card .u-meta {
+    flex: 1;
+    min-width: 0;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .usuario-card .u-name {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--clr-text);
+    word-break: break-word;
+    line-height: 1.2;
+  }
+
+  .usuario-card .u-username {
+    font-size: 0.85rem;
+    color: var(--clr-text);
+    opacity: 0.6;
+  }
+
+  .u-friend-btn {
+    flex-shrink: 0;
+    gap: 5px;
+    padding: 9px 15px;
+    font-size: 0.74rem;
+    letter-spacing: 0.4px;
+    text-indent: 0;
+    text-transform: none;
+    border-radius: 50px;
+    white-space: nowrap;
+  }
+
+  /* ── Plato de otro usuario (solo lectura) ── */
+  .u-dish {
+    background: var(--clr-white);
+    border: 1px solid var(--clr-border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .u-dish .ud-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .u-dish h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: var(--clr-text);
+    word-break: break-word;
+  }
+
+  .u-dish .ud-notes {
+    font-size: 0.8rem;
+    color: var(--clr-text);
+    margin-top: 4px;
+    line-height: 1.4;
+    opacity: 0.75;
+  }
+</style>
+
+<script>
+  import { navigate } from "astro:transitions/client";
+  import { supabase } from "../lib/supabase.ts";
+  import { initCache, type Restaurant, type Dish, type DishType } from "../lib/data.ts";
+  import {
+    getPublicProfile,
+    getUserRestaurants,
+    getUserDishes,
+    getUserDishTypes,
+    getFriendStatus,
+    sendFriendRequest,
+    acceptRequest,
+    deleteFriendship,
+    restaurantAverage,
+    type PublicUser,
+    type FriendStatus,
+  } from "../lib/social.ts";
+  import { getRatingClass } from "../scripts/store.ts";
+
+  // ─── Estado de módulo (persiste entre navegaciones ViewTransition) ──────────
+  let profileUser: PublicUser | null = null;
+  let restaurants: Restaurant[] = [];
+  let dishes: Dish[] = [];
+  let dishTypes: DishType[] = [];
+  let friend: { status: FriendStatus; friendshipId?: string } = { status: "none" };
+
+  type SortField = "name" | "rating" | "date";
+  type SortDir = "asc" | "desc";
+  const SORT_KEY = "staurant_sort_user";
+
+  function getSortState(): { field: SortField; dir: SortDir } {
+    try {
+      const saved = JSON.parse(localStorage.getItem(SORT_KEY) ?? "{}");
+      return {
+        field: (saved.field as SortField) ?? "rating",
+        dir: (saved.dir as SortDir) ?? "desc",
+      };
+    } catch {
+      return { field: "rating", dir: "desc" };
+    }
+  }
+  let sortState = getSortState();
+
+  function escapeHtml(s: string): string {
+    return s
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function ratingBadge(avg: number | null): string {
+    if (avg === null) {
+      return `<span class="rating-badge badge-empty"><i class="bi bi-star"></i></span>`;
+    }
+    return `<span class="rating-badge ${getRatingClass(avg)}"><span class="rating-num">${avg}</span></span>`;
+  }
+
+  function initials(u: PublicUser): string {
+    const base = u.name.trim() || u.username?.trim() || "?";
+    return base.charAt(0).toUpperCase();
+  }
+
+  // ─── Cabecera de perfil + botón de amistad ──────────────────────────────────
+
+  function renderHeader() {
+    const headerEl = document.getElementById("usuario-header");
+    if (!headerEl || !profileUser) return;
+
+    const card = document.createElement("div");
+    card.className = "usuario-card flex-row";
+
+    const avatar = document.createElement("div");
+    avatar.className = "u-avatar";
+    avatar.textContent = initials(profileUser);
+    card.appendChild(avatar);
+
+    const meta = document.createElement("div");
+    meta.className = "u-meta flex-column";
+    const name = document.createElement("p");
+    name.className = "u-name";
+    name.textContent = profileUser.name || "Usuario";
+    meta.appendChild(name);
+    if (profileUser.username) {
+      const uname = document.createElement("p");
+      uname.className = "u-username";
+      uname.textContent = `@${profileUser.username}`;
+      meta.appendChild(uname);
+    }
+    card.appendChild(meta);
+
+    card.appendChild(buildFriendButton());
+    headerEl.replaceChildren(card);
+  }
+
+  function buildFriendButton(): HTMLElement {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "boton2 u-friend-btn flex-row";
+
+    const refresh = async () => {
+      friend = await getFriendStatus(profileUser!.id);
+      renderHeader();
+    };
+
+    switch (friend.status) {
+      case "friends":
+        btn.innerHTML = `<i class="bi bi-people-fill"></i> Amigos`;
+        btn.onclick = async () => {
+          if (!confirm("¿Eliminar de tus amigos?")) return;
+          if (friend.friendshipId) {
+            btn.disabled = true;
+            await deleteFriendship(friend.friendshipId);
+            await refresh();
+          }
+        };
+        break;
+      case "outgoing":
+        btn.innerHTML = `<i class="bi bi-clock-history"></i> Enviada`;
+        btn.onclick = async () => {
+          if (friend.friendshipId) {
+            btn.disabled = true;
+            await deleteFriendship(friend.friendshipId);
+            await refresh();
+          }
+        };
+        break;
+      case "incoming":
+        btn.className = "boton u-friend-btn flex-row";
+        btn.innerHTML = `<i class="bi bi-check-lg"></i> Aceptar`;
+        btn.onclick = async () => {
+          if (friend.friendshipId) {
+            btn.disabled = true;
+            await acceptRequest(friend.friendshipId);
+            await refresh();
+          }
+        };
+        break;
+      default:
+        btn.className = "boton u-friend-btn flex-row";
+        btn.innerHTML = `<i class="bi bi-person-plus"></i> Agregar`;
+        btn.onclick = async () => {
+          btn.disabled = true;
+          await sendFriendRequest(profileUser!.id);
+          await refresh();
+        };
+    }
+    return btn;
+  }
+
+  // ─── Lista de restaurantes calificados ──────────────────────────────────────
+
+  function sortRestaurants(list: Restaurant[]): Restaurant[] {
+    return [...list].sort((a, b) => {
+      let cmp = 0;
+      if (sortState.field === "name") {
+        cmp = a.name.localeCompare(b.name);
+      } else if (sortState.field === "rating") {
+        const ra = restaurantAverage(dishes, a.id) ?? -1;
+        const rb = restaurantAverage(dishes, b.id) ?? -1;
+        cmp = ra - rb;
+      } else {
+        cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      }
+      return sortState.dir === "asc" ? cmp : -cmp;
+    });
+  }
+
+  function buildRestaurantCard(r: Restaurant): Element {
+    const tpl = document.getElementById(
+      "tpl-user-restaurant-card",
+    ) as HTMLTemplateElement;
+    const article = (
+      tpl.content.cloneNode(true) as DocumentFragment
+    ).querySelector("article")!;
+
+    article.removeAttribute("data-href");
+    article.removeAttribute("style");
+    article.classList.toggle("is-official", !!r.officialRestaurantId);
+
+    const h3 = article.querySelector("h3")!;
+    h3.textContent = "";
+    if (r.officialRestaurantId) {
+      const tailSpan = document.createElement("span");
+      tailSpan.className = "name-tail-nowrap";
+      tailSpan.textContent = r.name;
+      const badge = document.createElement("i");
+      badge.className = "bi bi-patch-check-fill verified-badge";
+      badge.title = "Restaurante verificado";
+      tailSpan.appendChild(badge);
+      h3.appendChild(tailSpan);
+    } else {
+      h3.textContent = r.name;
+    }
+
+    const dishCount = dishes.filter((d) => d.restaurantId === r.id).length;
+    const pill = article.querySelector(".dish-count-pill") as HTMLElement | null;
+    if (pill) {
+      pill.innerHTML = `<i class="bi bi-journal-text"></i> ${dishCount} ${dishCount === 1 ? "plato" : "platos"}`;
+    }
+
+    const avg = restaurantAverage(dishes, r.id);
+    const badge = article.querySelector(".rating-badge")!;
+    if (avg === null) {
+      badge.className = "rating-badge badge-empty";
+      badge.innerHTML = '<i class="bi bi-star"></i>';
+    } else {
+      badge.className = `rating-badge ${getRatingClass(avg)}`;
+      badge.innerHTML = `<span class="rating-num">${avg}</span>`;
+    }
+
+    article.addEventListener("click", () => openDetail(r.id));
+    return article;
+  }
+
+  function renderList() {
+    const listEl = document.getElementById("usuario-restaurants");
+    const sortWrap = document.getElementById("usuario-sort-wrap");
+    if (!listEl) return;
+
+    if (sortWrap) sortWrap.hidden = restaurants.length < 2;
+
+    if (restaurants.length === 0) {
+      listEl.innerHTML = `<div class="empty-state flex-column">
+           <i class="bi bi-journal-x"></i>
+           <p>Este usuario aún no tiene restaurantes calificados.</p>
+         </div>`;
+      return;
+    }
+
+    const sorted = sortRestaurants(restaurants);
+    listEl.innerHTML = "";
+    const grid = document.createElement("div");
+    grid.className = "cards-grid";
+    sorted.forEach((r) => grid.appendChild(buildRestaurantCard(r)));
+    listEl.appendChild(grid);
+  }
+
+  function updateSortUI() {
+    document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach((btn) => {
+      const isActive = btn.dataset.field === sortState.field;
+      btn.classList.toggle("active", isActive);
+      btn.querySelector("i")!.className = isActive
+        ? `bi bi-arrow-${sortState.dir === "asc" ? "up" : "down"}`
+        : "bi bi-arrow-down-up";
+    });
+  }
+
+  // ─── Detalle de un restaurante (platos, solo lectura) ───────────────────────
+
+  function renderDetail(restaurantId: string) {
+    const restaurant = restaurants.find((r) => r.id === restaurantId);
+    const headerEl = document.getElementById("usuario-detail-header");
+    const listEl = document.getElementById("usuario-detail-dishes");
+    if (!restaurant || !headerEl || !listEl) return;
+
+    const avg = restaurantAverage(dishes, restaurant.id);
+    const header = document.createElement("div");
+    header.className = "usuario-card flex-row";
+    header.innerHTML = ratingBadge(avg);
+    const titleWrap = document.createElement("div");
+    titleWrap.className = "u-meta flex-column";
+    const title = document.createElement("h1");
+    title.className = "usuario-detail-title";
+    title.textContent = restaurant.name;
+    titleWrap.appendChild(title);
+    header.appendChild(titleWrap);
+    headerEl.replaceChildren(header);
+
+    const list = dishes.filter((d) => d.restaurantId === restaurant.id);
+    if (list.length === 0) {
+      listEl.innerHTML = `<div class="empty-state flex-column">
+           <i class="bi bi-egg-fried"></i>
+           <p>Este restaurante no tiene platos.</p>
+         </div>`;
+      return;
+    }
+
+    // Mejor calificación primero, luego sin calificar.
+    list.sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1));
+
+    listEl.innerHTML = "";
+    list.forEach((d) => {
+      const article = document.createElement("article");
+      article.className = "u-dish flex-row";
+      article.innerHTML = ratingBadge(d.rating);
+
+      const info = document.createElement("div");
+      info.className = "ud-info";
+      const h4 = document.createElement("h4");
+      h4.textContent = d.name;
+      info.appendChild(h4);
+
+      const type = d.typeId ? dishTypes.find((t) => t.id === d.typeId) : null;
+      if (type) {
+        const tag = document.createElement("span");
+        tag.className = "dish-type-tag";
+        tag.textContent = type.name;
+        info.appendChild(tag);
+      }
+      if (d.notes) {
+        const notes = document.createElement("p");
+        notes.className = "ud-notes";
+        notes.textContent = d.notes;
+        info.appendChild(notes);
+      }
+      article.appendChild(info);
+      listEl.appendChild(article);
+    });
+  }
+
+  // ─── Cambio de vista (lista ↔ detalle) vía query param ?r= ──────────────────
+
+  function setView(restaurantId: string | null) {
+    const listView = document.getElementById("usuario-list-view");
+    const detailView = document.getElementById("usuario-detail-view");
+    if (!listView || !detailView) return;
+
+    const userId = new URLSearchParams(window.location.search).get("id") ?? "";
+    if (restaurantId && restaurants.some((r) => r.id === restaurantId)) {
+      listView.hidden = true;
+      detailView.hidden = false;
+      renderDetail(restaurantId);
+    } else {
+      listView.hidden = false;
+      detailView.hidden = true;
+      renderList();
+      updateSortUI();
+    }
+    // Mantener la URL en sync (sin recargar) para back-button intuitivo.
+    const target = restaurantId
+      ? `/usuario?id=${userId}&r=${restaurantId}`
+      : `/usuario?id=${userId}`;
+    if (window.location.pathname + window.location.search !== target) {
+      history.replaceState(null, "", target);
+    }
+  }
+
+  function openDetail(restaurantId: string) {
+    setView(restaurantId);
+    window.scrollTo({ top: 0 });
+  }
+
+  // ─── Init ───────────────────────────────────────────────────────────────────
+
+  document.addEventListener("astro:page-load", async () => {
+    const headerEl = document.getElementById("usuario-header");
+    if (!headerEl) return;
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      window.location.href = "/login";
+      return;
+    }
+
+    const userId = new URLSearchParams(window.location.search).get("id") ?? "";
+    if (!userId) {
+      navigate("/amigos");
+      return;
+    }
+    if (userId === session.user.id) {
+      // Tu propio perfil → usar la página de perfil personal.
+      navigate("/perfil");
+      return;
+    }
+
+    await initCache(session.user.id);
+
+    // Skeleton mientras carga
+    const restEl = document.getElementById("usuario-restaurants");
+    if (restEl && (!profileUser || profileUser.id !== userId)) {
+      const grid = document.createElement("div");
+      grid.className = "cards-grid";
+      for (let i = 0; i < 3; i++) {
+        const sk = document.createElement("div");
+        sk.className = "skeleton-card";
+        grid.appendChild(sk);
+      }
+      restEl.replaceChildren(grid);
+    }
+
+    const [user, rs, ds, dts, fr] = await Promise.all([
+      getPublicProfile(userId),
+      getUserRestaurants(userId),
+      getUserDishes(userId),
+      getUserDishTypes(userId),
+      getFriendStatus(userId),
+    ]);
+
+    if (!user) {
+      headerEl.innerHTML = `<div class="empty-state flex-column">
+           <i class="bi bi-person-x"></i>
+           <p>No se encontró este usuario.</p>
+         </div>`;
+      return;
+    }
+
+    profileUser = user;
+    restaurants = rs;
+    dishes = ds;
+    dishTypes = dts;
+    friend = fr;
+
+    document.title = `${user.name || "Perfil"} · STAURANT`;
+
+    renderHeader();
+
+    // Wire sort pills
+    document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach((btn) => {
+      btn.onclick = () => {
+        const field = btn.dataset.field as SortField;
+        if (sortState.field === field) {
+          sortState.dir = sortState.dir === "asc" ? "desc" : "asc";
+        } else {
+          sortState.field = field;
+          sortState.dir = field === "name" ? "asc" : "desc";
+        }
+        localStorage.setItem(SORT_KEY, JSON.stringify(sortState));
+        updateSortUI();
+        renderList();
+      };
+    });
+
+    document.getElementById("usuario-detail-back")!.onclick = () => setView(null);
+
+    const r = new URLSearchParams(window.location.search).get("r");
+    setView(r);
+  });
+</script>

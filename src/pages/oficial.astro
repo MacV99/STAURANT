@@ -134,6 +134,26 @@ import Layout1 from "../layouts/Layout1.astro";
     margin-top: 4px;
   }
 
+  /* Etiqueta informativa (no clickeable) cuando ya está en tu lista */
+  .oc-owned-tag {
+    width: 100%;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 4px;
+    padding: 12px 16px;
+    border-radius: var(--border-radius);
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: #1a7a38;
+    background: #d8f5e2;
+    border: 1px solid #a8e0b8;
+  }
+
+  .oc-owned-tag i {
+    font-size: 0.95rem;
+  }
+
   /* Plato oficial (solo lectura) */
   .oficial-dish {
     background: var(--clr-white);
@@ -271,42 +291,47 @@ import Layout1 from "../layouts/Layout1.astro";
       card.appendChild(notes);
     }
 
-    // Botón: agregar a la colección, o ver el que ya tienes.
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "boton oc-adopt-btn flex-row";
+    // Si ya está en tu lista → solo etiqueta informativa (sin acción).
+    // Si no lo tienes → botón para agregarlo a tu colección.
     if (adoptedRestaurant) {
-      btn.innerHTML = `<i class="bi bi-check-circle-fill"></i> Ver en mi lista`;
-      btn.onclick = () => navigate(`/restaurante?id=${adoptedRestaurant.id}`);
-    } else if (adopting) {
-      btn.disabled = true;
-      btn.innerHTML = `<i class="bi bi-hourglass-split"></i> Agregando...`;
+      const tag = document.createElement("div");
+      tag.className = "oc-owned-tag flex-row";
+      tag.innerHTML = `<i class="bi bi-check-circle-fill"></i> Ya está en tu lista`;
+      card.appendChild(tag);
     } else {
-      btn.innerHTML = `<i class="bi bi-plus-lg"></i> Agregar a mi colección`;
-      btn.onclick = async () => {
-        // Candado anti-duplicado: si entre el render y el clic ya quedó vinculado
-        // a este oficial (otra pestaña, sync en segundo plano, doble clic), no se
-        // vuelve a adoptar — se navega al que ya existe.
-        const already = getRestaurants().find(
-          (r) => r.officialRestaurantId === official!.id,
-        );
-        if (already) {
-          navigate(`/restaurante?id=${already.id}`);
-          return;
-        }
-        adopting = true;
-        renderHeader();
-        const created = await adoptOfficialRestaurant(official!.id);
-        adopting = false;
-        if (created) {
-          navigate(`/restaurante?id=${created.id}`);
-        } else {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "boton oc-adopt-btn flex-row";
+      if (adopting) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="bi bi-hourglass-split"></i> Agregando...`;
+      } else {
+        btn.innerHTML = `<i class="bi bi-plus-lg"></i> Agregar a mi colección`;
+        btn.onclick = async () => {
+          // Candado anti-duplicado: si entre el render y el clic ya quedó vinculado
+          // a este oficial (otra pestaña, sync en segundo plano, doble clic), no se
+          // vuelve a adoptar — se navega al que ya existe.
+          const already = getRestaurants().find(
+            (r) => r.officialRestaurantId === official!.id,
+          );
+          if (already) {
+            navigate(`/restaurante?id=${already.id}`);
+            return;
+          }
+          adopting = true;
           renderHeader();
-          alert("No se pudo agregar el restaurante. Inténtalo de nuevo.");
-        }
-      };
+          const created = await adoptOfficialRestaurant(official!.id);
+          adopting = false;
+          if (created) {
+            navigate(`/restaurante?id=${created.id}`);
+          } else {
+            renderHeader();
+            alert("No se pudo agregar el restaurante. Inténtalo de nuevo.");
+          }
+        };
+      }
+      card.appendChild(btn);
     }
-    card.appendChild(btn);
 
     headerEl.replaceChildren(card);
   }
