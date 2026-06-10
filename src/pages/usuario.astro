@@ -93,14 +93,6 @@ const tplRestaurant: Restaurant = {
     gap: 8px;
   }
 
-  .usuario-detail-title {
-    font-size: 1.2rem;
-    font-weight: 800;
-    letter-spacing: 0.3px;
-    color: var(--clr-text);
-    word-break: break-word;
-  }
-
   @media (hover: hover) {
     .back-link:hover {
       color: var(--clr-text);
@@ -174,6 +166,33 @@ const tplRestaurant: Restaurant = {
     white-space: nowrap;
   }
 
+  /* ── Cabecera de detalle de restaurante (solo lectura) ── */
+  .u-detail-header {
+    background: var(--clr-white);
+    border: 1px solid var(--clr-border);
+    border-radius: 18px;
+    padding: 18px 20px;
+    justify-content: space-between;
+    gap: 14px;
+    align-items: center;
+  }
+
+  .u-detail-header .u-detail-meta {
+    flex: 1;
+    min-width: 0;
+    align-items: flex-start;
+    gap: 7px;
+  }
+
+  .u-detail-header .u-detail-title {
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    color: var(--clr-text);
+    word-break: break-word;
+    line-height: 1.2;
+  }
+
   /* ── Plato de otro usuario (solo lectura) ── */
   .u-dish {
     background: var(--clr-white);
@@ -182,7 +201,7 @@ const tplRestaurant: Restaurant = {
     padding: 14px 16px;
     justify-content: space-between;
     gap: 12px;
-    align-items: flex-start;
+    align-items: center;
   }
 
   .u-dish .ud-info {
@@ -193,9 +212,25 @@ const tplRestaurant: Restaurant = {
   .u-dish h4 {
     font-size: 1rem;
     font-weight: 700;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.5px;
     color: var(--clr-text);
     word-break: break-word;
+  }
+
+  /* Píldora de tipo de plato, idéntica a DishCard.astro (que la define scoped,
+     por eso aquí la replicamos para los platos renderizados por JS). */
+  .u-dish .dish-type-tag {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-indent: 0.6px;
+    text-transform: uppercase;
+    color: var(--clr-primary);
+    background-color: var(--clr-white2);
+    border-radius: 20px;
+    padding: 2.5px 7px;
+    margin-top: 2px;
   }
 
   .u-dish .ud-notes {
@@ -463,20 +498,30 @@ const tplRestaurant: Restaurant = {
     const listEl = document.getElementById("usuario-detail-dishes");
     if (!restaurant || !headerEl || !listEl) return;
 
+    const list = dishes.filter((d) => d.restaurantId === restaurant.id);
     const avg = restaurantAverage(dishes, restaurant.id);
+
     const header = document.createElement("div");
-    header.className = "usuario-card flex-row";
-    header.innerHTML = ratingBadge(avg);
-    const titleWrap = document.createElement("div");
-    titleWrap.className = "u-meta flex-column";
-    const title = document.createElement("h1");
-    title.className = "usuario-detail-title";
+    header.className = "u-detail-header flex-row";
+
+    const meta = document.createElement("div");
+    meta.className = "u-detail-meta flex-column";
+    const title = document.createElement("h2");
+    title.className = "u-detail-title";
     title.textContent = restaurant.name;
-    titleWrap.appendChild(title);
-    header.appendChild(titleWrap);
+    meta.appendChild(title);
+    const count = document.createElement("span");
+    count.className = "dish-count-pill";
+    count.innerHTML = `<i class="bi bi-journal-text"></i> ${list.length} ${list.length === 1 ? "plato" : "platos"}`;
+    meta.appendChild(count);
+    header.appendChild(meta);
+
+    const headerBadge = document.createElement("span");
+    headerBadge.innerHTML = ratingBadge(avg);
+    header.appendChild(headerBadge.firstElementChild!);
+
     headerEl.replaceChildren(header);
 
-    const list = dishes.filter((d) => d.restaurantId === restaurant.id);
     if (list.length === 0) {
       listEl.innerHTML = `<div class="empty-state flex-column">
            <i class="bi bi-egg-fried"></i>
@@ -492,7 +537,6 @@ const tplRestaurant: Restaurant = {
     list.forEach((d) => {
       const article = document.createElement("article");
       article.className = "u-dish flex-row";
-      article.innerHTML = ratingBadge(d.rating);
 
       const info = document.createElement("div");
       info.className = "ud-info";
@@ -514,6 +558,11 @@ const tplRestaurant: Restaurant = {
         info.appendChild(notes);
       }
       article.appendChild(info);
+
+      const badge = document.createElement("span");
+      badge.innerHTML = ratingBadge(d.rating);
+      article.appendChild(badge.firstElementChild!);
+
       listEl.appendChild(article);
     });
   }
