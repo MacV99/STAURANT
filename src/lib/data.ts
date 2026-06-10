@@ -410,15 +410,26 @@ export function updateDish(
   const cache = getCache();
   const idx = cache.dishes.findIndex((d) => d.id === id);
   if (idx === -1) return null;
+
+  // Platos de restaurantes oficiales: su ficha (nombre, tipo, notas) la administra
+  // el sistema y NO puede modificarse. Lo único que el usuario puede cambiar es la
+  // calificación. Se descarta cualquier otro campo aunque llegue en `input`.
+  const effectiveInput: Partial<Pick<Dish, "typeId" | "name" | "rating" | "notes">> =
+    cache.dishes[idx].officialDishId
+      ? input.rating !== undefined
+        ? { rating: input.rating }
+        : {}
+      : input;
+
   const updatedAt = new Date().toISOString();
-  cache.dishes[idx] = { ...cache.dishes[idx], ...input, updatedAt };
+  cache.dishes[idx] = { ...cache.dishes[idx], ...effectiveInput, updatedAt };
   writeCache(cache);
 
   const patch: Record<string, unknown> = { updated_at: updatedAt };
-  if (input.typeId !== undefined) patch.type_id = input.typeId;
-  if (input.name !== undefined) patch.name = input.name;
-  if (input.rating !== undefined) patch.rating = input.rating;
-  if (input.notes !== undefined) patch.notes = input.notes;
+  if (effectiveInput.typeId !== undefined) patch.type_id = effectiveInput.typeId;
+  if (effectiveInput.name !== undefined) patch.name = effectiveInput.name;
+  if (effectiveInput.rating !== undefined) patch.rating = effectiveInput.rating;
+  if (effectiveInput.notes !== undefined) patch.notes = effectiveInput.notes;
   bgSync(() => supabase.from("dishes").update(patch).eq("id", id));
 
   bumpRestaurantUpdatedAt(cache.dishes[idx].restaurantId, updatedAt);
@@ -428,6 +439,12 @@ export function updateDish(
 export function deleteDish(id: string): void {
   const cache = getCache();
   const dish = cache.dishes.find((d) => d.id === id);
+  // Los platos oficiales no pueden eliminarse individualmente: forman parte de la
+  // carta administrada por el sistema. (Sí se eliminan al borrar el restaurante.)
+  if (dish?.officialDishId) {
+    console.warn("[deleteDish] no se puede eliminar un plato oficial");
+    return;
+  }
   cache.dishes = cache.dishes.filter((d) => d.id !== id);
   writeCache(cache);
   bgSync(() => supabase.from("dishes").delete().eq("id", id));
@@ -490,6 +507,29 @@ export function hasUnratedDishes(restaurantId: string): boolean {
   return getDishesByRestaurant(restaurantId).some((d) => d.rating === null);
 }
 
+/** IDs de los restaurantes con el promedio PERSONAL más alto (corona 👑).
+ *  - Solo cuenta restaurantes con al menos un plato calificado.
+ *  - Requiere ≥2 restaurantes calificados para destacar (sin comparación no hay "mejor").
+ *  - Empate → se devuelven todos los líderes (varias coronas). */
+export function getTopRatedRestaurantIds(): Set<string> {
+  const rated = getRestaurants()
+    .map((r) => ({ id: r.id, avg: getRestaurantAverage(r.id) }))
+    .filter((x): x is { id: string; avg: number } => x.avg !== null);
+  if (rated.length < 2) return new Set();
+  const max = Math.max(...rated.map((x) => x.avg));
+  return new Set(rated.filter((x) => x.avg === max).map((x) => x.id));
+}
+
+/** IDs de los platos con la mejor calificación PERSONAL dentro de un restaurante (corona 👑).
+ *  - Requiere ≥2 platos calificados.
+ *  - Empate → varios platos estrella. */
+export function getTopRatedDishIds(restaurantId: string): Set<string> {
+  const rated = getDishesByRestaurant(restaurantId).filter((d) => d.rating !== null);
+  if (rated.length < 2) return new Set();
+  const max = Math.max(...rated.map((d) => d.rating!));
+  return new Set(rated.filter((d) => d.rating === max).map((d) => d.id));
+}
+
 // ─── Official (global) ────────────────────────────────────────────────────────
 
 function toOfficialRestaurant(row: Record<string, unknown>): OfficialRestaurant {
@@ -529,6 +569,39 @@ export async function searchOfficialRestaurants(query: string): Promise<Official
   return (data ?? []).map(toOfficialRestaurant);
 }
 
+/** Trae TODOS los restaurantes oficiales de la plataforma (para la sección Explorar).
+ *  No se cachea: la lista de oficiales es pequeña y cambia poco. */
+export async function getAllOfficialRestaurants(): Promise<OfficialRestaurant[]> {
+  const { data, error } = await supabase
+    .from("official_restaurants")
+    .select("*")
+    .order("name", { ascending: true });
+  if (error) { console.error("[getAllOfficialRestaurants]", error); return []; }
+  return (data ?? []).map(toOfficialRestaurant);
+}
+
+/** Trae un restaurante oficial por id (detalle Explorar). */
+export async function getOfficialRestaurant(id: string): Promise<OfficialRestaurant | null> {
+  const { data, error } = await supabase
+    .from("official_restaurants")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (error || !data) { console.error("[getOfficialRestaurant]", error); return null; }
+  return toOfficialRestaurant(data);
+}
+
+/** Trae la carta oficial (platos) de un restaurante oficial. */
+export async function getOfficialDishes(officialRestaurantId: string): Promise<OfficialDish[]> {
+  const { data, error } = await supabase
+    .from("official_dishes")
+    .select("*")
+    .eq("official_restaurant_id", officialRestaurantId)
+    .order("name", { ascending: true });
+  if (error) { console.error("[getOfficialDishes]", error); return []; }
+  return (data ?? []).map(toOfficialDish);
+}
+
 /** Crea un Restaurant personal a partir de un oficial, clonando todos sus platos
  *  como dishes sin calificar en el espacio del usuario.
  *
@@ -540,6 +613,13 @@ export async function searchOfficialRestaurants(query: string): Promise<Official
  *  Esto evita que un refresh en segundo plano sobreescriba la adopción antes
  *  de que se persista (race contra refreshCacheInBackground). */
 export async function adoptOfficialRestaurant(officialId: string): Promise<Restaurant | null> {
+  // Candado anti-duplicado en la fuente: si el usuario ya tiene un restaurante
+  // vinculado a este oficial, no se crea otro — se devuelve el existente.
+  const alreadyAdopted = getCache().restaurants.find(
+    (r) => r.officialRestaurantId === officialId,
+  );
+  if (alreadyAdopted) return alreadyAdopted;
+
   const [officialRes, dishesRes] = await Promise.all([
     supabase.from("official_restaurants").select("*").eq("id", officialId).single(),
     supabase.from("official_dishes").select("*").eq("official_restaurant_id", officialId),

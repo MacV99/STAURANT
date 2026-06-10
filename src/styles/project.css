@@ -266,6 +266,29 @@
   padding: 2px 8px;
 }
 
+/* === CORONA 👑 (mejor valorado, según calificación personal) ===
+   Se posa sobre la esquina superior derecha del badge de calificación
+   (.rating-badge, que ya es position:relative). Creada por JS → global. */
+
+.crown-badge {
+  position: absolute;
+  top: -13px;
+  right: -9px;
+  z-index: 3;
+  font-size: 1.15rem;
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 1.5px rgba(180, 130, 10, 0.45));
+  transform: rotate(20deg);
+  animation: crown-pop 0.42s var(--transition-bounce);
+}
+
+@keyframes crown-pop {
+  0%   { transform: rotate(20deg) scale(0);   opacity: 0; }
+  60%  { transform: rotate(12deg) scale(1.25); }
+  100% { transform: rotate(20deg) scale(1); }
+}
+
 /* === VERIFIED BADGE (perfil oficial) === */
 
 .verified-badge {

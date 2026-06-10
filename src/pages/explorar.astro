@@ -1,0 +1,353 @@
+---
+import Layout1 from "../layouts/Layout1.astro";
+---
+
+<Layout1 title="Explorar · STAURANT">
+  <div class="explore-page flex-column">
+    <div class="explore-header flex-column">
+      <h1 class="explore-title">Explorar Restaurantes</h1>
+      <p class="explore-sub">
+        Descubre los restaurantes oficiales de la plataforma y agrégalos a tu
+        colección.
+      </p>
+    </div>
+
+    <div class="explore-search-wrap">
+      <i class="bi bi-search-fill explore-search-icon"></i>
+      <input
+        id="explore-search"
+        class="explore-search-input"
+        type="search"
+        placeholder="Buscar restaurante oficial..."
+        autocomplete="off"
+        spellcheck="false"
+      />
+    </div>
+
+    <div id="explore-list" class="flex-column"></div>
+  </div>
+</Layout1>
+
+<style>
+  .explore-page {
+    width: 100%;
+    max-width: 1100px;
+    padding: 20px 16px 100px;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .explore-header {
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .explore-title {
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: var(--clr-text);
+  }
+
+  .explore-sub {
+    font-size: 0.88rem;
+    color: var(--clr-text);
+    opacity: 0.65;
+    line-height: 1.45;
+  }
+
+  .explore-search-wrap {
+    position: relative;
+    width: 100%;
+  }
+
+  .explore-search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--clr-text);
+    opacity: 0.45;
+    font-size: 0.95rem;
+    pointer-events: none;
+  }
+
+  .explore-search-input {
+    width: 100%;
+    padding: 11px 16px 11px 38px;
+    border-radius: var(--border-radius);
+    border: 1.5px solid var(--clr-border);
+    background: var(--clr-white);
+    font-size: 0.9rem;
+    color: var(--clr-text);
+    transition: border-color var(--transition);
+  }
+
+  .explore-search-input::placeholder {
+    color: var(--clr-text);
+    opacity: 0.5;
+  }
+
+  .explore-search-input:focus {
+    outline: none;
+    border-color: var(--clr-border2);
+  }
+
+  .explore-search-input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+  }
+
+  #explore-list {
+    align-items: stretch;
+    gap: 7px;
+  }
+
+  @media (min-width: 768px) {
+    .explore-page {
+      padding: 28px 24px 80px;
+    }
+
+    #explore-list {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+  }
+</style>
+
+<style is:global>
+  .explore-card {
+    background: var(--clr-white);
+    border: 1px solid var(--clr-border);
+    border-radius: 18px;
+    padding: 16px;
+    justify-content: space-between;
+    gap: 12px;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .explore-card.is-official {
+    background:
+      linear-gradient(
+        315deg,
+        rgba(212, 160, 23, 0.14) 0%,
+        rgba(255, 248, 230, 0) 60%
+      ),
+      var(--clr-white);
+    border-color: rgba(212, 160, 23, 0.5);
+  }
+
+  .explore-card:active {
+    transform: scale(0.98);
+  }
+
+  .explore-card .ec-body {
+    align-items: flex-start;
+    min-width: 0;
+    gap: 6px;
+  }
+
+  .explore-card h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: var(--clr-text);
+    word-break: break-word;
+    line-height: 1.25;
+  }
+
+  .explore-card .ec-meta {
+    justify-content: flex-start;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .explore-card .ec-city {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.78rem;
+    color: var(--clr-text);
+    opacity: 0.6;
+  }
+
+  .explore-card .ec-adopted {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: #1a7a38;
+    background: #d8f5e2;
+    border: solid 1px #a8e0b8ad;
+    border-radius: 20px;
+    padding: 2px 8px;
+  }
+
+  .explore-card .ec-chevron {
+    color: var(--clr-text);
+    opacity: 0.35;
+    font-size: 1rem;
+    flex-shrink: 0;
+    align-self: center;
+  }
+
+  @media (hover: hover) {
+    .explore-card:hover {
+      border-color: var(--clr-border2);
+    }
+  }
+</style>
+
+<script>
+  import { navigate } from "astro:transitions/client";
+  import { supabase } from "../lib/supabase.ts";
+  import {
+    initCache,
+    getRestaurants,
+    getAllOfficialRestaurants,
+    getOfficialRestaurantStat,
+    type OfficialRestaurant,
+  } from "../lib/data.ts";
+
+  // Estado a nivel de módulo (persiste entre navegaciones ViewTransition).
+  let officials: OfficialRestaurant[] = [];
+  let exploreSearch = "";
+
+  function escapeHtml(s: string): string {
+    return s
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function buildCard(o: OfficialRestaurant): HTMLElement {
+    // ¿El usuario ya tiene este oficial en su colección?
+    const adopted = getRestaurants().some((r) => r.officialRestaurantId === o.id);
+    const stat = getOfficialRestaurantStat(o.id);
+
+    const card = document.createElement("article");
+    card.className = "explore-card card-clickable flex-row is-official";
+    card.setAttribute("data-id", o.id);
+
+    const body = document.createElement("div");
+    body.className = "ec-body flex-column";
+
+    const h3 = document.createElement("h3");
+    h3.textContent = o.name;
+    const verified = document.createElement("i");
+    verified.className = "bi bi-patch-check-fill verified-badge";
+    verified.title = "Restaurante verificado";
+    h3.appendChild(verified);
+    body.appendChild(h3);
+
+    const meta = document.createElement("div");
+    meta.className = "ec-meta flex-row";
+
+    if (o.city) {
+      const city = document.createElement("span");
+      city.className = "ec-city";
+      city.innerHTML = `<i class="bi bi-geo-alt"></i> ${escapeHtml(o.city)}`;
+      meta.appendChild(city);
+    }
+
+    if (stat && stat.ratingsCount > 0) {
+      const pill = document.createElement("span");
+      pill.className = "global-rating-pill";
+      pill.title = `Promedio global basado en ${stat.ratingsCount} ${stat.ratingsCount === 1 ? "calificación" : "calificaciones"}`;
+      pill.innerHTML = `<i class="bi bi-globe2"></i> ${stat.avgRating} <span class="grp-count">· ${stat.ratingsCount}</span>`;
+      meta.appendChild(pill);
+    }
+
+    if (adopted) {
+      const tag = document.createElement("span");
+      tag.className = "ec-adopted";
+      tag.innerHTML = `<i class="bi bi-check-circle-fill"></i> En tu lista`;
+      meta.appendChild(tag);
+    }
+
+    body.appendChild(meta);
+    card.appendChild(body);
+
+    const chevron = document.createElement("i");
+    chevron.className = "bi bi-chevron-right ec-chevron";
+    card.appendChild(chevron);
+
+    card.addEventListener("click", () => navigate(`/oficial?id=${o.id}`));
+    return card;
+  }
+
+  function render() {
+    const listEl = document.getElementById("explore-list");
+    if (!listEl) return;
+
+    const q = exploreSearch.toLowerCase().trim();
+    const filtered = q
+      ? officials.filter(
+          (o) =>
+            o.name.toLowerCase().includes(q) ||
+            (o.city ?? "").toLowerCase().includes(q),
+        )
+      : officials;
+
+    if (filtered.length === 0) {
+      listEl.innerHTML = `<div class="empty-state flex-column">
+           <i class="bi bi-${q ? "search" : "shop"}"></i>
+           <p>${q ? "Sin resultados para tu búsqueda." : "Aún no hay restaurantes oficiales."}</p>
+         </div>`;
+      return;
+    }
+
+    listEl.innerHTML = "";
+    const frag = document.createDocumentFragment();
+    filtered.forEach((o) => frag.appendChild(buildCard(o)));
+    listEl.appendChild(frag);
+  }
+
+  // Re-render cuando lleguen stats globales o cambie el cache (adopción).
+  document.addEventListener("stats:synced", render);
+  document.addEventListener("cache:synced", render);
+
+  document.addEventListener("astro:page-load", async () => {
+    const listEl = document.getElementById("explore-list");
+    if (!listEl) return; // no estamos en esta página
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      window.location.href = "/login";
+      return;
+    }
+
+    // Skeletons mientras carga
+    if (officials.length === 0) {
+      listEl.innerHTML = "";
+      for (let i = 0; i < 5; i++) {
+        const sk = document.createElement("div");
+        sk.className = "skeleton-card";
+        listEl.appendChild(sk);
+      }
+    }
+
+    await initCache(session.user.id);
+
+    // Búsqueda
+    const searchEl = document.getElementById(
+      "explore-search",
+    ) as HTMLInputElement | null;
+    if (searchEl) {
+      searchEl.value = exploreSearch;
+      searchEl.oninput = () => {
+        exploreSearch = searchEl.value;
+        render();
+      };
+    }
+
+    officials = await getAllOfficialRestaurants();
+    render();
+  });
+</script>

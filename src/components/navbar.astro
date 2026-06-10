@@ -2,6 +2,8 @@
 const pathname = Astro.url.pathname;
 const isHome = pathname === "/" || pathname.endsWith("/index");
 const isPerfil = pathname.includes("/perfil");
+const isExplorar =
+  pathname.includes("/explorar") || pathname.includes("/oficial");
 const fabIcon = pathname.includes("/restaurante")
   ? "bi bi-fork-knife"
   : "bi bi-shop-window";
@@ -28,6 +30,15 @@ const fabIcon = pathname.includes("/restaurante")
     >
       <i class={isHome ? "bi bi-house-door-fill" : "bi bi-house-door"}></i>
       <span>Inicio</span>
+    </a>
+
+    <a
+      href="/explorar"
+      class:list={["sidebar-item", "flex-row", { active: isExplorar }]}
+      aria-current={isExplorar ? "page" : undefined}
+    >
+      <i class={isExplorar ? "bi bi-compass-fill" : "bi bi-compass"}></i>
+      <span>Explorar</span>
     </a>
 
     <a
@@ -65,6 +76,15 @@ const fabIcon = pathname.includes("/restaurante")
     <span>Inicio</span>
   </a>
 
+  <a
+    href="/explorar"
+    class:list={["nav-item", "flex-column", { active: isExplorar }]}
+    aria-current={isExplorar ? "page" : undefined}
+  >
+    <i class={isExplorar ? "bi bi-compass-fill" : "bi bi-compass"}></i>
+    <span>Explorar</span>
+  </a>
+
   <button
     type="button"
     class="nav-item nav-fab flex-row"
@@ -92,6 +112,8 @@ const fabIcon = pathname.includes("/restaurante")
     const { pathname } = window.location;
     const isHome = pathname === "/" || pathname.endsWith("/index");
     const isPerfil = pathname.includes("/perfil");
+    const isExplorar =
+      pathname.includes("/explorar") || pathname.includes("/oficial");
 
     const roots = [".mobile-bottom-nav", ".desktop-sidebar"] as const;
 
@@ -99,19 +121,28 @@ const fabIcon = pathname.includes("/restaurante")
       const homeEl = document.querySelector(
         `${root} a[href="/"]`,
       ) as HTMLElement | null;
+      const explorarEl = document.querySelector(
+        `${root} a[href="/explorar"]`,
+      ) as HTMLElement | null;
       const perfilEl = document.querySelector(
         `${root} a[href="/perfil"]`,
       ) as HTMLElement | null;
 
       homeEl?.classList.toggle("active", isHome);
+      explorarEl?.classList.toggle("active", isExplorar);
       perfilEl?.classList.toggle("active", isPerfil);
 
       const homeIcon = homeEl?.querySelector("i") as HTMLElement | null;
+      const explorarIcon = explorarEl?.querySelector("i") as HTMLElement | null;
       const perfilIcon = perfilEl?.querySelector("i") as HTMLElement | null;
       if (homeIcon)
         homeIcon.className = isHome
           ? "bi bi-house-door-fill"
           : "bi bi-house-door";
+      if (explorarIcon)
+        explorarIcon.className = isExplorar
+          ? "bi bi-compass-fill"
+          : "bi bi-compass";
       if (perfilIcon)
         perfilIcon.className = isPerfil ? "bi bi-person-fill" : "bi bi-person";
     }

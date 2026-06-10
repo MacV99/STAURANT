@@ -8,7 +8,12 @@ import FormModal from "./FormModal.astro";
       <input type="hidden" id="df-type-id" />
       <input type="hidden" id="df-rating" value="5" />
 
-      <div class="type-field flex-column">
+      <p id="df-official-note" class="official-note flex-row" hidden>
+        <i class="bi bi-patch-check-fill"></i>
+        <span>Plato oficial. Solo puedes registrar tu calificación.</span>
+      </p>
+
+      <div class="type-field flex-column" id="df-type-field">
         <span class="label-text flex-row"
           >Tipo de plato <span class="optional">(opcional)</span></span
         >
@@ -39,7 +44,7 @@ import FormModal from "./FormModal.astro";
         </div>
       </div>
 
-      <label for="df-name">
+      <label for="df-name" id="df-name-field">
         <span class="label-text flex-row"
           >Nombre del plato <span class="required">*</span></span
         >
@@ -76,7 +81,7 @@ import FormModal from "./FormModal.astro";
         </div>
       </div>
 
-      <label for="df-notes">
+      <label for="df-notes" id="df-notes-field">
         <span class="label-text flex-row">Notas</span>
         <textarea
           id="df-notes"
@@ -90,6 +95,37 @@ import FormModal from "./FormModal.astro";
 <style>
   /* Estilos base de form/label/footer viven en project.css (.form-box …).
      Aquí solo lo específico de este formulario (rating, drum, combobox tipo). */
+
+  .official-note {
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: var(--border-radius);
+    background: rgba(212, 160, 23, 0.12);
+    border: 1px solid rgba(212, 160, 23, 0.45);
+    font-size: 0.8rem;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--clr-text);
+  }
+
+  .official-note[hidden] {
+    display: none;
+  }
+
+  /* Nombre del plato en modo solo lectura (plato oficial) */
+  #df-name-field.is-locked input {
+    background: var(--clr-white2);
+    color: var(--clr-text);
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  .official-note i {
+    color: #d4a017;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+  }
 
   .rating-field {
     align-items: stretch;
@@ -490,6 +526,14 @@ import FormModal from "./FormModal.astro";
     const drumOuterEl = document.getElementById("df-drum-outer") as HTMLElement;
     const drumEl = document.getElementById("df-rating-drum") as HTMLElement;
     const drumTrackEl = document.getElementById("df-drum-track") as HTMLElement;
+    const officialNoteEl = document.getElementById("df-official-note") as HTMLElement;
+    const typeFieldEl = document.getElementById("df-type-field") as HTMLElement;
+    const nameFieldEl = document.getElementById("df-name-field") as HTMLElement;
+    const notesFieldEl = document.getElementById("df-notes-field") as HTMLElement;
+
+    // Platos oficiales: nombre/tipo/notas los administra el sistema, solo se permite
+    // calificar. Ocultamos esos campos y mostramos el aviso correspondiente.
+    let isOfficial = false;
 
     let isRated = false;
 
@@ -667,8 +711,16 @@ import FormModal from "./FormModal.astro";
       form.reset();
       restaurantIdInput.value = restaurantId;
 
+      isOfficial = mode === "edit" && !!data?.officialDishId;
+      // Mostrar/ocultar los campos no editables según sea un plato oficial.
+      officialNoteEl.hidden = !isOfficial;
+      typeFieldEl.hidden = isOfficial;
+      notesFieldEl.hidden = isOfficial;
+      nameInput.readOnly = isOfficial;
+      nameFieldEl.classList.toggle("is-locked", isOfficial);
+
       if (mode === "edit" && data) {
-        titleEl.textContent = "Editar plato";
+        titleEl.textContent = isOfficial ? "Calificar plato" : "Editar plato";
         idInput.value = data.id;
         nameInput.value = data.name;
         notesInput.value = data.notes;
@@ -953,7 +1005,11 @@ import FormModal from "./FormModal.astro";
       buildDrum();
       syncDrumPadding();
       const idx = Math.round((v - MIN_V) * 10);
-      prevDrumV = -1;
+      // Pre-cargar prevDrumV con el valor inicial: al fijar scrollLeft abajo se
+      // dispara un evento "scroll" programático; sin esto el handler lo trataría
+      // como interacción del usuario y auto-calificaría el plato (isRated=true),
+      // rompiendo el invariante de "plato nuevo nace sin calificación".
+      prevDrumV = parseFloat((MIN_V + idx * 0.1).toFixed(1));
       prevCenter = -1;
       drumEl.scrollLeft = scrollLeftFor(idx);
       requestAnimationFrame(() => {

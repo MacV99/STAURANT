@@ -1,0 +1,421 @@
+---
+import Layout1 from "../layouts/Layout1.astro";
+---
+
+<Layout1 title="Restaurante oficial · STAURANT">
+  <div class="oficial-page flex-column">
+    <a id="oficial-back" href="/explorar" class="back-link flex-row">
+      <i class="bi bi-arrow-left"></i> Explorar
+    </a>
+
+    <div id="oficial-header" class="oficial-header"></div>
+
+    <div class="oficial-dishes flex-column">
+      <h2 class="oficial-dishes-title">Carta</h2>
+      <div id="oficial-dishes-list" class="flex-column"></div>
+    </div>
+  </div>
+</Layout1>
+
+<style>
+  .oficial-page {
+    width: 100%;
+    max-width: 760px;
+    padding: 20px 16px 100px;
+    align-items: stretch;
+    gap: 24px;
+  }
+
+  .back-link {
+    justify-content: flex-start;
+    gap: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--clr-primary);
+    letter-spacing: 1px;
+    width: fit-content;
+    padding: 6px 0;
+    transition: var(--transition);
+  }
+
+  .oficial-dishes {
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .oficial-dishes-title {
+    font-size: 1rem;
+    letter-spacing: 2px;
+    color: var(--clr-text);
+  }
+
+  #oficial-dishes-list {
+    align-items: stretch;
+    gap: 5px;
+  }
+
+  @media (hover: hover) {
+    .back-link:hover {
+      color: var(--clr-text);
+    }
+  }
+
+  @media (min-width: 768px) {
+    .oficial-page {
+      padding: 28px 24px 80px;
+    }
+  }
+</style>
+
+<style is:global>
+  /* Header del restaurante oficial */
+  .oficial-card {
+    background:
+      linear-gradient(
+        315deg,
+        rgba(212, 160, 23, 0.14) 0%,
+        rgba(255, 248, 230, 0) 60%
+      ),
+      var(--clr-white);
+    border: 1px solid rgba(212, 160, 23, 0.5);
+    border-radius: 20px;
+    padding: 22px 20px;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .oficial-card .oc-top {
+    justify-content: flex-start;
+    gap: 14px;
+  }
+
+  .oficial-card .oc-meta {
+    align-items: flex-start;
+    gap: 5px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .oficial-card h1 {
+    font-size: 1.3rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: var(--clr-text);
+    word-break: break-word;
+    line-height: 1.25;
+  }
+
+  .oficial-card .oc-pills {
+    justify-content: flex-start;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .oficial-card .oc-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.82rem;
+    color: var(--clr-text);
+    opacity: 0.7;
+  }
+
+  .oficial-card .oc-notes {
+    font-size: 0.85rem;
+    color: var(--clr-text);
+    line-height: 1.5;
+    opacity: 0.8;
+  }
+
+  .oc-adopt-btn {
+    width: 100%;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  /* Plato oficial (solo lectura) */
+  .oficial-dish {
+    background: var(--clr-white);
+    border: 1px solid var(--clr-border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .oficial-dish .od-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .oficial-dish h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--clr-text);
+  }
+
+  .oficial-dish .od-notes {
+    font-size: 0.8rem;
+    color: var(--clr-text);
+    margin-top: 3px;
+    line-height: 1.4;
+    opacity: 0.75;
+  }
+
+  @media (min-width: 768px) {
+    .oficial-card {
+      padding: 24px 28px;
+    }
+
+    .oficial-card h1 {
+      font-size: 1.6rem;
+    }
+  }
+</style>
+
+<script>
+  import { navigate } from "astro:transitions/client";
+  import { supabase } from "../lib/supabase.ts";
+  import {
+    initCache,
+    getRestaurants,
+    getOfficialRestaurant,
+    getOfficialDishes,
+    getOfficialRestaurantStat,
+    getOfficialDishStat,
+    adoptOfficialRestaurant,
+    type OfficialRestaurant,
+    type OfficialDish,
+  } from "../lib/data.ts";
+  import { getRatingClass } from "../scripts/store.ts";
+
+  let official: OfficialRestaurant | null = null;
+  let dishes: OfficialDish[] = [];
+  let adopting = false;
+
+  function escapeHtml(s: string): string {
+    return s
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function globalRatingPill(avg: number, count: number): string {
+    return `<span class="global-rating-pill" title="Promedio global basado en ${count} ${count === 1 ? "calificación" : "calificaciones"}"><i class="bi bi-globe2"></i> ${avg} <span class="grp-count">· ${count}</span></span>`;
+  }
+
+  function ratingBadge(avg: number | null): string {
+    if (avg === null) {
+      return `<span class="rating-badge badge-empty"><i class="bi bi-star"></i></span>`;
+    }
+    return `<span class="rating-badge ${getRatingClass(avg)}"><span class="rating-num">${avg}</span></span>`;
+  }
+
+  function renderHeader() {
+    const headerEl = document.getElementById("oficial-header");
+    if (!headerEl || !official) return;
+
+    const stat = getOfficialRestaurantStat(official.id);
+    const avg = stat && stat.ratingsCount > 0 ? stat.avgRating : null;
+    const adoptedRestaurant = getRestaurants().find(
+      (r) => r.officialRestaurantId === official!.id,
+    );
+
+    const card = document.createElement("div");
+    card.className = "oficial-card flex-column";
+
+    const top = document.createElement("div");
+    top.className = "oc-top flex-row";
+    top.innerHTML = ratingBadge(avg);
+
+    const meta = document.createElement("div");
+    meta.className = "oc-meta flex-column";
+
+    const h1 = document.createElement("h1");
+    h1.textContent = official.name;
+    const verified = document.createElement("i");
+    verified.className = "bi bi-patch-check-fill verified-badge";
+    verified.title = "Restaurante verificado";
+    h1.appendChild(verified);
+    meta.appendChild(h1);
+
+    const pills = document.createElement("div");
+    pills.className = "oc-pills flex-row";
+    let pillsHtml = "";
+    if (official.city) {
+      pillsHtml += `<span class="oc-line"><i class="bi bi-geo-alt"></i> ${escapeHtml(official.city)}</span>`;
+    }
+    if (stat && stat.ratingsCount > 0) {
+      pillsHtml += globalRatingPill(stat.avgRating, stat.ratingsCount);
+    }
+    pills.innerHTML = pillsHtml;
+    if (pills.childElementCount > 0) meta.appendChild(pills);
+
+    if (official.address) {
+      const addr = document.createElement("span");
+      addr.className = "oc-line";
+      addr.innerHTML = `<i class="bi bi-pin-map"></i> ${escapeHtml(official.address)}`;
+      meta.appendChild(addr);
+    }
+
+    top.appendChild(meta);
+    card.appendChild(top);
+
+    if (official.notes) {
+      const notes = document.createElement("p");
+      notes.className = "oc-notes";
+      notes.textContent = official.notes;
+      card.appendChild(notes);
+    }
+
+    // Botón: agregar a la colección, o ver el que ya tienes.
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "boton oc-adopt-btn flex-row";
+    if (adoptedRestaurant) {
+      btn.innerHTML = `<i class="bi bi-check-circle-fill"></i> Ver en mi lista`;
+      btn.onclick = () => navigate(`/restaurante?id=${adoptedRestaurant.id}`);
+    } else if (adopting) {
+      btn.disabled = true;
+      btn.innerHTML = `<i class="bi bi-hourglass-split"></i> Agregando...`;
+    } else {
+      btn.innerHTML = `<i class="bi bi-plus-lg"></i> Agregar a mi colección`;
+      btn.onclick = async () => {
+        // Candado anti-duplicado: si entre el render y el clic ya quedó vinculado
+        // a este oficial (otra pestaña, sync en segundo plano, doble clic), no se
+        // vuelve a adoptar — se navega al que ya existe.
+        const already = getRestaurants().find(
+          (r) => r.officialRestaurantId === official!.id,
+        );
+        if (already) {
+          navigate(`/restaurante?id=${already.id}`);
+          return;
+        }
+        adopting = true;
+        renderHeader();
+        const created = await adoptOfficialRestaurant(official!.id);
+        adopting = false;
+        if (created) {
+          navigate(`/restaurante?id=${created.id}`);
+        } else {
+          renderHeader();
+          alert("No se pudo agregar el restaurante. Inténtalo de nuevo.");
+        }
+      };
+    }
+    card.appendChild(btn);
+
+    headerEl.replaceChildren(card);
+  }
+
+  function renderDishes() {
+    const listEl = document.getElementById("oficial-dishes-list");
+    if (!listEl) return;
+
+    if (dishes.length === 0) {
+      listEl.innerHTML = `<div class="empty-state flex-column">
+           <i class="bi bi-egg-fried"></i>
+           <p>Este restaurante aún no tiene platos en su carta.</p>
+         </div>`;
+      return;
+    }
+
+    listEl.innerHTML = "";
+    dishes.forEach((d) => {
+      const stat = getOfficialDishStat(d.id);
+      const avg = stat && stat.ratingsCount > 0 ? stat.avgRating : null;
+
+      const article = document.createElement("article");
+      article.className = "oficial-dish flex-row";
+      article.innerHTML = ratingBadge(avg);
+
+      const info = document.createElement("div");
+      info.className = "od-info";
+      const h4 = document.createElement("h4");
+      h4.textContent = d.name;
+      info.appendChild(h4);
+      if (d.typeName) {
+        const tag = document.createElement("span");
+        tag.className = "dish-type-tag";
+        tag.textContent = d.typeName;
+        info.appendChild(tag);
+      }
+      if (stat && stat.ratingsCount > 0) {
+        const pillWrap = document.createElement("div");
+        pillWrap.style.marginTop = "4px";
+        pillWrap.innerHTML = globalRatingPill(stat.avgRating, stat.ratingsCount);
+        info.appendChild(pillWrap);
+      }
+      if (d.notes) {
+        const notes = document.createElement("p");
+        notes.className = "od-notes";
+        notes.textContent = d.notes;
+        info.appendChild(notes);
+      }
+      article.appendChild(info);
+      listEl.appendChild(article);
+    });
+  }
+
+  function renderAll() {
+    renderHeader();
+    renderDishes();
+  }
+
+  document.addEventListener("stats:synced", () => {
+    if (official) renderAll();
+  });
+  document.addEventListener("cache:synced", () => {
+    if (official) renderHeader();
+  });
+
+  document.addEventListener("astro:page-load", async () => {
+    const headerEl = document.getElementById("oficial-header");
+    if (!headerEl) return;
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      window.location.href = "/login";
+      return;
+    }
+
+    // Skeleton mientras carga
+    const listEl = document.getElementById("oficial-dishes-list");
+    if (listEl && dishes.length === 0) {
+      listEl.innerHTML = "";
+      for (let i = 0; i < 3; i++) {
+        const sk = document.createElement("div");
+        sk.className = "skeleton-card skeleton-dish";
+        listEl.appendChild(sk);
+      }
+    }
+
+    await initCache(session.user.id);
+
+    const id = new URLSearchParams(window.location.search).get("id") ?? "";
+    if (!id) {
+      window.location.href = "/explorar";
+      return;
+    }
+
+    const [off, ds] = await Promise.all([
+      getOfficialRestaurant(id),
+      getOfficialDishes(id),
+    ]);
+    official = off;
+    dishes = ds;
+
+    if (!official) {
+      window.location.href = "/explorar";
+      return;
+    }
+
+    document.title = `${official.name} · STAURANT`;
+    renderAll();
+  });
+</script>

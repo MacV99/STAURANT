@@ -205,9 +205,10 @@ const tplRestaurant: Restaurant = {
     getRestaurantAverage,
     hasUnratedDishes,
     getOfficialRestaurantStat,
+    getTopRatedRestaurantIds,
     type Restaurant,
   } from "../lib/data.ts";
-  import { getRatingClass } from "../scripts/store.ts";
+  import { getRatingClass, makeCrown } from "../scripts/store.ts";
 
   // ─── Sort state (persiste entre navegaciones en memoria de módulo) ──────────
 
@@ -234,6 +235,30 @@ const tplRestaurant: Restaurant = {
 
   // ─── Search state ─────────────────────────────────────────────────────────
   let searchQuery = "";
+
+  function escapeHtml(s: string): string {
+    return s
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  // Abre el modal de crear restaurante con el nombre prellenado desde la búsqueda.
+  function openCreateWithName(name: string) {
+    const api = (window as any).restaurantForm;
+    if (!api) return;
+    api.open("create");
+    const nameInput = document.getElementById(
+      "rf-name",
+    ) as HTMLInputElement | null;
+    if (nameInput) {
+      nameInput.value = name;
+      // dispara forceUppercase + búsqueda de oficiales
+      nameInput.dispatchEvent(new Event("input", { bubbles: true }));
+      nameInput.focus();
+    }
+  }
 
   function sortRestaurants(list: ReturnType<typeof getRestaurants>) {
     return [...list].sort((a, b) => {
@@ -281,6 +306,7 @@ const tplRestaurant: Restaurant = {
     r: Restaurant,
     avg: number | null,
     dishCount: number,
+    isTop: boolean,
   ): Element {
     const tpl = document.getElementById(
       "tpl-restaurant-card",
@@ -355,6 +381,7 @@ const tplRestaurant: Restaurant = {
       badge.className = `rating-badge ${getRatingClass(avg)}`;
       badge.innerHTML = `<span class="rating-num">${avg}</span>`;
     }
+    if (isTop) badge.appendChild(makeCrown("Tu mejor valorado"));
 
     return article;
   }
@@ -381,16 +408,28 @@ const tplRestaurant: Restaurant = {
     const sorted = sortRestaurants(all);
 
     if (sorted.length === 0) {
-      container.innerHTML = q
-        ? `<div class="empty-state flex-column">
+      if (q) {
+        const safe = escapeHtml(searchQuery.trim());
+        container.innerHTML = `<div class="empty-state flex-column">
              <i class="bi bi-search"></i>
-             <p>Sin resultados para "<strong>${q}</strong>".</p>
-           </div>`
-        : `<div class="empty-state flex-column">
+             <p>Sin resultados para "<strong>${safe}</strong>".</p>
+             <button type="button" class="boton create-from-search">
+               <i class="bi bi-plus-lg"></i> Crear "${safe}"
+             </button>
+           </div>`;
+        const createBtn = container.querySelector<HTMLButtonElement>(
+          ".create-from-search",
+        );
+        if (createBtn) {
+          createBtn.onclick = () => openCreateWithName(searchQuery.trim());
+        }
+      } else {
+        container.innerHTML = `<div class="empty-state flex-column">
              <i class="bi bi-${status === "visited" ? "journal-check" : "bookmark"}"></i>
              <p>${status === "visited" ? "Aún no has registrado restaurantes visitados." : "No tienes restaurantes pendientes."}</p>
              ${status === "visited" ? '<p class="empty-hint">Agrega uno con el botón <strong>+</strong></p>' : ""}
            </div>`;
+      }
       return;
     }
 
@@ -399,11 +438,13 @@ const tplRestaurant: Restaurant = {
     grid.className = "cards-grid";
     // Stagger solo en render normal; durante búsqueda se omite para no parpadear.
     if (!q) grid.classList.add("stagger-in");
+    const topIds = getTopRatedRestaurantIds();
     sorted.forEach((r) => {
       const card = buildRestaurantCardElement(
         r,
         getRestaurantAverage(r.id),
         getDishesByRestaurant(r.id).length,
+        topIds.has(r.id),
       );
       card.addEventListener("click", () => navigate(`/restaurante?id=${r.id}`));
       grid.appendChild(card);

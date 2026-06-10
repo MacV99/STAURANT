@@ -359,9 +359,11 @@ const tplRestaurant: Restaurant = {
     getDishTypes,
     getOfficialDishStat,
     getOfficialRestaurantStat,
+    getTopRatedRestaurantIds,
+    getTopRatedDishIds,
   } from "../lib/data.ts";
   import type { Restaurant, Dish } from "../lib/data.ts";
-  import { getRatingClass, emit } from "../scripts/store.ts";
+  import { getRatingClass, emit, makeCrown } from "../scripts/store.ts";
 
   // ─── Sort state (persiste en módulo entre navegaciones) ────────────────────
 
@@ -536,6 +538,9 @@ const tplRestaurant: Restaurant = {
   let dishTypeFilter = "";
   // id del plato cuyo badge debe hacer "pop" en el próximo render (recién calificado/editado).
   let popDishId: string | null = null;
+  // IDs de los platos estrella (mejor calificación personal). Recalculado antes de
+  // cada render para que la corona 👑 se actualice al cambiar las calificaciones.
+  let topDishIds: Set<string> = new Set();
 
   // ─── Generadores de HTML (nivel módulo) ────────────────────────────────────
 
@@ -593,6 +598,9 @@ const tplRestaurant: Restaurant = {
     } else {
       badge.className = `rating-badge ${getRatingClass(avg)}`;
       badge.innerHTML = `<span class="rating-num">${avg}</span>`;
+    }
+    if (getTopRatedRestaurantIds().has(r.id)) {
+      badge.appendChild(makeCrown("Tu mejor valorado"));
     }
     // Pill de rating global (solo si es oficial y hay calificaciones agregadas)
     if (r.officialRestaurantId) {
@@ -695,6 +703,7 @@ const tplRestaurant: Restaurant = {
       badge.className = `rating-badge ${getRatingClass(d.rating)} badge-btn`;
       badge.innerHTML = `<span class="rating-num">${d.rating}</span>`;
     }
+    if (topDishIds.has(d.id)) badge.appendChild(makeCrown("Plato estrella"));
     if (d.id === popDishId) badge.classList.add("badge-pop");
     badge.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -718,15 +727,20 @@ const tplRestaurant: Restaurant = {
       menuPopup.classList.toggle("active");
     });
 
-    article
-      .querySelector<HTMLButtonElement>(".btn-edit-dish")!
-      .addEventListener("click", () => {
-        (window as any).dishForm.open("edit", d.restaurantId, d);
-        menuPopup.classList.remove("active");
-      });
-    article
-      .querySelector<HTMLButtonElement>(".btn-delete-dish")!
-      .addEventListener("click", () => {
+    const editBtn = article.querySelector<HTMLButtonElement>(".btn-edit-dish")!;
+    editBtn.addEventListener("click", () => {
+      (window as any).dishForm.open("edit", d.restaurantId, d);
+      menuPopup.classList.remove("active");
+    });
+    const deleteBtn = article.querySelector<HTMLButtonElement>(".btn-delete-dish")!;
+    if (d.officialDishId) {
+      // Plato oficial: solo se permite calificar. No se puede editar la ficha ni
+      // eliminarlo individualmente; el menú se limita a la acción de calificar.
+      editBtn.querySelector("span")!.textContent = "Calificar";
+      editBtn.querySelector("i")!.className = "bi bi-star-fill";
+      deleteBtn.remove();
+    } else {
+      deleteBtn.addEventListener("click", () => {
         (window as any).confirmDialog.show(
           `¿Eliminar el plato "${d.name}"?`,
           () => {
@@ -736,6 +750,7 @@ const tplRestaurant: Restaurant = {
         );
         menuPopup.classList.remove("active");
       });
+    }
     return article;
   }
 
@@ -778,6 +793,7 @@ const tplRestaurant: Restaurant = {
     const avg = getRestaurantAverage(currentRestaurant.id);
     const filtered = getFilteredSortedDishes(currentRestaurant.id);
     const total = getDishesByRestaurant(currentRestaurant.id).length;
+    topDishIds = getTopRatedDishIds(currentRestaurant.id);
 
     headerEl.replaceChildren(buildHeaderElement(currentRestaurant, avg));
     renderDishes(filtered, total, dishesListEl, sortBarEl);
@@ -905,6 +921,7 @@ const tplRestaurant: Restaurant = {
     const avg = getRestaurantAverage(restaurant.id);
     const filtered = getFilteredSortedDishes(restaurant.id);
     const total = getDishesByRestaurant(restaurant.id).length;
+    topDishIds = getTopRatedDishIds(restaurant.id);
 
     headerEl.replaceChildren(buildHeaderElement(restaurant, avg));
 

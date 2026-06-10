@@ -12,6 +12,16 @@ export function getRatingBadgeHTML(score: number | null): string {
   return `<span class="rating-badge ${cls}"><span class="rating-num">${score}</span></span>`;
 }
 
+/** Corona 👑 para destacar el mejor valorado (restaurante o plato). */
+export function makeCrown(label = "Mejor valorado"): HTMLSpanElement {
+  const crown = document.createElement("span");
+  crown.className = "crown-badge";
+  crown.textContent = "👑";
+  crown.title = label;
+  crown.setAttribute("aria-label", label);
+  return crown;
+}
+
 // ─── Event bus ─────────────────────────────────────────────────────────────────
 
 type AppEvent =
