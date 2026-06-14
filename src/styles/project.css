@@ -433,6 +433,13 @@
   flex-direction: column;
 }
 
+/* Eleva la card que tiene el menú abierto por encima de las cards
+   hermanas, para que el dropdown no quede tapado. */
+.dish-card:has(.menu-popup.active) {
+  position: relative;
+  z-index: 20;
+}
+
 .menu-item {
   gap: 8px;
   padding: 10px 14px;
