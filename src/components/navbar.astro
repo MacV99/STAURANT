@@ -6,9 +6,14 @@ const isExplorar =
   pathname.includes("/explorar") || pathname.includes("/oficial");
 const isAmigos =
   pathname.includes("/amigos") || pathname.includes("/usuario");
-const fabIcon = pathname.includes("/restaurante")
-  ? "bi bi-fork-knife"
-  : "bi bi-shop-window";
+// En el perfil de un amigo el botón central no crea nada: vuelve a tu cuenta.
+const isUsuario = pathname.includes("/usuario");
+const fabIcon = isUsuario
+  ? "bi bi-house-door-fill"
+  : pathname.includes("/restaurante")
+    ? "bi bi-fork-knife"
+    : "bi bi-shop-window";
+const createLabel = isUsuario ? "Mi cuenta" : "Crear";
 ---
 
 <!-- ── Mobile header ───────────────────────────────────────────── -->
@@ -64,15 +69,15 @@ const fabIcon = pathname.includes("/restaurante")
 
   <button
     type="button"
-    class="sidebar-item sidebar-create flex-row"
+    class:list={["sidebar-item", "sidebar-create", "flex-row", { "is-return": isUsuario }]}
     data-action="create"
-    aria-label="Crear restaurante o plato"
+    aria-label={isUsuario ? "Volver a mi cuenta" : "Crear restaurante o plato"}
   >
     <span class="fab-inner sidebar-create-icon">
       <i class={fabIcon}></i>
       <span class="fab-badge">+</span>
     </span>
-    <span>Crear</span>
+    <span class="sidebar-create-label">{createLabel}</span>
   </button>
 </aside>
 
@@ -98,9 +103,9 @@ const fabIcon = pathname.includes("/restaurante")
 
   <button
     type="button"
-    class="nav-item nav-fab flex-row"
+    class:list={["nav-item", "nav-fab", "flex-row", { "is-return": isUsuario }]}
     data-action="create"
-    aria-label="Crear restaurante o plato"
+    aria-label={isUsuario ? "Volver a mi cuenta" : "Crear restaurante o plato"}
   >
     <span class="fab-inner">
       <i class={fabIcon}></i>
@@ -128,6 +133,8 @@ const fabIcon = pathname.includes("/restaurante")
 </nav>
 
 <script>
+  import { navigate } from "astro:transitions/client";
+
   function updateActiveState(): void {
     const { pathname } = window.location;
     const isHome = pathname === "/" || pathname.endsWith("/index");
@@ -178,14 +185,28 @@ const fabIcon = pathname.includes("/restaurante")
   }
 
   function updateFabIcon(): void {
-    const cls = window.location.pathname.includes("/restaurante")
-      ? "bi bi-fork-knife"
-      : "bi bi-shop-window";
+    const { pathname } = window.location;
+    const isUsuario = pathname.includes("/usuario");
+    const cls = isUsuario
+      ? "bi bi-house-door-fill"
+      : pathname.includes("/restaurante")
+        ? "bi bi-fork-knife"
+        : "bi bi-shop-window";
     document
       .querySelectorAll("[data-action='create'] .fab-inner > i")
       .forEach((el) => {
         (el as HTMLElement).className = cls;
       });
+    // En un perfil ajeno el botón no crea: se vuelve "volver a mi cuenta".
+    document.querySelectorAll("[data-action='create']").forEach((btn) => {
+      btn.classList.toggle("is-return", isUsuario);
+      btn.setAttribute(
+        "aria-label",
+        isUsuario ? "Volver a mi cuenta" : "Crear restaurante o plato",
+      );
+    });
+    const label = document.querySelector(".sidebar-create-label");
+    if (label) label.textContent = isUsuario ? "Mi cuenta" : "Crear";
   }
 
   function initFab(): void {
@@ -193,6 +214,11 @@ const fabIcon = pathname.includes("/restaurante")
       (btn as HTMLElement).onclick = (e) => {
         e.preventDefault();
         const { pathname } = window.location;
+        // Perfil de un amigo → el botón central vuelve a tu cuenta (inicio).
+        if (pathname.includes("/usuario")) {
+          navigate("/");
+          return;
+        }
         if (pathname === "/" || pathname.endsWith("/index")) {
           (window as any).restaurantForm?.open("create");
           return;
@@ -272,6 +298,15 @@ const fabIcon = pathname.includes("/restaurante")
     line-height: 1;
     pointer-events: none;
     animation: fab-badge-cycle 8s ease-in-out infinite;
+  }
+
+  /* Modo "volver a mi cuenta" (perfil ajeno): sin "+" ni animación, icono fijo. */
+  .is-return .fab-badge {
+    display: none;
+  }
+
+  .is-return .fab-inner > i {
+    animation: none;
   }
 
   /* ── Brand ─────────────────────────────────────────────────────── */

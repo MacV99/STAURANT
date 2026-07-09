@@ -1,0 +1,81 @@
+<div id="notice-overlay" class="overlay" aria-modal="true" role="dialog">
+  <div class="notice-box flex-column">
+    <div id="notice-icon" class="notice-icon">
+      <i class="bi bi-info-circle-fill"></i>
+    </div>
+    <p id="notice-message">—</p>
+    <button id="notice-ok" class="boton">Entendido</button>
+  </div>
+</div>
+
+<style>
+  .notice-box {
+    background: var(--clr-white);
+    border: solid 1px var(--clr-border);
+    border-radius: 20px;
+    padding: 32px 24px 28px;
+    width: 90%;
+    max-width: 360px;
+    gap: 14px;
+  }
+
+  .notice-icon {
+    font-size: 2.2rem;
+    color: var(--clr-primary);
+    line-height: 1;
+  }
+
+  .notice-icon.is-error {
+    color: #b02a3a;
+  }
+
+  #notice-message {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--clr-text);
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  #notice-ok {
+    width: 100%;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    margin-top: 6px;
+  }
+</style>
+
+<script>
+  import { createOverlay } from "../scripts/store.ts";
+
+  // Re-inicializar en cada navegación para que show/hide siempre
+  // operen sobre los elementos del DOM ACTUAL (no los del swap anterior).
+  document.addEventListener("astro:page-load", () => {
+    const overlayApi = createOverlay("notice-overlay");
+    if (!overlayApi) return; // no está en esta página
+    const { open, close } = overlayApi;
+
+    const msgEl = document.getElementById("notice-message")!;
+    const iconWrapEl = document.getElementById("notice-icon")!;
+    const iconEl = iconWrapEl.querySelector("i")!;
+    const okBtn = document.getElementById("notice-ok")!;
+
+    function show(
+      message: string,
+      opts: { variant?: "info" | "error"; icon?: string } = {},
+    ) {
+      msgEl.textContent = message;
+      const isError = opts.variant === "error";
+      iconWrapEl.classList.toggle("is-error", isError);
+      iconEl.className =
+        opts.icon ?? (isError ? "bi bi-exclamation-triangle-fill" : "bi bi-info-circle-fill");
+      open();
+    }
+
+    // .onclick evita acumulación de listeners si el módulo re-ejecuta
+    okBtn.onclick = close;
+
+    // Actualizar API global con referencias frescas al DOM actual
+    (window as any).noticeDialog = { show, hide: close };
+  });
+</script>

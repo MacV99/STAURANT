@@ -1,5 +1,6 @@
 ---
 import Layout1 from "../layouts/Layout1.astro";
+import NoticeDialog from "../components/NoticeDialog.astro";
 ---
 
 <Layout1 title="Restaurante oficial · STAURANT">
@@ -15,6 +16,8 @@ import Layout1 from "../layouts/Layout1.astro";
       <div id="oficial-dishes-list" class="flex-column"></div>
     </div>
   </div>
+
+  <NoticeDialog />
 </Layout1>
 
 <style>
@@ -326,7 +329,10 @@ import Layout1 from "../layouts/Layout1.astro";
             navigate(`/restaurante?id=${created.id}`);
           } else {
             renderHeader();
-            alert("No se pudo agregar el restaurante. Inténtalo de nuevo.");
+            (window as any).noticeDialog?.show(
+              "No se pudo agregar el restaurante. Inténtalo de nuevo.",
+              { variant: "error" },
+            );
           }
         };
       }

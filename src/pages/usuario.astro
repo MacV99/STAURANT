@@ -2,29 +2,46 @@
 import Layout1 from "../layouts/Layout1.astro";
 import SortBar from "../components/SortBar.astro";
 import RestaurantCard from "../components/RestaurantCard.astro";
-import type { Restaurant } from "../lib/data";
+import RestaurantHeader from "../components/RestaurantHeader.astro";
+import DishCard from "../components/DishCard.astro";
+import ConfirmDialog from "../components/ConfirmDialog.astro";
+import type { Restaurant, Dish } from "../lib/data";
 
 const tplRestaurant: Restaurant = {
   id: "",
   name: "",
   status: "visited",
-  notes: "",
+  notes: " ",
   createdAt: "",
   updatedAt: "",
   officialRestaurantId: null,
+};
+const tplDish: Dish = {
+  id: "",
+  restaurantId: "",
+  typeId: null,
+  name: "",
+  rating: 5,
+  notes: " ",
+  createdAt: "",
+  updatedAt: "",
+  officialDishId: null,
 };
 ---
 
 <Layout1 title="Perfil · STAURANT">
   <div class="usuario-page flex-column">
-    <a id="usuario-back" href="/amigos" class="back-link flex-row">
-      <i class="bi bi-arrow-left"></i> Amigos
-    </a>
+    <!-- ── Cinta superior: breadcrumb + botón de amistad ── -->
+    <div id="usuario-ribbon" class="usuario-ribbon texture-dotted flex-row">
+      <button id="usuario-back" class="u-ribbon-back" type="button" aria-label="Atrás">
+        <i class="bi bi-arrow-left"></i>
+      </button>
+      <div id="usuario-crumb" class="u-crumb flex-row"></div>
+      <div id="usuario-friend-slot" class="u-friend-slot flex-row"></div>
+    </div>
 
-    <div id="usuario-header" class="usuario-header"></div>
-
-    <!-- Vista lista de restaurantes -->
-    <div id="usuario-list-view" class="flex-column">
+    <!-- ── Vista lista de restaurantes ── -->
+    <div id="usuario-list-view" class="usuario-inner flex-column">
       <div class="usuario-sort-wrap" id="usuario-sort-wrap" hidden>
         <SortBar
           pills={[
@@ -37,19 +54,28 @@ const tplRestaurant: Restaurant = {
       <div id="usuario-restaurants" class="flex-column"></div>
     </div>
 
-    <!-- Vista detalle de un restaurante (solo lectura) -->
-    <div id="usuario-detail-view" class="flex-column" hidden>
-      <button id="usuario-detail-back" type="button" class="back-link flex-row">
-        <i class="bi bi-arrow-left"></i> <span>Volver</span>
-      </button>
-      <div id="usuario-detail-header" class="usuario-detail-header"></div>
-      <div id="usuario-detail-dishes" class="flex-column"></div>
+    <!-- ── Vista detalle de un restaurante ── -->
+    <div id="usuario-detail-view" class="usuario-inner flex-column" hidden>
+      <div id="usuario-detail-header"></div>
+      <div class="usuario-dishes-section flex-column">
+        <h2 class="usuario-dishes-title">Platos</h2>
+        <div id="usuario-detail-dishes" class="flex-column"></div>
+      </div>
     </div>
   </div>
 
+  <!-- Templates renderizados por Astro (conservan su CSS scoped); el JS los clona -->
   <template id="tpl-user-restaurant-card">
     <RestaurantCard restaurant={tplRestaurant} avg={null} dishCount={0} />
   </template>
+  <template id="tpl-user-restaurant-header">
+    <RestaurantHeader restaurant={tplRestaurant} avg={5} dishCount={0} />
+  </template>
+  <template id="tpl-user-dish-card">
+    <DishCard dish={tplDish} typeName="..." />
+  </template>
+
+  <ConfirmDialog />
 </Layout1>
 
 <style>
@@ -58,33 +84,32 @@ const tplRestaurant: Restaurant = {
     display: none !important;
   }
 
+  /* Mismo ancho que el home (lista de restaurantes). */
   .usuario-page {
     width: 100%;
-    max-width: 760px;
-    padding: 20px 16px 100px;
+    max-width: 1100px;
+    padding: 0 0 100px;
     align-items: stretch;
-    gap: 20px;
+    gap: 0;
   }
 
-  .back-link {
-    justify-content: flex-start;
-    gap: 6px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--clr-primary);
-    letter-spacing: 1px;
-    width: fit-content;
-    padding: 6px 0;
-    background: none;
-    border: none;
-    cursor: pointer;
-    transition: var(--transition);
-  }
-
-  #usuario-list-view,
-  #usuario-detail-view {
+  .usuario-inner {
     align-items: stretch;
     gap: 16px;
+    padding: 16px;
+  }
+
+  /* El detalle de un restaurante conserva el ancho de la página `restaurante`. */
+  #usuario-detail-view {
+    max-width: 760px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  @media (min-width: 768px) {
+    .usuario-inner {
+      padding: 16px 24px;
+    }
   }
 
   #usuario-restaurants,
@@ -93,72 +118,106 @@ const tplRestaurant: Restaurant = {
     gap: 8px;
   }
 
-  @media (hover: hover) {
-    .back-link:hover {
-      color: var(--clr-text);
-    }
+  .usuario-dishes-section {
+    align-items: stretch;
+    gap: 12px;
   }
 
-  @media (min-width: 768px) {
-    .usuario-page {
-      padding: 28px 24px 80px;
-    }
+  .usuario-dishes-title {
+    font-size: 1rem;
+    letter-spacing: 2px;
+    color: var(--clr-text);
   }
 </style>
 
 <style is:global>
-  /* ── Cabecera de perfil público ── */
-  .usuario-card {
-    background: var(--clr-white);
-    border: solid 1px var(--clr-border);
-    border-radius: 20px;
-    padding: 22px 20px;
+  /* ── Cinta superior (contenido generado/tocado por JS → scope global) ── */
+  .usuario-ribbon {
+    position: sticky;
+    top: 80px;
+    z-index: 90;
+    justify-content: flex-start;
     align-items: center;
-    gap: 16px;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: solid 1px var(--clr-border);
   }
 
-  .usuario-card .u-avatar {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    background: var(--clr-white2);
-    border: solid 2px var(--clr-border);
-    font-size: 1.7rem;
-    font-weight: 700;
-    color: var(--clr-primary);
+  @media (min-width: 768px) {
+    .usuario-ribbon {
+      top: 0;
+    }
+  }
+
+  .u-ribbon-back {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
-    text-transform: uppercase;
+    background: none;
+    border: none;
+    border-radius: 50%;
+    color: var(--clr-primary);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 0;
+    transition: var(--transition);
   }
 
-  .usuario-card .u-meta {
+  .u-crumb {
     flex: 1;
     min-width: 0;
-    align-items: flex-start;
-    gap: 2px;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 6px;
+    overflow: hidden;
   }
 
-  .usuario-card .u-name {
-    font-size: 1.2rem;
-    font-weight: 800;
-    color: var(--clr-text);
-    word-break: break-word;
-    line-height: 1.2;
+  .u-crumb-ic {
+    color: var(--clr-primary);
+    font-size: 0.9rem;
+    flex-shrink: 0;
   }
 
-  .usuario-card .u-username {
-    font-size: 0.85rem;
+  .u-crumb-user {
+    font-size: 0.9rem;
+    font-weight: 700;
     color: var(--clr-text);
-    opacity: 0.6;
+    white-space: nowrap;
+    flex-shrink: 0;
+    max-width: 45%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .u-crumb-sep {
+    color: var(--clr-text);
+    opacity: 0.4;
+    flex-shrink: 0;
+  }
+
+  .u-crumb-loc {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--clr-primary);
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+
+  .u-friend-slot {
+    flex-shrink: 0;
   }
 
   .u-friend-btn {
     flex-shrink: 0;
     gap: 5px;
-    padding: 9px 15px;
-    font-size: 0.74rem;
+    padding: 8px 13px;
+    font-size: 0.72rem;
     letter-spacing: 0.4px;
     text-indent: 0;
     text-transform: none;
@@ -166,86 +225,118 @@ const tplRestaurant: Restaurant = {
     white-space: nowrap;
   }
 
-  /* ── Cabecera de detalle de restaurante (solo lectura) ── */
-  .u-detail-header {
-    background: var(--clr-white);
-    border: 1px solid var(--clr-border);
-    border-radius: 18px;
-    padding: 18px 20px;
-    justify-content: space-between;
-    gap: 14px;
-    align-items: center;
-  }
-
-  .u-detail-header .u-detail-meta {
-    flex: 1;
-    min-width: 0;
-    align-items: flex-start;
-    gap: 7px;
-  }
-
-  .u-detail-header .u-detail-title {
-    font-size: 1.2rem;
-    font-weight: 800;
-    letter-spacing: 0.3px;
-    color: var(--clr-text);
-    word-break: break-word;
-    line-height: 1.2;
-  }
-
-  /* ── Plato de otro usuario (solo lectura) ── */
-  .u-dish {
-    background: var(--clr-white);
-    border: 1px solid var(--clr-border);
-    border-radius: 14px;
-    padding: 14px 16px;
-    justify-content: space-between;
-    gap: 12px;
-    align-items: center;
-  }
-
-  .u-dish .ud-info {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .u-dish h4 {
-    font-size: 1rem;
+  /* ── Botón "Agregar a los míos" (inyectado en header y platos clonados) ── */
+  .u-add-btn {
+    flex-shrink: 0;
+    gap: 5px;
+    padding: 8px 13px;
+    font-size: 0.72rem;
     font-weight: 700;
-    letter-spacing: 0.5px;
-    color: var(--clr-text);
-    word-break: break-word;
+    letter-spacing: 0.4px;
+    text-indent: 0;
+    text-transform: none;
+    border-radius: 50px;
+    white-space: nowrap;
+    cursor: pointer;
+    border: solid 1.5px var(--clr-primary);
+    background: var(--clr-primary);
+    color: var(--clr-white);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
   }
 
-  /* Píldora de tipo de plato, idéntica a DishCard.astro (que la define scoped,
-     por eso aquí la replicamos para los platos renderizados por JS). */
-  .u-dish .dish-type-tag {
-    display: inline-block;
+  .u-add-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  .u-add-btn.is-added {
+    background: transparent;
+    color: var(--clr-primary);
+    border-color: var(--clr-border2);
+  }
+
+  .u-add-btn i {
+    font-size: 0.8rem;
+  }
+
+  /* "Agregar" del header: abajo a la derecha y más pequeño */
+  .u-header-actions {
+    justify-content: flex-start;
+    align-items: center;
+  }
+
+  .u-header-actions .u-add-btn {
+    padding: 6px 12px;
+    font-size: 0.68rem;
+  }
+
+  /* Variante compacta (solo icono) para las tarjetas de plato */
+  .u-add-btn.u-add-icon {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 14px;
+  }
+
+  .u-add-btn.u-add-icon i {
+    font-size: 1rem;
+  }
+
+  /* ── Marca "en tu lista" en la tarjeta de restaurante ── */
+  .u-mine-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
     font-size: 0.68rem;
     font-weight: 700;
-    letter-spacing: 0.6px;
-    text-indent: 0.6px;
+    letter-spacing: 0.4px;
     text-transform: uppercase;
     color: var(--clr-primary);
-    background-color: var(--clr-white2);
-    border-radius: 20px;
-    padding: 2.5px 7px;
-    margin-top: 2px;
   }
 
-  .u-dish .ud-notes {
-    font-size: 0.8rem;
-    color: var(--clr-text);
-    margin-top: 4px;
-    line-height: 1.4;
-    opacity: 0.75;
+  .u-mine-check i {
+    font-size: 0.75rem;
+  }
+
+  @media (hover: hover) {
+    .u-ribbon-back:hover {
+      background: var(--clr-white2);
+    }
+
+    .u-add-btn:not(:disabled):hover {
+      filter: brightness(1.06);
+    }
+
+    .u-add-btn.is-added:not(:disabled):hover {
+      background: var(--clr-white2);
+      filter: none;
+    }
   }
 </style>
 
 <script>
   import { navigate } from "astro:transitions/client";
   import { supabase } from "../lib/supabase.ts";
-  import { initCache, type Restaurant, type Dish, type DishType } from "../lib/data.ts";
+  import {
+    initCache,
+    getRestaurants,
+    getDishesByRestaurant,
+    getDishTypes,
+    createRestaurant,
+    createDish,
+    createDishType,
+    markAsVisited,
+    adoptOfficialRestaurant,
+    getOfficialRestaurantStat,
+    getOfficialDishStat,
+    type Restaurant,
+    type Dish,
+    type DishType,
+  } from "../lib/data.ts";
   import {
     getPublicProfile,
     getUserRestaurants,
@@ -263,10 +354,11 @@ const tplRestaurant: Restaurant = {
 
   // ─── Estado de módulo (persiste entre navegaciones ViewTransition) ──────────
   let profileUser: PublicUser | null = null;
-  let restaurants: Restaurant[] = [];
-  let dishes: Dish[] = [];
-  let dishTypes: DishType[] = [];
+  let restaurants: Restaurant[] = []; // del amigo
+  let dishes: Dish[] = []; // del amigo
+  let dishTypes: DishType[] = []; // del amigo
   let friend: { status: FriendStatus; friendshipId?: string } = { status: "none" };
+  let currentDetailId: string | null = null;
 
   type SortField = "name" | "rating" | "date";
   type SortDir = "asc" | "desc";
@@ -293,48 +385,131 @@ const tplRestaurant: Restaurant = {
       .replace(/"/g, "&quot;");
   }
 
-  function ratingBadge(avg: number | null): string {
-    if (avg === null) {
-      return `<span class="rating-badge badge-empty"><i class="bi bi-star"></i></span>`;
+  function paintBadge(el: Element, rating: number | null): void {
+    if (rating === null) {
+      el.className = "rating-badge badge-empty";
+      el.innerHTML = '<i class="bi bi-star-fill"></i>';
+    } else {
+      el.className = `rating-badge ${getRatingClass(rating)}`;
+      el.innerHTML = `<span class="rating-num">${rating}</span>`;
     }
-    return `<span class="rating-badge ${getRatingClass(avg)}"><span class="rating-num">${avg}</span></span>`;
   }
 
-  function initials(u: PublicUser): string {
-    const base = u.name.trim() || u.username?.trim() || "?";
-    return base.charAt(0).toUpperCase();
+  function fillName(el: HTMLElement, r: Restaurant): void {
+    el.textContent = "";
+    if (r.officialRestaurantId) {
+      const idx = r.name.lastIndexOf(" ");
+      const head = idx === -1 ? "" : r.name.slice(0, idx + 1);
+      const tail = idx === -1 ? r.name : r.name.slice(idx + 1);
+      if (head) el.appendChild(document.createTextNode(head));
+      const tailSpan = document.createElement("span");
+      tailSpan.className = "name-tail-nowrap";
+      tailSpan.textContent = tail;
+      const badge = document.createElement("i");
+      badge.className = "bi bi-patch-check-fill verified-badge";
+      badge.title = "Restaurante verificado";
+      tailSpan.appendChild(badge);
+      el.appendChild(tailSpan);
+    } else {
+      el.textContent = r.name;
+    }
   }
 
-  // ─── Cabecera de perfil + botón de amistad ──────────────────────────────────
+  function buildGlobalRatingPill(avg: number, count: number): HTMLElement {
+    const pill = document.createElement("span");
+    pill.className = "global-rating-pill";
+    pill.title = `Promedio global basado en ${count} ${count === 1 ? "calificación" : "calificaciones"}`;
+    pill.innerHTML = `<i class="bi bi-globe2"></i> ${avg} <span class="grp-count">· ${count}</span>`;
+    return pill;
+  }
 
-  function renderHeader() {
-    const headerEl = document.getElementById("usuario-header");
-    if (!headerEl || !profileUser) return;
+  // ─── "Ya lo tengo": cruce contra MI caché (getRestaurants/getDishes son míos) ──
 
-    const card = document.createElement("div");
-    card.className = "usuario-card flex-row";
-
-    const avatar = document.createElement("div");
-    avatar.className = "u-avatar";
-    avatar.textContent = initials(profileUser);
-    card.appendChild(avatar);
-
-    const meta = document.createElement("div");
-    meta.className = "u-meta flex-column";
-    const name = document.createElement("p");
-    name.className = "u-name";
-    name.textContent = profileUser.name || "Usuario";
-    meta.appendChild(name);
-    if (profileUser.username) {
-      const uname = document.createElement("p");
-      uname.className = "u-username";
-      uname.textContent = `@${profileUser.username}`;
-      meta.appendChild(uname);
+  function myRestaurantFor(r: Restaurant): Restaurant | undefined {
+    if (r.officialRestaurantId) {
+      const m = getRestaurants().find(
+        (x) => x.officialRestaurantId === r.officialRestaurantId,
+      );
+      if (m) return m;
     }
-    card.appendChild(meta);
+    const name = r.name.trim().toLowerCase();
+    return getRestaurants().find((x) => x.name.trim().toLowerCase() === name);
+  }
 
-    card.appendChild(buildFriendButton());
-    headerEl.replaceChildren(card);
+  function myDishFor(mine: Restaurant, d: Dish): Dish | undefined {
+    const list = getDishesByRestaurant(mine.id);
+    if (d.officialDishId) {
+      const m = list.find((x) => x.officialDishId === d.officialDishId);
+      if (m) return m;
+    }
+    const name = d.name.trim().toLowerCase();
+    return list.find((x) => x.name.trim().toLowerCase() === name);
+  }
+
+  /** Traduce el typeId del amigo → un DishType MÍO (creándolo si hace falta). */
+  function resolveMyType(friendTypeId: string | null): string | null {
+    if (!friendTypeId) return null;
+    const friendName = dishTypes.find((t) => t.id === friendTypeId)?.name;
+    const upper = friendName?.trim().toUpperCase();
+    if (!upper) return null;
+    const existing = getDishTypes().find((t) => t.name === upper);
+    return existing ? existing.id : createDishType(upper).id;
+  }
+
+  /** Asegura que el restaurante del amigo exista en MI lista; lo crea si no. */
+  async function ensureMyRestaurant(r: Restaurant): Promise<Restaurant | null> {
+    const existing = myRestaurantFor(r);
+    if (existing) return existing;
+    if (r.officialRestaurantId) {
+      return await adoptOfficialRestaurant(r.officialRestaurantId);
+    }
+    return createRestaurant({ name: r.name, notes: "" });
+  }
+
+  async function addRestaurantToMine(r: Restaurant): Promise<void> {
+    await ensureMyRestaurant(r); // queda en pendiente
+  }
+
+  async function addDishToMine(r: Restaurant, d: Dish): Promise<void> {
+    const mine = await ensureMyRestaurant(r);
+    if (!mine) return;
+    if (!myDishFor(mine, d)) {
+      createDish({
+        restaurantId: mine.id,
+        typeId: resolveMyType(d.typeId),
+        name: d.name,
+        rating: null, // yo aún no lo califico
+        notes: d.notes,
+      });
+    }
+    markAsVisited(mine.id); // agregar un plato → visitado
+  }
+
+  // ─── Cinta superior ─────────────────────────────────────────────────────────
+
+  function renderRibbon(): void {
+    const crumbEl = document.getElementById("usuario-crumb");
+    const backEl = document.getElementById("usuario-back");
+    const slot = document.getElementById("usuario-friend-slot");
+    if (!crumbEl || !backEl || !slot || !profileUser) return;
+
+    const who = profileUser.name?.trim() || profileUser.username || "Usuario";
+    const detail = currentDetailId
+      ? restaurants.find((r) => r.id === currentDetailId)
+      : null;
+    const loc = detail ? detail.name : "perfil";
+
+    crumbEl.innerHTML = `<i class="bi bi-person-fill u-crumb-ic"></i>
+      <span class="u-crumb-user">${escapeHtml(who)}</span>
+      <span class="u-crumb-sep">·</span>
+      <span class="u-crumb-loc">${escapeHtml(loc)}</span>`;
+
+    backEl.onclick = () => {
+      if (currentDetailId) setView(null);
+      else navigate("/amigos");
+    };
+
+    slot.replaceChildren(buildFriendButton());
   }
 
   function buildFriendButton(): HTMLElement {
@@ -344,19 +519,23 @@ const tplRestaurant: Restaurant = {
 
     const refresh = async () => {
       friend = await getFriendStatus(profileUser!.id);
-      renderHeader();
+      renderRibbon();
     };
 
     switch (friend.status) {
       case "friends":
         btn.innerHTML = `<i class="bi bi-people-fill"></i> Amigos`;
-        btn.onclick = async () => {
-          if (!confirm("¿Eliminar de tus amigos?")) return;
-          if (friend.friendshipId) {
-            btn.disabled = true;
-            await deleteFriendship(friend.friendshipId);
-            await refresh();
-          }
+        btn.onclick = () => {
+          (window as any).confirmDialog?.show(
+            "¿Eliminar de tus amigos?",
+            async () => {
+              if (friend.friendshipId) {
+                btn.disabled = true;
+                await deleteFriendship(friend.friendshipId);
+                await refresh();
+              }
+            },
+          );
         };
         break;
       case "outgoing":
@@ -392,7 +571,50 @@ const tplRestaurant: Restaurant = {
     return btn;
   }
 
-  // ─── Lista de restaurantes calificados ──────────────────────────────────────
+  // ─── Botón "Agregar a los míos" ───────────────────────────────────────────
+
+  function buildAddButton(r: Restaurant, d?: Dish): HTMLButtonElement {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    const mine = myRestaurantFor(r);
+    const isAdded = d ? !!(mine && myDishFor(mine, d)) : !!mine;
+
+    btn.className = "u-add-btn flex-row" + (d ? " u-add-icon" : "");
+    if (isAdded) btn.classList.add("is-added");
+
+    if (d) {
+      btn.innerHTML = isAdded
+        ? '<i class="bi bi-check2"></i>'
+        : '<i class="bi bi-plus-lg"></i>';
+      btn.title = isAdded ? "Ya en tu lista" : "Agregar plato a los míos";
+    } else {
+      btn.innerHTML = isAdded
+        ? '<i class="bi bi-check2"></i> En tu lista'
+        : '<i class="bi bi-plus-lg"></i> Agregar';
+    }
+
+    btn.onclick = async (e) => {
+      e.stopPropagation();
+      if (isAdded) {
+        if (mine) navigate(`/restaurante?id=${mine.id}`);
+        return;
+      }
+      btn.disabled = true;
+      try {
+        if (d) await addDishToMine(r, d);
+        else await addRestaurantToMine(r);
+      } catch (err) {
+        console.error("[usuario add]", err);
+        btn.disabled = false;
+        return;
+      }
+      // Re-render del detalle: recomputa el estado "en tu lista" de todos los botones.
+      if (currentDetailId) renderDetail(currentDetailId);
+    };
+    return btn;
+  }
+
+  // ─── Lista de restaurantes ──────────────────────────────────────────────────
 
   function sortRestaurants(list: Restaurant[]): Restaurant[] {
     return [...list].sort((a, b) => {
@@ -422,20 +644,7 @@ const tplRestaurant: Restaurant = {
     article.removeAttribute("style");
     article.classList.toggle("is-official", !!r.officialRestaurantId);
 
-    const h3 = article.querySelector("h3")!;
-    h3.textContent = "";
-    if (r.officialRestaurantId) {
-      const tailSpan = document.createElement("span");
-      tailSpan.className = "name-tail-nowrap";
-      tailSpan.textContent = r.name;
-      const badge = document.createElement("i");
-      badge.className = "bi bi-patch-check-fill verified-badge";
-      badge.title = "Restaurante verificado";
-      tailSpan.appendChild(badge);
-      h3.appendChild(tailSpan);
-    } else {
-      h3.textContent = r.name;
-    }
+    fillName(article.querySelector("h3")!, r);
 
     const dishCount = dishes.filter((d) => d.restaurantId === r.id).length;
     const pill = article.querySelector(".dish-count-pill") as HTMLElement | null;
@@ -443,15 +652,18 @@ const tplRestaurant: Restaurant = {
       pill.innerHTML = `<i class="bi bi-journal-text"></i> ${dishCount} ${dishCount === 1 ? "plato" : "platos"}`;
     }
 
-    const avg = restaurantAverage(dishes, r.id);
-    const badge = article.querySelector(".rating-badge")!;
-    if (avg === null) {
-      badge.className = "rating-badge badge-empty";
-      badge.innerHTML = '<i class="bi bi-star"></i>';
-    } else {
-      badge.className = `rating-badge ${getRatingClass(avg)}`;
-      badge.innerHTML = `<span class="rating-num">${avg}</span>`;
+    // Marca "en tu lista" si ya lo tengo
+    if (myRestaurantFor(r)) {
+      const body = article.querySelector(".card-body");
+      if (body) {
+        const chk = document.createElement("span");
+        chk.className = "u-mine-check";
+        chk.innerHTML = '<i class="bi bi-check-circle-fill"></i> En tu lista';
+        body.appendChild(chk);
+      }
     }
+
+    paintBadge(article.querySelector(".rating-badge")!, restaurantAverage(dishes, r.id));
 
     article.addEventListener("click", () => openDetail(r.id));
     return article;
@@ -490,7 +702,94 @@ const tplRestaurant: Restaurant = {
     });
   }
 
-  // ─── Detalle de un restaurante (platos, solo lectura) ───────────────────────
+  // ─── Detalle de un restaurante ───────────────────────────────────────────────
+
+  function buildDetailHeader(r: Restaurant): Element {
+    const tpl = document.getElementById(
+      "tpl-user-restaurant-header",
+    ) as HTMLTemplateElement;
+    const card = (tpl.content.cloneNode(true) as DocumentFragment).querySelector(
+      ".rh-card",
+    )!;
+    card.removeAttribute("style");
+    card.classList.toggle("is-official", !!r.officialRestaurantId);
+
+    fillName(card.querySelector("h1")!, r);
+
+    const list = dishes.filter((d) => d.restaurantId === r.id);
+    const pill = card.querySelector(".dish-count-pill");
+    if (pill) {
+      pill.innerHTML = `<i class="bi bi-journal-text"></i> ${list.length} ${list.length === 1 ? "plato" : "platos"}`;
+    }
+
+    paintBadge(card.querySelector(".rating-badge")!, restaurantAverage(dishes, r.id));
+
+    // Pill de rating global (si es oficial y hay agregados)
+    if (r.officialRestaurantId) {
+      const stat = getOfficialRestaurantStat(r.officialRestaurantId);
+      if (stat && stat.ratingsCount > 0) {
+        card.querySelector(".rh-pills")?.appendChild(
+          buildGlobalRatingPill(stat.avgRating, stat.ratingsCount),
+        );
+      }
+    }
+
+    const notesEl = card.querySelector<HTMLElement>(".rh-notes");
+    if (r.notes) notesEl!.textContent = r.notes;
+    else notesEl?.remove();
+
+    // Quitar el menú (editar/eliminar) y poner "Agregar a los míos" abajo a la derecha.
+    card.querySelector(".rh-menu")?.remove();
+    const footer = document.createElement("div");
+    footer.className = "u-header-actions flex-row";
+    footer.appendChild(buildAddButton(r));
+    card.appendChild(footer);
+
+    return card;
+  }
+
+  function buildDetailDishCard(r: Restaurant, d: Dish): Element {
+    const tpl = document.getElementById(
+      "tpl-user-dish-card",
+    ) as HTMLTemplateElement;
+    const article = (
+      tpl.content.cloneNode(true) as DocumentFragment
+    ).querySelector("article")!;
+    article.removeAttribute("data-id");
+
+    article.querySelector("h4")!.textContent = d.name;
+
+    const typeTagEl = article.querySelector<HTMLElement>(".dish-type-tag");
+    const typeName = d.typeId
+      ? (dishTypes.find((t) => t.id === d.typeId)?.name ?? null)
+      : null;
+    if (typeName && typeTagEl) typeTagEl.textContent = typeName;
+    else typeTagEl?.remove();
+
+    // Pill global del plato (si es oficial y hay agregados)
+    if (d.officialDishId) {
+      const stat = getOfficialDishStat(d.officialDishId);
+      if (stat && stat.ratingsCount > 0) {
+        article
+          .querySelector<HTMLElement>(".dish-info")
+          ?.appendChild(buildGlobalRatingPill(stat.avgRating, stat.ratingsCount));
+      }
+    }
+
+    const notesEl = article.querySelector<HTMLElement>(".dish-notes");
+    if (d.notes) notesEl!.textContent = d.notes;
+    else notesEl?.remove();
+
+    paintBadge(article.querySelector(".rating-badge")!, d.rating);
+
+    // Reemplazar el menú por "Agregar a los míos"
+    const actions = article.querySelector(".dish-actions");
+    if (actions) {
+      actions.innerHTML = "";
+      actions.appendChild(buildAddButton(r, d));
+    }
+    return article;
+  }
 
   function renderDetail(restaurantId: string) {
     const restaurant = restaurants.find((r) => r.id === restaurantId);
@@ -498,29 +797,11 @@ const tplRestaurant: Restaurant = {
     const listEl = document.getElementById("usuario-detail-dishes");
     if (!restaurant || !headerEl || !listEl) return;
 
-    const list = dishes.filter((d) => d.restaurantId === restaurant.id);
-    const avg = restaurantAverage(dishes, restaurant.id);
+    headerEl.replaceChildren(buildDetailHeader(restaurant));
 
-    const header = document.createElement("div");
-    header.className = "u-detail-header flex-row";
-
-    const meta = document.createElement("div");
-    meta.className = "u-detail-meta flex-column";
-    const title = document.createElement("h2");
-    title.className = "u-detail-title";
-    title.textContent = restaurant.name;
-    meta.appendChild(title);
-    const count = document.createElement("span");
-    count.className = "dish-count-pill";
-    count.innerHTML = `<i class="bi bi-journal-text"></i> ${list.length} ${list.length === 1 ? "plato" : "platos"}`;
-    meta.appendChild(count);
-    header.appendChild(meta);
-
-    const headerBadge = document.createElement("span");
-    headerBadge.innerHTML = ratingBadge(avg);
-    header.appendChild(headerBadge.firstElementChild!);
-
-    headerEl.replaceChildren(header);
+    const list = dishes
+      .filter((d) => d.restaurantId === restaurant.id)
+      .sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1));
 
     if (list.length === 0) {
       listEl.innerHTML = `<div class="empty-state flex-column">
@@ -530,41 +811,8 @@ const tplRestaurant: Restaurant = {
       return;
     }
 
-    // Mejor calificación primero, luego sin calificar.
-    list.sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1));
-
     listEl.innerHTML = "";
-    list.forEach((d) => {
-      const article = document.createElement("article");
-      article.className = "u-dish flex-row";
-
-      const info = document.createElement("div");
-      info.className = "ud-info";
-      const h4 = document.createElement("h4");
-      h4.textContent = d.name;
-      info.appendChild(h4);
-
-      const type = d.typeId ? dishTypes.find((t) => t.id === d.typeId) : null;
-      if (type) {
-        const tag = document.createElement("span");
-        tag.className = "dish-type-tag";
-        tag.textContent = type.name;
-        info.appendChild(tag);
-      }
-      if (d.notes) {
-        const notes = document.createElement("p");
-        notes.className = "ud-notes";
-        notes.textContent = d.notes;
-        info.appendChild(notes);
-      }
-      article.appendChild(info);
-
-      const badge = document.createElement("span");
-      badge.innerHTML = ratingBadge(d.rating);
-      article.appendChild(badge.firstElementChild!);
-
-      listEl.appendChild(article);
-    });
+    list.forEach((d) => listEl.appendChild(buildDetailDishCard(restaurant, d)));
   }
 
   // ─── Cambio de vista (lista ↔ detalle) vía query param ?r= ──────────────────
@@ -576,15 +824,19 @@ const tplRestaurant: Restaurant = {
 
     const userId = new URLSearchParams(window.location.search).get("id") ?? "";
     if (restaurantId && restaurants.some((r) => r.id === restaurantId)) {
+      currentDetailId = restaurantId;
       listView.hidden = true;
       detailView.hidden = false;
       renderDetail(restaurantId);
     } else {
+      currentDetailId = null;
       listView.hidden = false;
       detailView.hidden = true;
       renderList();
       updateSortUI();
     }
+    renderRibbon();
+
     // Mantener la URL en sync (sin recargar) para back-button intuitivo.
     const target = restaurantId
       ? `/usuario?id=${userId}&r=${restaurantId}`
@@ -602,8 +854,8 @@ const tplRestaurant: Restaurant = {
   // ─── Init ───────────────────────────────────────────────────────────────────
 
   document.addEventListener("astro:page-load", async () => {
-    const headerEl = document.getElementById("usuario-header");
-    if (!headerEl) return;
+    const ribbonEl = document.getElementById("usuario-ribbon");
+    if (!ribbonEl) return;
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -646,10 +898,17 @@ const tplRestaurant: Restaurant = {
     ]);
 
     if (!user) {
-      headerEl.innerHTML = `<div class="empty-state flex-column">
-           <i class="bi bi-person-x"></i>
-           <p>No se encontró este usuario.</p>
-         </div>`;
+      const crumbEl = document.getElementById("usuario-crumb");
+      if (crumbEl) {
+        crumbEl.innerHTML = `<span class="u-crumb-loc">Usuario no encontrado</span>`;
+      }
+      const listEl = document.getElementById("usuario-restaurants");
+      if (listEl) {
+        listEl.innerHTML = `<div class="empty-state flex-column">
+             <i class="bi bi-person-x"></i>
+             <p>No se encontró este usuario.</p>
+           </div>`;
+      }
       return;
     }
 
@@ -660,8 +919,6 @@ const tplRestaurant: Restaurant = {
     friend = fr;
 
     document.title = `${user.name || "Perfil"} · STAURANT`;
-
-    renderHeader();
 
     // Wire sort pills
     document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach((btn) => {
@@ -678,8 +935,6 @@ const tplRestaurant: Restaurant = {
         renderList();
       };
     });
-
-    document.getElementById("usuario-detail-back")!.onclick = () => setView(null);
 
     const r = new URLSearchParams(window.location.search).get("r");
     setView(r);
