@@ -24,6 +24,7 @@ const tplRestaurant: Restaurant = {
   name: "...",
   status: "visited",
   notes: " ",
+  cities: [],
   createdAt: "",
   updatedAt: "",
   officialRestaurantId: null,
@@ -591,6 +592,12 @@ const tplRestaurant: Restaurant = {
       if (pill)
         pill.innerHTML = `<i class="bi bi-journal-text"></i> ${dishes.length} ${dishes.length === 1 ? "plato" : "platos"}`;
     }
+    const citiesEl = div.querySelector(".rh-cities") as HTMLElement | null;
+    const citiesListEl = div.querySelector(".rh-cities-list");
+    if (citiesEl && citiesListEl && r.cities.length > 0) {
+      citiesListEl.textContent = r.cities.join(" · ");
+      citiesEl.hidden = false;
+    }
     const badge = div.querySelector(".rating-badge")!;
     if (avg === null) {
       badge.className = "rating-badge badge-empty";
@@ -607,7 +614,11 @@ const tplRestaurant: Restaurant = {
       const stat = getOfficialRestaurantStat(r.officialRestaurantId);
       if (stat && stat.ratingsCount > 0) {
         const pillsRow = div.querySelector<HTMLElement>(".rh-pills");
-        pillsRow?.appendChild(buildGlobalRatingPill(stat.avgRating, stat.ratingsCount));
+        // Global primero, antes del conteo de platos.
+        pillsRow?.insertBefore(
+          buildGlobalRatingPill(stat.avgRating, stat.ratingsCount),
+          pillsRow.firstChild,
+        );
       }
     }
 

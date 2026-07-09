@@ -187,6 +187,26 @@ import NoticeDialog from "../components/NoticeDialog.astro";
     opacity: 0.75;
   }
 
+  .oficial-dish .od-price {
+    display: block;
+    width: fit-content;
+    margin-top: 5px;
+    font-size: 0.95rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    color: var(--clr-primary);
+  }
+
+  .oficial-dish .od-thumb {
+    flex-shrink: 0;
+    width: 72px;
+    height: 72px;
+    object-fit: cover;
+    border-radius: 12px;
+    border: 1px solid var(--clr-border);
+    align-self: flex-start;
+  }
+
   @media (min-width: 768px) {
     .oficial-card {
       padding: 24px 28px;
@@ -374,6 +394,12 @@ import NoticeDialog from "../components/NoticeDialog.astro";
         tag.textContent = d.typeName;
         info.appendChild(tag);
       }
+      if (d.price !== null) {
+        const price = document.createElement("span");
+        price.className = "od-price";
+        price.textContent = `$${d.price.toLocaleString("es-CO")}`;
+        info.appendChild(price);
+      }
       if (stat && stat.ratingsCount > 0) {
         const pillWrap = document.createElement("div");
         pillWrap.style.marginTop = "4px";
@@ -387,6 +413,16 @@ import NoticeDialog from "../components/NoticeDialog.astro";
         info.appendChild(notes);
       }
       article.appendChild(info);
+
+      if (d.imageUrl) {
+        const thumb = document.createElement("img");
+        thumb.className = "od-thumb";
+        thumb.src = d.imageUrl;
+        thumb.alt = d.name;
+        thumb.loading = "lazy";
+        article.appendChild(thumb);
+      }
+
       listEl.appendChild(article);
     });
   }

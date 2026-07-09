@@ -36,6 +36,7 @@ function toRestaurant(row: Record<string, unknown>): Restaurant {
     name: row.name as string,
     status: row.status as "visited" | "pending",
     notes: row.notes as string,
+    cities: (row.cities as string[] | null) ?? [],
     createdAt: row.created_at as string,
     updatedAt: (row.updated_at as string | null) ?? (row.created_at as string),
     officialRestaurantId: (row.official_restaurant_id as string | null) ?? null,

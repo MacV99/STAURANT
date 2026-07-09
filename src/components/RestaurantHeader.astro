@@ -49,6 +49,10 @@ const isPending = r.status === "pending";
           )
         }
       </div>
+      <span class="rh-cities" hidden>
+        <i class="bi bi-geo-alt-fill" />
+        <span class="rh-cities-list" />
+      </span>
     </div>
     <div class="rh-menu">
       <button class="rh-btn-menu boton2" data-id={r.id}>
@@ -153,8 +157,28 @@ const isPending = r.status === "pending";
 
   .rh-pills {
     justify-content: flex-start;
-    gap: 6px;
+    gap: 6px 10px;
     flex-wrap: wrap;
+  }
+
+  .rh-cities {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 3px;
+    font-size: 0.78rem;
+    color: var(--clr-text);
+    opacity: 0.8;
+  }
+
+  .rh-cities[hidden] {
+    display: none;
+  }
+
+  .rh-cities i {
+    color: var(--clr-primary);
+    font-size: 0.78rem;
+    flex-shrink: 0;
   }
 
   .rh-name {

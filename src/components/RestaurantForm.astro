@@ -21,6 +21,25 @@ import FormModal from "./FormModal.astro";
     </div>
   </label>
 
+  <div class="city-field flex-column" id="rf-city-field">
+    <span class="label-text flex-row">Ciudades <span class="optional">(opcional)</span></span>
+    <div class="city-combobox" id="rf-city-combobox">
+      <div class="city-input-wrap flex-row">
+        <input
+          type="text"
+          id="rf-city"
+          class="city-search-input"
+          placeholder="Agrega una o varias ciudades..."
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <span class="city-chevron" aria-hidden="true"><i class="bi bi-chevron-down"></i></span>
+      </div>
+      <div id="rf-city-dropdown" class="city-dropdown" hidden></div>
+    </div>
+    <div id="rf-city-chips" class="rf-city-chips flex-row" hidden></div>
+  </div>
+
   <label for="rf-notes">
     <span class="label-text flex-row">Notas</span>
     <textarea
@@ -51,6 +70,145 @@ import FormModal from "./FormModal.astro";
     overflow-y: auto;
     overscroll-behavior: contain;
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  }
+
+  /* ── Combobox de ciudad ───────────────────────────────────────────────── */
+
+  .city-field {
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .city-combobox {
+    position: relative;
+  }
+
+  .city-input-wrap {
+    border: 1.5px solid var(--clr-border);
+    border-radius: var(--border-radius);
+    background: var(--clr-white);
+    overflow: hidden;
+    transition: border-color 0.12s ease;
+  }
+
+  .city-input-wrap:focus-within {
+    border-color: var(--clr-border2);
+  }
+
+  .city-search-input {
+    flex: 1;
+    border: none !important;
+    background: transparent !important;
+    outline: none !important;
+    box-shadow: none !important;
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    color: var(--clr-text);
+    min-width: 0;
+  }
+
+  .city-search-input::placeholder {
+    text-transform: none;
+    color: var(--clr-text);
+    opacity: 0.5;
+  }
+
+  .city-chevron {
+    padding: 0 10px 0 4px;
+    color: var(--clr-text);
+    opacity: 0.4;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+    pointer-events: none;
+    transition: transform 0.15s ease;
+  }
+
+  .city-combobox.is-open .city-chevron {
+    transform: rotate(180deg);
+  }
+
+  .city-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--clr-white);
+    border: 1.5px solid var(--clr-border);
+    border-radius: var(--border-radius);
+    z-index: 200;
+    max-height: 220px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  }
+
+  /* ── Chips de ciudades agregadas ──────────────────────────────────────── */
+
+  .rf-city-chips {
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    margin-top: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .rf-city-chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .rf-city-chips[hidden] {
+    display: none;
+  }
+
+  .rf-city-chips :global(.rf-city-pin) {
+    color: var(--clr-primary);
+    font-size: 0.9rem;
+    flex-shrink: 0;
+  }
+
+  .rf-city-chips :global(.rf-city-chip) {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 4px 4px 10px;
+    border-radius: 50px;
+    border: 1.5px solid var(--clr-border);
+    background: var(--clr-white2);
+    color: var(--clr-text);
+    font-size: 0.76rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .rf-city-chips :global(.rf-city-chip-x) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--clr-text);
+    opacity: 0.5;
+    font-size: 0.58rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: opacity 0.12s ease;
+  }
+
+  @media (hover: hover) {
+    .rf-city-chips :global(.rf-city-chip-x:hover) {
+      opacity: 1;
+      color: var(--clr-danger);
+    }
   }
 </style>
 
@@ -103,6 +261,49 @@ import FormModal from "./FormModal.astro";
     cursor: default;
     padding: 14px;
   }
+
+  /* Opciones de ciudad creadas via JS → scope global */
+
+  #rf-city-dropdown .city-option {
+    padding: 11px 14px;
+    font-size: 0.88rem;
+    color: var(--clr-text);
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--clr-border);
+    transition: background 0.1s ease;
+  }
+
+  #rf-city-dropdown .city-option:last-child {
+    border-bottom: none;
+  }
+
+  @media (hover: hover) {
+    #rf-city-dropdown .city-option:hover {
+      background: var(--clr-white2);
+    }
+  }
+
+  #rf-city-dropdown .city-option.is-create {
+    color: var(--clr-primary);
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+    justify-content: flex-start;
+    gap: 6px;
+    border-top: 1px solid var(--clr-border);
+  }
+
+  #rf-city-dropdown .city-option.is-create i {
+    font-size: 0.7rem;
+    flex-shrink: 0;
+  }
+
+  #rf-city-dropdown .city-option.is-create .create-name {
+    font-weight: 700;
+    text-transform: uppercase;
+  }
 </style>
 
 <script>
@@ -111,6 +312,7 @@ import FormModal from "./FormModal.astro";
     createRestaurant,
     updateRestaurant,
     getRestaurants,
+    getCities,
     searchOfficialRestaurants,
     adoptOfficialRestaurant,
   } from "../lib/data.ts";
@@ -137,6 +339,11 @@ import FormModal from "./FormModal.astro";
     const cancelBtn  = document.getElementById("restaurant-form-cancel")!;
     const dropdownEl = document.getElementById("rf-name-dropdown") as HTMLElement;
     const submitBtn  = document.getElementById("restaurant-form-submit") as HTMLButtonElement;
+    const cityCombobox = document.getElementById("rf-city-combobox") as HTMLElement;
+    const cityInput  = document.getElementById("rf-city") as HTMLInputElement;
+    const cityDropdown = document.getElementById("rf-city-dropdown") as HTMLElement;
+    const cityChipsEl = document.getElementById("rf-city-chips") as HTMLElement;
+    let selectedCities: string[] = [];
 
     function showDropdown(): void {
       dropdownEl.hidden = false;
@@ -222,11 +429,123 @@ import FormModal from "./FormModal.astro";
       }, 220);
     }
 
+    // ─── Combobox de ciudades (multi: se van agregando como chips) ────────────
+
+    function renderCityChips(): void {
+      cityChipsEl.innerHTML = "";
+      cityChipsEl.hidden = selectedCities.length === 0;
+      if (selectedCities.length === 0) return;
+
+      // Un solo pin al inicio, y luego todas las ciudades.
+      const pin = document.createElement("i");
+      pin.className = "bi bi-geo-alt-fill rf-city-pin";
+      cityChipsEl.appendChild(pin);
+
+      selectedCities.forEach((c) => {
+        const chip = document.createElement("span");
+        chip.className = "rf-city-chip";
+        const label = document.createElement("span");
+        label.className = "rf-city-chip-label";
+        label.textContent = c;
+        chip.appendChild(label);
+        const x = document.createElement("button");
+        x.type = "button";
+        x.className = "rf-city-chip-x";
+        x.setAttribute("aria-label", `Quitar ${c}`);
+        x.innerHTML = `<i class="bi bi-x-lg"></i>`;
+        x.addEventListener("mousedown", (e) => e.preventDefault());
+        x.onclick = () => removeCity(c);
+        chip.appendChild(x);
+        cityChipsEl.appendChild(chip);
+      });
+    }
+
+    function addCity(value: string): void {
+      const v = value.trim().toUpperCase();
+      if (!v) return;
+      if (!selectedCities.includes(v)) selectedCities.push(v);
+      renderCityChips();
+      cityInput.value = "";
+      renderCityDropdown(""); // refresca sugerencias (ya sin la recién agregada)
+      cityInput.focus();
+    }
+
+    function removeCity(value: string): void {
+      selectedCities = selectedCities.filter((c) => c !== value);
+      renderCityChips();
+    }
+
+    function renderCityDropdown(query: string): void {
+      const q = query.trim().toUpperCase();
+      // Sugerencias = ciudades ya usadas por el usuario, menos las ya agregadas aquí.
+      const all = getCities().filter((c) => !selectedCities.includes(c));
+      const filtered = q ? all.filter((c) => c.includes(q)) : all;
+      const exactMatch = all.includes(q);
+      cityDropdown.innerHTML = "";
+
+      filtered.forEach((c) => {
+        const opt = document.createElement("div");
+        opt.className = "city-option";
+        opt.textContent = c;
+        opt.addEventListener("mousedown", (e) => e.preventDefault());
+        opt.addEventListener("click", () => addCity(c));
+        cityDropdown.appendChild(opt);
+      });
+
+      // Opción para agregar una nueva (texto que no coincide con una existente
+      // ni con una ya agregada)
+      if (q && !exactMatch && !selectedCities.includes(q)) {
+        const createOpt = document.createElement("div");
+        createOpt.className = "city-option is-create flex-row";
+        createOpt.innerHTML = `<i class="bi bi-plus-lg"></i> Agregar "<span class="create-name"></span>"`;
+        createOpt.querySelector(".create-name")!.textContent = q;
+        createOpt.addEventListener("mousedown", (e) => e.preventDefault());
+        createOpt.addEventListener("click", () => addCity(q));
+        cityDropdown.appendChild(createOpt);
+      }
+
+      if (cityDropdown.childElementCount === 0) {
+        closeCityDropdown();
+        return;
+      }
+      cityDropdown.hidden = false;
+      cityCombobox.classList.add("is-open");
+    }
+
+    function openCityDropdown(): void {
+      renderCityDropdown(cityInput.value);
+    }
+    function closeCityDropdown(): void {
+      cityDropdown.hidden = true;
+      cityCombobox.classList.remove("is-open");
+    }
+
+    cityInput.oninput = () => {
+      forceUppercase(cityInput);
+      openCityDropdown();
+    };
+    cityInput.onfocus = () => openCityDropdown();
+    cityInput.onblur = () => {
+      setTimeout(() => {
+        if (!cityCombobox.contains(document.activeElement)) closeCityDropdown();
+      }, 150);
+    };
+    // Enter agrega la ciudad escrita en vez de enviar el formulario.
+    cityInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        addCity(cityInput.value);
+      }
+    });
+
     function open(mode: "create" | "edit", data?: Restaurant) {
       errorEl.textContent = "";
       form.reset();
       officialIdInput.value = "";
       hideDropdown();
+      closeCityDropdown();
+      selectedCities = mode === "edit" && data ? [...data.cities] : [];
+      renderCityChips();
       if (mode === "edit" && data) {
         titleEl.textContent = "Editar restaurante";
         idInput.value   = data.id;
@@ -277,16 +596,19 @@ import FormModal from "./FormModal.astro";
       if (duplicate) { errorEl.textContent = "Ya existe un restaurante con ese nombre."; nameInput.focus(); return; }
 
       const notes = notesInput.value.trim();
+      // Incluye lo que quedó escrito en el input sin confirmar como un chip.
+      addCity(cityInput.value);
+      const cities = [...selectedCities];
 
       // Cerrar ANTES de emitir: garantiza que el modal cierra aunque
       // el listener del evento lance una excepción.
       close();
 
       if (id) {
-        const updated = updateRestaurant(id, { name, notes });
+        const updated = updateRestaurant(id, { name, notes, cities });
         if (updated) emit("restaurant:updated", updated);
       } else {
-        emit("restaurant:created", createRestaurant({ name, notes }));
+        emit("restaurant:created", createRestaurant({ name, notes, cities }));
       }
     };
 

@@ -7,6 +7,7 @@ export interface Restaurant {
   name: string;
   status: "visited" | "pending";
   notes: string;
+  cities: string[]; // MAYÚSCULAS; puede tener varias (cadenas / multi-sede)
   createdAt: string;
   updatedAt: string;
   officialRestaurantId: string | null;
@@ -37,7 +38,9 @@ export interface OfficialDish {
   officialRestaurantId: string;
   typeName: string | null;
   name: string;
-  notes: string | null;
+  notes: string | null; // descripción del plato en la carta
+  price: number | null; // solo platos oficiales; null = sin precio
+  imageUrl: string | null; // foto del plato (carta oficial)
 }
 
 export interface OfficialStat {
@@ -240,6 +243,7 @@ function toRestaurant(row: Record<string, unknown>): Restaurant {
     name: row.name as string,
     status: row.status as "visited" | "pending",
     notes: row.notes as string,
+    cities: (row.cities as string[] | null) ?? [],
     createdAt: row.created_at as string,
     updatedAt: (row.updated_at as string | null) ?? (row.created_at as string),
     officialRestaurantId: (row.official_restaurant_id as string | null) ?? null,
@@ -283,14 +287,28 @@ export function getDishes(): Dish[] {
   return getCache().dishes;
 }
 
+/** Ciudades distintas ya usadas por el usuario (MAYÚSCULAS, ordenadas alfabéticamente).
+ *  Alimenta el autocomplete del formulario y el filtro por ciudad del Inicio. */
+export function getCities(): string[] {
+  const set = new Set<string>();
+  for (const r of getCache().restaurants) {
+    for (const c of r.cities) set.add(c);
+  }
+  return [...set].sort((a, b) => a.localeCompare(b));
+}
+
 export function createRestaurant(
-  input: Pick<Restaurant, "name" | "notes"> & { officialRestaurantId?: string | null },
+  input: Pick<Restaurant, "name" | "notes"> & {
+    officialRestaurantId?: string | null;
+    cities?: string[];
+  },
 ): Restaurant {
   const now = new Date().toISOString();
   const r: Restaurant = {
     id: crypto.randomUUID(),
     name: input.name,
     notes: input.notes,
+    cities: input.cities ?? [],
     status: "pending",
     createdAt: now,
     updatedAt: now,
@@ -303,7 +321,7 @@ export function createRestaurant(
   bgSync(() =>
     supabase.from("restaurants").insert({
       id: r.id, user_id: _userId,
-      name: r.name, notes: r.notes,
+      name: r.name, notes: r.notes, cities: r.cities,
       status: r.status, created_at: r.createdAt, updated_at: r.updatedAt,
       official_restaurant_id: r.officialRestaurantId,
     })
@@ -313,7 +331,7 @@ export function createRestaurant(
 
 export function updateRestaurant(
   id: string,
-  input: Partial<Pick<Restaurant, "name" | "notes" | "status">>
+  input: Partial<Pick<Restaurant, "name" | "notes" | "status" | "cities">>
 ): Restaurant | null {
   const cache = getCache();
   const idx = cache.restaurants.findIndex((r) => r.id === id);
@@ -326,6 +344,7 @@ export function updateRestaurant(
   if (input.name !== undefined) patch.name = input.name;
   if (input.notes !== undefined) patch.notes = input.notes;
   if (input.status !== undefined) patch.status = input.status;
+  if (input.cities !== undefined) patch.cities = input.cities;
   bgSync(() => supabase.from("restaurants").update(patch).eq("id", id));
 
   return cache.restaurants[idx];
@@ -549,6 +568,8 @@ function toOfficialDish(row: Record<string, unknown>): OfficialDish {
     typeName: (row.type_name as string | null) ?? null,
     name: row.name as string,
     notes: (row.notes as string | null) ?? null,
+    price: (row.price as number | null) ?? null,
+    imageUrl: (row.image_url as string | null) ?? null,
   };
 }
 
@@ -655,6 +676,7 @@ export async function adoptOfficialRestaurant(officialId: string): Promise<Resta
     id: crypto.randomUUID(),
     name: official.name,
     notes: official.notes ?? "",
+    cities: official.city ? [official.city.trim().toUpperCase()] : [],
     status: "pending",
     createdAt: now,
     updatedAt: now,
@@ -682,7 +704,7 @@ export async function adoptOfficialRestaurant(officialId: string): Promise<Resta
   try {
     const rRes = await supabase.from("restaurants").insert({
       id: restaurant.id, user_id: _userId,
-      name: restaurant.name, notes: restaurant.notes,
+      name: restaurant.name, notes: restaurant.notes, cities: restaurant.cities,
       status: restaurant.status,
       created_at: restaurant.createdAt, updated_at: restaurant.updatedAt,
       official_restaurant_id: restaurant.officialRestaurantId,

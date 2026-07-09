@@ -718,7 +718,6 @@ import Layout1 from "../layouts/Layout1.astro";
     const visited = restaurants.filter((r) => r.status === "visited").length;
     const pending = restaurants.filter((r) => r.status === "pending").length;
     const ratedDishes = dishes.filter((d) => d.rating !== null);
-    const totalDishes = dishes.length;
     const avgAll =
       ratedDishes.length > 0
         ? Math.round((ratedDishes.reduce((s, d) => s + d.rating!, 0) / ratedDishes.length) * 10) / 10
@@ -730,7 +729,7 @@ import Layout1 from "../layouts/Layout1.astro";
     };
     set("sn-visited", String(visited));
     set("sn-pending", String(pending));
-    set("sn-dishes", String(totalDishes));
+    set("sn-dishes", String(ratedDishes.length));
     set("sn-avg", avgAll !== null ? String(avgAll) : "—");
 
     const medals = ["🥇", "🥈", "🥉"];
@@ -769,7 +768,11 @@ import Layout1 from "../layouts/Layout1.astro";
     const mostTriedEl = document.getElementById("top3-most-tried-list");
     if (mostTriedEl) {
       const top3MostTried = restaurants
-        .map((r) => ({ id: r.id, name: r.name, count: dishesByRestaurant.get(r.id)?.length ?? 0 }))
+        .map((r) => ({
+          id: r.id,
+          name: r.name,
+          count: dishesByRestaurant.get(r.id)?.filter((d) => d.rating !== null).length ?? 0,
+        }))
         .filter((r) => r.count > 0)
         .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
         .slice(0, 3);

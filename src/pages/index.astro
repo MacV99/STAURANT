@@ -12,6 +12,7 @@ const tplRestaurant: Restaurant = {
   name: "",
   status: "visited",
   notes: "",
+  cities: [],
   createdAt: "",
   updatedAt: "",
   officialRestaurantId: null,
@@ -52,6 +53,8 @@ const tplRestaurant: Restaurant = {
           { field: "rating", label: "Rating" },
         ]}
       />
+
+      <div id="city-filter" class="city-filter" role="tablist" aria-label="Filtrar por ciudad" hidden></div>
     </div>
 
     <div id="tab-visitados" class="tab-content" role="tabpanel" hidden></div>
@@ -181,9 +184,62 @@ const tplRestaurant: Restaurant = {
     display: none;
   }
 
+  .city-filter {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .city-filter[hidden] {
+    display: none;
+  }
+
+  .city-filter::-webkit-scrollbar {
+    display: none;
+  }
+
+  .city-filter :global(.city-chip) {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 13px;
+    border-radius: 50px;
+    border: 1.5px solid var(--clr-border);
+    background: var(--clr-white);
+    color: var(--clr-text);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .city-filter :global(.city-filter-pin) {
+    flex-shrink: 0;
+    color: var(--clr-primary);
+    font-size: 0.9rem;
+  }
+
+  .city-filter :global(.city-chip.active) {
+    background: var(--clr-primary);
+    border-color: var(--clr-primary);
+    color: var(--clr-white);
+  }
+
   @media (hover: hover) {
     .search-clear:hover {
       opacity: 1;
+    }
+
+    .city-filter :global(.city-chip:not(.active):hover) {
+      background: var(--clr-white2);
     }
   }
 
@@ -201,6 +257,7 @@ const tplRestaurant: Restaurant = {
     initCache,
     isCacheLoaded,
     getRestaurants,
+    getCities,
     getDishesByRestaurant,
     getRestaurantAverage,
     hasUnratedDishes,
@@ -235,6 +292,8 @@ const tplRestaurant: Restaurant = {
 
   // ─── Search state ─────────────────────────────────────────────────────────
   let searchQuery = "";
+  // ─── City filter state ─────────────────────────────────────────────────────
+  let cityFilter: string | null = null; // null = todas las ciudades
 
   function escapeHtml(s: string): string {
     return s
@@ -392,6 +451,7 @@ const tplRestaurant: Restaurant = {
     const q = searchQuery.toLowerCase().trim();
     const all = getRestaurants().filter((r) => {
       if (r.status !== status) return false;
+      if (cityFilter && !r.cities.includes(cityFilter)) return false;
       if (!q) return true;
       if (
         r.name.toLowerCase().includes(q) ||
@@ -423,6 +483,11 @@ const tplRestaurant: Restaurant = {
         if (createBtn) {
           createBtn.onclick = () => openCreateWithName(searchQuery.trim());
         }
+      } else if (cityFilter) {
+        container.innerHTML = `<div class="empty-state flex-column">
+             <i class="bi bi-geo-alt"></i>
+             <p>Sin restaurantes ${status === "visited" ? "visitados" : "pendientes"} en <strong>${escapeHtml(cityFilter)}</strong>.</p>
+           </div>`;
       } else {
         container.innerHTML = `<div class="empty-state flex-column">
              <i class="bi bi-${status === "visited" ? "journal-check" : "bookmark"}"></i>
@@ -490,7 +555,49 @@ const tplRestaurant: Restaurant = {
     if (ratingPill) ratingPill.style.display = isVisitados ? "" : "none";
   }
 
-  function renderBoth() {
+  // ─── City filter UI ─────────────────────────────────────────────────────────
+
+  function renderCityFilter() {
+    const el = document.getElementById("city-filter");
+    if (!el) return;
+    const cities = getCities();
+    // Si la ciudad activa ya no existe (editada/eliminada), volver a "Todas".
+    if (cityFilter && !cities.includes(cityFilter)) cityFilter = null;
+
+    if (cities.length === 0) {
+      el.hidden = true;
+      el.innerHTML = "";
+      return;
+    }
+
+    el.hidden = false;
+    el.innerHTML = "";
+
+    const makeChip = (label: string, value: string | null) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "city-chip" + (value === cityFilter ? " active" : "");
+      chip.setAttribute("role", "tab");
+      chip.setAttribute("aria-selected", String(value === cityFilter));
+      chip.textContent = label;
+      chip.onclick = () => {
+        cityFilter = value;
+        renderBoth();
+      };
+      return chip;
+    };
+
+    // Un solo pin al inicio, luego "Todas" + cada ciudad (sin icono por chip).
+    const pin = document.createElement("i");
+    pin.className = "bi bi-geo-alt-fill city-filter-pin";
+    el.appendChild(pin);
+    el.appendChild(makeChip("Todas", null));
+    cities.forEach((c) => el.appendChild(makeChip(c, c)));
+  }
+
+  // Re-renderiza solo las listas (no los chips de ciudad, que no dependen de la
+  // búsqueda ni del sort) — se llama en cada tecla del buscador.
+  function renderLists() {
     const tv = document.getElementById("tab-visitados") as HTMLElement | null;
     const tp = document.getElementById("tab-pendientes") as HTMLElement | null;
     if (!tv || !tp) return;
@@ -498,6 +605,11 @@ const tplRestaurant: Restaurant = {
     renderList("pending", tp);
     updateCounts();
     updateSortBarVisibility();
+  }
+
+  function renderBoth() {
+    renderCityFilter();
+    renderLists();
   }
 
   function activateTab(tab: "visitados" | "pendientes") {
@@ -539,6 +651,7 @@ const tplRestaurant: Restaurant = {
 
     const activeTab = getActiveTab();
 
+    renderCityFilter();
     renderList("visited", tabVisitadosEl);
     if (tabPendientesEl) renderList("pending", tabPendientesEl);
 
@@ -641,7 +754,7 @@ const tplRestaurant: Restaurant = {
       searchEl.oninput = () => {
         searchQuery = searchEl.value;
         syncClear();
-        renderBoth();
+        renderLists();
       };
     }
     if (clearEl) {
@@ -652,7 +765,7 @@ const tplRestaurant: Restaurant = {
           searchEl.focus();
         }
         syncClear();
-        renderBoth();
+        renderLists();
       };
     }
 
