@@ -12,7 +12,7 @@ const { pills } = Astro.props;
 ---
 
 <div class="sort-bar flex-row">
-  <span class="sort-label">Ordenar</span>
+  <i class="bi bi-sort-down sort-icon" aria-hidden="true"></i>
   <div class="sort-pills flex-row">
     {
       pills.map((p) => (
@@ -27,24 +27,27 @@ const { pills } = Astro.props;
 <style>
   .sort-bar {
     justify-content: flex-start;
+    align-items: center;
     gap: 8px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
 
-  .sort-label {
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--clr-text);
-    opacity: 0.5;
+  .sort-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sort-icon {
+    color: var(--clr-primary);
+    font-size: 0.95rem;
     flex-shrink: 0;
   }
 
   .sort-pills {
     justify-content: flex-start;
     gap: 6px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
 
   .sort-pill {
@@ -61,6 +64,7 @@ const { pills } = Astro.props;
     letter-spacing: 0.5px;
     text-transform: none;
     cursor: pointer;
+    flex-shrink: 0;
     transition: var(--transition);
   }
 
