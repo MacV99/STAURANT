@@ -3,93 +3,91 @@ import FormModal from "./FormModal.astro";
 ---
 
 <FormModal id="dish-form" title="Nuevo plato" maxWidth="420px">
-      <input type="hidden" id="df-id" />
-      <input type="hidden" id="df-restaurant-id" />
-      <input type="hidden" id="df-type-id" />
-      <input type="hidden" id="df-rating" value="5" />
+  <input type="hidden" id="df-id" />
+  <input type="hidden" id="df-restaurant-id" />
+  <input type="hidden" id="df-type-id" />
+  <input type="hidden" id="df-rating" value="5" />
 
-      <p id="df-official-note" class="official-note flex-row" hidden>
-        <i class="bi bi-patch-check-fill"></i>
-        <span>Plato oficial. Solo puedes registrar tu calificación.</span>
-      </p>
+  <p id="df-official-note" class="official-note flex-row" hidden>
+    <i class="bi bi-patch-check-fill"></i>
+    <span>Plato oficial. Solo puedes registrar tu calificación.</span>
+  </p>
 
-      <div class="type-field flex-column" id="df-type-field">
-        <span class="label-text flex-row"
-          >Tipo de plato <span class="optional">(opcional)</span></span
-        >
-        <div class="type-combobox" id="df-type-combobox">
-          <div class="type-input-wrap flex-row">
-            <input
-              type="text"
-              id="df-type-search"
-              class="type-search-input"
-              placeholder="Selecciona una etiqueta"
-              autocomplete="off"
-              spellcheck="false"
-            />
-            <button
-              type="button"
-              id="df-type-clear"
-              class="type-clear-btn"
-              hidden
-              aria-label="Quitar tipo"
-            >
-              <i class="bi bi-x-lg"></i>
-            </button>
-            <span class="type-chevron" aria-hidden="true"
-              ><i class="bi bi-chevron-down"></i></span
-            >
-          </div>
-          <div id="df-type-dropdown" class="type-dropdown" hidden></div>
-        </div>
-      </div>
-
-      <label for="df-name" id="df-name-field">
-        <span class="label-text flex-row"
-          >Nombre del plato <span class="required">*</span></span
-        >
+  <div class="type-field flex-column" id="df-type-field">
+    <span class="label-text flex-row"
+      >Tipo de plato <span class="optional">(opcional)</span></span
+    >
+    <div class="type-combobox" id="df-type-combobox">
+      <div class="type-input-wrap flex-row">
         <input
           type="text"
-          id="df-name"
-          required
-          placeholder="Bandeja paisa, Sushi roll..."
+          id="df-type-search"
+          class="type-search-input"
+          placeholder="Selecciona una etiqueta"
+          autocomplete="off"
+          spellcheck="false"
         />
-      </label>
-
-      <div class="rating-field flex-column">
-        <div class="rating-label-row flex-row">
-          <span class="rating-label"
-            >Calificación <span class="optional">(opcional)</span></span
-          >
-          <button
-            type="button"
-            id="df-rating-clear"
-            class="rating-clear-link"
-            hidden
-          >
-            Quitar
-          </button>
-        </div>
-        <div class="drum-outer is-unrated" id="df-drum-outer">
-          <div class="drum-picker" id="df-rating-drum">
-            <div class="drum-track" id="df-drum-track"></div>
-          </div>
-          <div class="drum-hint">
-            <i class="bi bi-star"></i>
-            <span>Toca para calificar</span>
-          </div>
-        </div>
+        <button
+          type="button"
+          id="df-type-clear"
+          class="type-clear-btn"
+          hidden
+          aria-label="Quitar tipo"
+        >
+          <i class="bi bi-x-lg"></i>
+        </button>
+        <span class="type-chevron" aria-hidden="true"
+          ><i class="bi bi-chevron-down"></i></span
+        >
       </div>
+      <div id="df-type-dropdown" class="type-dropdown" hidden></div>
+    </div>
+  </div>
 
-      <label for="df-notes" id="df-notes-field">
-        <span class="label-text flex-row">Notas</span>
-        <textarea
-          id="df-notes"
-          rows="2"
-          placeholder="Sabor, presentación, lo que quieras recordar..."
-        ></textarea>
-      </label>
+  <label for="df-name" id="df-name-field">
+    <span class="label-text flex-row"
+      >Nombre del plato <span class="required">*</span></span
+    >
+    <input
+      type="text"
+      id="df-name"
+      required
+      placeholder="Bandeja paisa, Sushi roll..."
+    />
+  </label>
 
+  <div class="rating-field flex-column">
+    <div class="rating-label-row flex-row">
+      <span class="rating-label"
+        >Calificación <span class="optional">(opcional)</span></span
+      >
+      <button
+        type="button"
+        id="df-rating-clear"
+        class="rating-clear-link"
+        hidden
+      >
+        Quitar
+      </button>
+    </div>
+    <div class="drum-outer is-unrated" id="df-drum-outer">
+      <div class="drum-picker" id="df-rating-drum">
+        <div class="drum-track" id="df-drum-track"></div>
+      </div>
+      <div class="drum-hint">
+        <i class="bi bi-star"></i>
+        <span>Toca para calificar</span>
+      </div>
+    </div>
+  </div>
+
+  <label for="df-notes" id="df-notes-field">
+    <span class="label-text flex-row">Notas</span>
+    <textarea
+      id="df-notes"
+      rows="2"
+      placeholder="Sabor, presentación, lo que quieras recordar..."></textarea>
+  </label>
 </FormModal>
 
 <style>
@@ -242,8 +240,13 @@ import FormModal from "./FormModal.astro";
   }
 
   @keyframes drum-hint-pulse {
-    0%, 100% { opacity: 0.5; }
-    50% { opacity: 0.95; }
+    0%,
+    100% {
+      opacity: 0.5;
+    }
+    50% {
+      opacity: 0.95;
+    }
   }
 
   .drum-picker {
@@ -413,14 +416,17 @@ import FormModal from "./FormModal.astro";
     transform-origin: center;
     transition:
       transform 0.26s cubic-bezier(0.22, 1, 0.36, 1),
-      opacity 0.26s cubic-bezier(0.22, 1, 0.36, 1),
-      font-size 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-      color 0.22s ease;
+      opacity 0.26s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  /* Disable transitions while actively scrolling — avoids visual stickiness */
+  /* Durante el scroll los visuales (tamaño/opacidad) se calculan en JS cuadro a
+     cuadro según la posición exacta. Una transición corta y con arranque rápido
+     (ease-out) hace que el número "clave" al centro de forma más cortante y se
+     disuelva suave al alejarse, sin reintroducir el salto. No usar 0s aquí. */
   #df-rating-drum.is-scrolling .drum-item {
-    transition: none;
+    transition:
+      transform 0.06s ease-out,
+      opacity 0.06s ease-out;
   }
 
   /* Decimal part of drum items (e.g. ".5") — smaller than the integer */
@@ -430,9 +436,9 @@ import FormModal from "./FormModal.astro";
     font-weight: 800;
   }
 
-  #df-rating-drum .drum-item.is-center {
-    font-size: 2.5rem; /* ← tamaño del número central */
-  }
+  /* El tamaño del número central lo maneja el `scale` continuo en JS
+     (SCALE_CURVE) para que crezca de forma gradual, sin brinco de font-size.
+     Se mantiene la clase por si se quiere enfatizar el color/estado activo. */
 
   /* ── Type dropdown ─────────────────────────────────────────────────────── */
 
@@ -555,9 +561,13 @@ import FormModal from "./FormModal.astro";
     const drumOuterEl = document.getElementById("df-drum-outer") as HTMLElement;
     const drumEl = document.getElementById("df-rating-drum") as HTMLElement;
     const drumTrackEl = document.getElementById("df-drum-track") as HTMLElement;
-    const officialNoteEl = document.getElementById("df-official-note") as HTMLElement;
+    const officialNoteEl = document.getElementById(
+      "df-official-note",
+    ) as HTMLElement;
     const nameFieldEl = document.getElementById("df-name-field") as HTMLElement;
-    const notesFieldEl = document.getElementById("df-notes-field") as HTMLElement;
+    const notesFieldEl = document.getElementById(
+      "df-notes-field",
+    ) as HTMLElement;
 
     // Platos oficiales: nombre/tipo/notas los administra el sistema, solo se permite
     // calificar. Ocultamos esos campos y mostramos el aviso correspondiente.
@@ -788,28 +798,35 @@ import FormModal from "./FormModal.astro";
 
     const ITEM_W = 52;
     const MIN_V = 1.0;
-    const NUM_ITEMS = 91; // 1.0 → 10.0 at 0.1 steps
+    const MAX_V = 10.0;
+    const STEP = 0.5;
+    const NUM_ITEMS = Math.round((MAX_V - MIN_V) / STEP) + 1; // 1.0 → 10.0 at 0.5 steps
+    // Valor del item idx, redondeado al step para evitar errores de punto flotante.
+    const valueForIdx = (idx: number) =>
+      Math.round((MIN_V + idx * STEP) * 10) / 10;
     // Espacio extra simétrico a cada lado para permitir rebote/overscroll
     // pasando el 1 (izq) y el 10 (der). El snap JS regresa al item.
     const OVERSCROLL = Math.round(ITEM_W * 0.55);
 
     const drumItems: HTMLElement[] = [];
     let prevDrumV = -1;
-    let prevCenter = -1;
+    // Ventana de items actualmente pintados; se resetean al salir de ella.
+    let prevLo = -1;
+    let prevHi = -1;
     let drumBuilt = false;
     let startSpacer: HTMLElement | null = null;
     let endSpacer: HTMLElement | null = null;
 
     // scrollLeft que centra el item idx (las dos spacers añaden OVERSCROLL al origen).
     const scrollLeftFor = (idx: number) => idx * ITEM_W + OVERSCROLL;
+    // Índice fraccionario del punto que está en el centro ahora mismo. La clave
+    // de la fluidez: los visuales se calculan a partir de ESTE valor continuo,
+    // no del índice redondeado, así el número central crece/encoge de forma
+    // gradual en vez de "saltar" al cruzar la mitad entre dos números.
+    const centerFromScrollLeft = () =>
+      (drumEl.scrollLeft - OVERSCROLL) / ITEM_W;
     const idxFromScrollLeft = () =>
-      Math.max(
-        0,
-        Math.min(
-          NUM_ITEMS - 1,
-          Math.round((drumEl.scrollLeft - OVERSCROLL) / ITEM_W),
-        ),
-      );
+      Math.max(0, Math.min(NUM_ITEMS - 1, Math.round(centerFromScrollLeft())));
 
     function syncDrumPadding() {
       const w = drumEl.getBoundingClientRect().width;
@@ -845,7 +862,7 @@ import FormModal from "./FormModal.astro";
       drumTrackEl.appendChild(startSpacer);
 
       for (let i = 0; i < NUM_ITEMS; i++) {
-        const v = parseFloat((MIN_V + i * 0.1).toFixed(1));
+        const v = valueForIdx(i);
         const tenths = Math.round(v * 10) % 10;
         const item = document.createElement("div");
         item.className = "drum-item";
@@ -866,34 +883,61 @@ import FormModal from "./FormModal.astro";
       drumTrackEl.appendChild(endSpacer);
     }
 
-    function updateDrumVisuals(centerIdx: number) {
-      if (centerIdx === prevCenter) return;
-      const RADIUS = 4;
-      const opacities = [1, 0.55, 0.28, 0.14, 0.07];
-      const scales = [1, 0.72, 0.52, 0.38, 0.28];
-      const lo = Math.max(0, centerIdx - RADIUS);
-      const hi = Math.min(NUM_ITEMS - 1, centerIdx + RADIUS);
+    // Interpola una tabla de keyframes por distancia fraccionaria `d` (0,1,2…).
+    // Entre índice y índice el valor se mezcla linealmente → sin escalones.
+    const sampleCurve = (curve: number[], d: number): number => {
+      if (d <= 0) return curve[0];
+      if (d >= curve.length - 1) return curve[curve.length - 1];
+      const k = Math.floor(d);
+      return curve[k] + (curve[k + 1] - curve[k]) * (d - k);
+    };
+
+    // Curvas de tamaño/opacidad por distancia al centro. El item central llega a
+    // 1.25 (equivale al 2rem base → 2.5rem visual) y decae suavemente hacia fuera.
+    const SCALE_CURVE = [1.25, 0.72, 0.52, 0.38, 0.28];
+    const OPACITY_CURVE = [1, 0.55, 0.28, 0.14, 0.07];
+
+    // Ancho de la banda de "focus" alrededor del centro.
+    //   > 1  → el número permanece pleno en un rango MÁS AMPLIO (focus ancho).
+    //   = 1  → caída lineal.
+    //   < 1  → el número solo está pleno en una banda MUY estrecha (focus finito).
+    // Subir el valor ensancha el rango en focus; bajarlo lo hace más puntual.
+    const CENTER_SHARPNESS = 0.8;
+    const RADIUS = 4;
+    // Distancia "sesgada": comprime el rango cercano al centro para que el pico
+    // de tamaño sea más puntual. dist 0 sigue siendo 0 (centro pleno).
+    const sharpDist = (dist: number): number =>
+      Math.pow(Math.min(dist / RADIUS, 1), CENTER_SHARPNESS) * RADIUS;
+
+    function updateDrumVisuals(center: number) {
       const CENTER_GAP = 8; // px extra separation around the center
-      if (prevCenter >= 0) {
-        const prevLo = Math.max(0, prevCenter - RADIUS);
-        const prevHi = Math.min(NUM_ITEMS - 1, prevCenter + RADIUS);
+      const nearest = Math.round(center);
+      const lo = Math.max(0, nearest - RADIUS);
+      const hi = Math.min(NUM_ITEMS - 1, nearest + RADIUS);
+
+      // Apaga los items que salieron de la ventana visible.
+      if (prevLo >= 0) {
         for (let i = prevLo; i <= prevHi; i++) {
           if (i < lo || i > hi) {
-            const shift = Math.sign(i - centerIdx) * CENTER_GAP;
+            const shift = Math.sign(i - center) * CENTER_GAP;
             drumItems[i].style.opacity = "0.04";
             drumItems[i].style.transform = `translateX(${shift}px) scale(0.25)`;
             drumItems[i].classList.remove("is-center");
           }
         }
       }
+
       for (let i = lo; i <= hi; i++) {
-        const dist = Math.abs(i - centerIdx);
-        const shift = Math.sign(i - centerIdx) * CENTER_GAP;
-        drumItems[i].style.opacity = String(opacities[dist] ?? 0.04);
-        drumItems[i].style.transform = `translateX(${shift}px) scale(${scales[dist] ?? 0.25})`;
-        drumItems[i].classList.toggle("is-center", dist === 0);
+        const d = sharpDist(Math.abs(i - center));
+        // Separación continua: 0 en el centro, ±CENTER_GAP a partir de 1 item.
+        const shift = Math.max(-1, Math.min(1, i - center)) * CENTER_GAP;
+        drumItems[i].style.opacity = String(sampleCurve(OPACITY_CURVE, d));
+        drumItems[i].style.transform =
+          `translateX(${shift}px) scale(${sampleCurve(SCALE_CURVE, d)})`;
+        drumItems[i].classList.toggle("is-center", i === nearest);
       }
-      prevCenter = centerIdx;
+      prevLo = lo;
+      prevHi = hi;
     }
 
     let scrollSnapTimer: number | undefined;
@@ -920,13 +964,15 @@ import FormModal from "./FormModal.astro";
       () => {
         const now = Date.now();
         const dt = now - lastScrollTime;
-        if (dt > 0) scrollVelocity = Math.abs(drumEl.scrollLeft - lastScrollLeft) / dt;
+        if (dt > 0)
+          scrollVelocity = Math.abs(drumEl.scrollLeft - lastScrollLeft) / dt;
         lastScrollLeft = drumEl.scrollLeft;
         lastScrollTime = now;
 
-        const idx = idxFromScrollLeft();
-        const v = parseFloat((MIN_V + idx * 0.1).toFixed(1));
-        updateDrumVisuals(idx);
+        const center = centerFromScrollLeft();
+        updateDrumVisuals(center);
+        const idx = Math.max(0, Math.min(NUM_ITEMS - 1, Math.round(center)));
+        const v = valueForIdx(idx);
         if (v !== prevDrumV) {
           prevDrumV = v;
           if (!isRated) {
@@ -948,7 +994,10 @@ import FormModal from "./FormModal.astro";
           if (scrollVelocity >= 0.3) {
             // Still has momentum — wait one more beat
             scrollSnapTimer = window.setTimeout(() => {
-              if (!isDragging && !isTouching) { snapToNearest(); removeIsScrolling(); }
+              if (!isDragging && !isTouching) {
+                snapToNearest();
+                removeIsScrolling();
+              }
             }, 80);
           } else {
             snapToNearest();
@@ -961,17 +1010,24 @@ import FormModal from "./FormModal.astro";
 
     // Track de dedo apoyado: sin esto, el timer de 120ms snappea bajo el dedo
     // si el usuario pausa el movimiento sin soltar.
-    drumEl.addEventListener("touchstart", () => {
-      isTouching = true;
-      if (scrollSnapTimer) clearTimeout(scrollSnapTimer);
-      drumEl.classList.add("is-scrolling");
-    }, { passive: true });
+    drumEl.addEventListener(
+      "touchstart",
+      () => {
+        isTouching = true;
+        if (scrollSnapTimer) clearTimeout(scrollSnapTimer);
+        drumEl.classList.add("is-scrolling");
+      },
+      { passive: true },
+    );
     const onTouchRelease = () => {
       isTouching = false;
       // Snap inmediato al soltar: ya sabemos que el gesto terminó, no hay nada
       // que debouncear. El timer del scroll se cancela para que no dispare otro.
       if (scrollSnapTimer) clearTimeout(scrollSnapTimer);
-      if (!isDragging) { snapToNearest(); removeIsScrolling(); }
+      if (!isDragging) {
+        snapToNearest();
+        removeIsScrolling();
+      }
     };
     drumEl.addEventListener("touchend", onTouchRelease, { passive: true });
     drumEl.addEventListener("touchcancel", onTouchRelease, { passive: true });
@@ -987,7 +1043,10 @@ import FormModal from "./FormModal.astro";
         // Debounced snap-to-nearest after wheel stops
         if (wheelSnapTimer) clearTimeout(wheelSnapTimer);
         wheelSnapTimer = window.setTimeout(() => {
-          drumEl.scrollTo({ left: scrollLeftFor(idxFromScrollLeft()), behavior: "smooth" });
+          drumEl.scrollTo({
+            left: scrollLeftFor(idxFromScrollLeft()),
+            behavior: "smooth",
+          });
           removeIsScrolling();
         }, 120);
       },
@@ -1007,7 +1066,9 @@ import FormModal from "./FormModal.astro";
       dragMoved = false;
       dragStartX = e.clientX;
       dragStartScroll = drumEl.scrollLeft;
-      try { drumEl.setPointerCapture(e.pointerId); } catch {}
+      try {
+        drumEl.setPointerCapture(e.pointerId);
+      } catch {}
     });
 
     const DRAG_SPEED = 1.8; // multiplier so reaching the edges doesn't require a huge drag
@@ -1022,14 +1083,24 @@ import FormModal from "./FormModal.astro";
     const endDrag = (e: PointerEvent) => {
       if (!isDragging) return;
       isDragging = false;
-      try { drumEl.releasePointerCapture(e.pointerId); } catch {}
+      try {
+        drumEl.releasePointerCapture(e.pointerId);
+      } catch {}
       // Custom JS scroll doesn't trigger CSS scroll-snap. Snap to nearest item manually
       // so releases always land exactly on a value (including the max, 10).
-      drumEl.scrollTo({ left: scrollLeftFor(idxFromScrollLeft()), behavior: "smooth" });
+      drumEl.scrollTo({
+        left: scrollLeftFor(idxFromScrollLeft()),
+        behavior: "smooth",
+      });
       removeIsScrolling();
       if (dragMoved) {
-        const stopClick = (ev: Event) => { ev.stopPropagation(); };
-        window.addEventListener("click", stopClick, { capture: true, once: true });
+        const stopClick = (ev: Event) => {
+          ev.stopPropagation();
+        };
+        window.addEventListener("click", stopClick, {
+          capture: true,
+          once: true,
+        });
       }
     };
     drumEl.addEventListener("pointerup", endDrag);
@@ -1038,16 +1109,26 @@ import FormModal from "./FormModal.astro";
     function initDrumForValue(v: number) {
       buildDrum();
       syncDrumPadding();
-      const idx = Math.round((v - MIN_V) * 10);
+      // Aproxima el valor entrante (p.ej. 7.9 de datos viejos) al step 0.5 más cercano
+      // y lo mantiene dentro del rango [1, 10].
+      const idx = Math.max(
+        0,
+        Math.min(NUM_ITEMS - 1, Math.round((v - MIN_V) / STEP)),
+      );
       // Pre-cargar prevDrumV con el valor inicial: al fijar scrollLeft abajo se
       // dispara un evento "scroll" programático; sin esto el handler lo trataría
       // como interacción del usuario y auto-calificaría el plato (isRated=true),
       // rompiendo el invariante de "plato nuevo nace sin calificación".
-      prevDrumV = parseFloat((MIN_V + idx * 0.1).toFixed(1));
-      prevCenter = -1;
+      prevDrumV = valueForIdx(idx);
+      // Persistimos el valor ya aproximado al step: así un 7.9 heredado se guarda
+      // como 8 aunque el usuario no toque la rueda. No afecta el invariante de
+      // "sin calificar" porque el rating solo se guarda si isRated es true.
+      ratingInput.value = String(prevDrumV);
+      prevLo = -1;
+      prevHi = -1;
       drumEl.scrollLeft = scrollLeftFor(idx);
       requestAnimationFrame(() => {
-        updateDrumVisuals(idxFromScrollLeft());
+        updateDrumVisuals(centerFromScrollLeft());
       });
     }
 
@@ -1093,9 +1174,9 @@ import FormModal from "./FormModal.astro";
       if (id) {
         // Capturar rating previo desde el cache ANTES del update para detectar
         // la transición null → número (única señal real de "primera calificación").
-        const prevRating = getDishesByRestaurant(restaurantId).find(
-          (d) => d.id === id,
-        )?.rating ?? null;
+        const prevRating =
+          getDishesByRestaurant(restaurantId).find((d) => d.id === id)
+            ?.rating ?? null;
         const updated = updateDish(id, { name, rating, notes, typeId });
         if (updated) {
           emit("dish:updated", updated);
