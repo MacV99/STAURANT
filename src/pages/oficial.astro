@@ -4,6 +4,7 @@ import DishCard from "../components/DishCard.astro";
 import RestaurantHeader from "../components/RestaurantHeader.astro";
 import SortBar from "../components/SortBar.astro";
 import AuthModal from "../components/AuthModal.astro";
+import DishForm from "../components/DishForm.astro";
 import NoticeDialog from "../components/NoticeDialog.astro";
 import type { Dish, Restaurant } from "../lib/data";
 
@@ -96,6 +97,7 @@ const tplRestaurant: Restaurant = {
   </div>
 
   <AuthModal />
+  <DishForm />
   <NoticeDialog />
 
   <template id="tpl-dish-card">
@@ -405,12 +407,12 @@ const tplRestaurant: Restaurant = {
 </style>
 
 <script>
-  import { navigate } from "astro:transitions/client";
   import { supabase } from "../lib/supabase.ts";
   import {
     initCache,
     getRestaurants,
     getDishesByRestaurant,
+    getRestaurantAverage,
     getOfficialRestaurant,
     getOfficialDishes,
     getOfficialRestaurantStat,
@@ -422,6 +424,7 @@ const tplRestaurant: Restaurant = {
     type OfficialRestaurant,
     type OfficialDish,
   } from "../lib/data.ts";
+  import { getRatingClass } from "../scripts/store.ts";
 
   // ─── Estado del módulo ──────────────────────────────────────────────────────
 
@@ -449,6 +452,25 @@ const tplRestaurant: Restaurant = {
     userId = session.user.id;
     await initCache(userId);
     return true;
+  }
+
+  /** Restaurante personal del usuario vinculado a este oficial (o undefined). */
+  function getAdoptedRestaurantId(): string | null {
+    if (!userId || !official) return null;
+    return (
+      getRestaurants().find((r) => r.officialRestaurantId === official!.id)?.id ??
+      null
+    );
+  }
+
+  /** TU calificación de un plato oficial (null si anónimo / no calificado). */
+  function getMyRatingFor(officialDishId: string): number | null {
+    const rid = getAdoptedRestaurantId();
+    if (!rid) return null;
+    return (
+      getDishesByRestaurant(rid).find((d) => d.officialDishId === officialDishId)
+        ?.rating ?? null
+    );
   }
 
   // ─── Intención pendiente (reanudar tras redirect de Google) ─────────────────
@@ -481,15 +503,13 @@ const tplRestaurant: Restaurant = {
     });
   }
 
-  /** Con sesión: adopta el restaurante (queda VISITADO), y lleva al usuario a su
-   *  vista REAL (/restaurante) con el modal de calificación abierto en ese plato.
-   *  Así la experiencia es idéntica a calificar un oficial desde el perfil. */
+  /** Con sesión: adopta el restaurante (queda VISITADO) y abre el MISMO modal de
+   *  calificación (DishForm) aquí mismo, sin sacar al usuario de la carta. Así
+   *  puede calificar varios platos del tirón; cada card queda con su nota. */
   async function continueRate(od: OfficialDish): Promise<void> {
     if (!userId || !official) return;
 
-    let rid =
-      getRestaurants().find((r) => r.officialRestaurantId === official!.id)?.id ??
-      null;
+    let rid = getAdoptedRestaurantId();
     if (!rid) {
       const created = await adoptOfficialRestaurant(official.id);
       if (!created) {
@@ -522,9 +542,9 @@ const tplRestaurant: Restaurant = {
       return;
     }
 
-    // La página /restaurante lee esta señal y abre el DishForm en ese plato.
-    sessionStorage.setItem("staurant_open_rate", personal.id);
-    navigate(`/restaurante?id=${rid}`);
+    // Reflejar la adopción en la UI y abrir el modal de rating en ESTE plato.
+    renderAll();
+    (window as any).dishForm?.open("edit", rid, personal);
   }
 
   // ─── Render (mismos componentes que /restaurante) ───────────────────────────
@@ -572,12 +592,19 @@ const tplRestaurant: Restaurant = {
       citiesEl.hidden = false;
     }
 
-    // Badge = TU calificación del lugar (aún no calificas → estrella vacía).
-    // La nota de la comunidad va aparte, en el pill global (🌐).
+    // Badge = TU promedio del lugar (si ya calificaste algún plato); si no,
+    // estrella vacía. La nota de la comunidad va aparte, en el pill global (🌐).
     const stat = getOfficialRestaurantStat(official!.id);
+    const rid = getAdoptedRestaurantId();
+    const myAvg = rid ? getRestaurantAverage(rid) : null;
     const badge = div.querySelector(".rating-badge")!;
-    badge.className = "rating-badge badge-empty";
-    badge.innerHTML = '<i class="bi bi-star"></i>';
+    if (myAvg === null) {
+      badge.className = "rating-badge badge-empty";
+      badge.innerHTML = '<i class="bi bi-star"></i>';
+    } else {
+      badge.className = `rating-badge ${getRatingClass(myAvg)}`;
+      badge.innerHTML = `<span class="rating-num">${myAvg}</span>`;
+    }
     if (stat && stat.ratingsCount > 0) {
       const pillsRow = div.querySelector<HTMLElement>(".rh-pills");
       pillsRow?.insertBefore(
@@ -639,11 +666,17 @@ const tplRestaurant: Restaurant = {
       notesEl?.remove();
     }
 
-    // Badge = TU calificación (aún no calificas → estrella vacía, invita a tocar).
-    // La nota de la comunidad va aparte, en el pill global (🌐) de arriba.
+    // Badge = TU nota (si ya calificaste este plato); si no, estrella vacía que
+    // invita a tocar. La nota de la comunidad va en el pill global (🌐).
+    const myRating = getMyRatingFor(od.id);
     const badge = article.querySelector(".rating-badge")!;
-    badge.className = "rating-badge badge-empty badge-btn";
-    badge.innerHTML = '<i class="bi bi-star"></i>';
+    if (myRating === null) {
+      badge.className = "rating-badge badge-empty badge-btn";
+      badge.innerHTML = '<i class="bi bi-star"></i>';
+    } else {
+      badge.className = `rating-badge ${getRatingClass(myRating)} badge-btn`;
+      badge.innerHTML = `<span class="rating-num">${myRating}</span>`;
+    }
     badge.addEventListener("click", (e) => {
       e.stopPropagation();
       rateFlow(od);
@@ -874,6 +907,14 @@ const tplRestaurant: Restaurant = {
     if (official) renderAll();
   });
 
+  // Tras calificar en el DishForm: repinta tu nota en la card y refresca el
+  // promedio global (el RPC ya incluye tu nueva calificación).
+  document.addEventListener("dish:updated", () => {
+    if (!official) return;
+    renderAll();
+    void fetchOfficialStats();
+  });
+
   // ─── Init en astro:page-load ────────────────────────────────────────────────
 
   document.addEventListener("astro:page-load", async () => {
@@ -900,17 +941,6 @@ const tplRestaurant: Restaurant = {
     const authed = await ensureAuthState();
     // Anónimo: initCache no corre (no dispara stats), pedimos stats directo.
     if (!authed) void fetchOfficialStats();
-
-    // Si ya tiene ESTE restaurante en su perfil → llevarlo a su vista REAL.
-    if (authed) {
-      const adopted = getRestaurants().find(
-        (r) => r.officialRestaurantId === id,
-      );
-      if (adopted) {
-        navigate(`/restaurante?id=${adopted.id}`);
-        return;
-      }
-    }
 
     const [off, ds] = await Promise.all([
       getOfficialRestaurant(id),

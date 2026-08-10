@@ -1098,16 +1098,5 @@ const tplRestaurant: Restaurant = {
 
     updateDishSortUI();
     rerenderRestaurantePage();
-
-    // Llegada desde la carta pública del QR (/oficial): abrir directo el modal de
-    // calificación en el plato que el usuario tocó, ya en su vista real.
-    const openRateId = sessionStorage.getItem("staurant_open_rate");
-    if (openRateId) {
-      sessionStorage.removeItem("staurant_open_rate");
-      const d = getDishesByRestaurant(currentRestaurant.id).find(
-        (x) => x.id === openRateId,
-      );
-      if (d) (window as any).dishForm?.open("edit", currentRestaurant.id, d);
-    }
   });
 </script>
