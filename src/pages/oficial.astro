@@ -422,7 +422,6 @@ const tplRestaurant: Restaurant = {
     type OfficialRestaurant,
     type OfficialDish,
   } from "../lib/data.ts";
-  import { getRatingClass } from "../scripts/store.ts";
 
   // ─── Estado del módulo ──────────────────────────────────────────────────────
 
@@ -573,17 +572,12 @@ const tplRestaurant: Restaurant = {
       citiesEl.hidden = false;
     }
 
-    // Badge de rating GLOBAL
+    // Badge = TU calificación del lugar (aún no calificas → estrella vacía).
+    // La nota de la comunidad va aparte, en el pill global (🌐).
     const stat = getOfficialRestaurantStat(official!.id);
-    const avg = stat && stat.ratingsCount > 0 ? stat.avgRating : null;
     const badge = div.querySelector(".rating-badge")!;
-    if (avg === null) {
-      badge.className = "rating-badge badge-empty";
-      badge.innerHTML = '<i class="bi bi-star"></i>';
-    } else {
-      badge.className = `rating-badge ${getRatingClass(avg)}`;
-      badge.innerHTML = `<span class="rating-num">${avg}</span>`;
-    }
+    badge.className = "rating-badge badge-empty";
+    badge.innerHTML = '<i class="bi bi-star"></i>';
     if (stat && stat.ratingsCount > 0) {
       const pillsRow = div.querySelector<HTMLElement>(".rh-pills");
       pillsRow?.insertBefore(
@@ -645,16 +639,11 @@ const tplRestaurant: Restaurant = {
       notesEl?.remove();
     }
 
-    // Badge = rating GLOBAL, clickeable para calificar (igual que en el detalle).
-    const avg = stat && stat.ratingsCount > 0 ? stat.avgRating : null;
+    // Badge = TU calificación (aún no calificas → estrella vacía, invita a tocar).
+    // La nota de la comunidad va aparte, en el pill global (🌐) de arriba.
     const badge = article.querySelector(".rating-badge")!;
-    if (avg === null) {
-      badge.className = "rating-badge badge-empty badge-btn";
-      badge.innerHTML = '<i class="bi bi-star"></i>';
-    } else {
-      badge.className = `rating-badge ${getRatingClass(avg)} badge-btn`;
-      badge.innerHTML = `<span class="rating-num">${avg}</span>`;
-    }
+    badge.className = "rating-badge badge-empty badge-btn";
+    badge.innerHTML = '<i class="bi bi-star"></i>';
     badge.addEventListener("click", (e) => {
       e.stopPropagation();
       rateFlow(od);
