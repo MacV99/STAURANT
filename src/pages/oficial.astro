@@ -32,11 +32,19 @@ const tplRestaurant: Restaurant = {
 };
 ---
 
-<Layout1 title="Restaurante · STAURANT">
+<Layout1 title="Restaurante · STAURANT" bare>
   <div class="detail-page flex-column">
-    <a id="back-link" href="/" class="back-link flex-row" hidden>
-      <i class="bi bi-arrow-left"></i> Volver
-    </a>
+    <div class="public-topbar flex-row">
+      <a href="/" class="pt-brand flex-row" aria-label="STAURANT">
+        <img src="/img/logo2.png" alt="STAURANT" class="pt-logo" />
+      </a>
+      <a id="login-link" href="/login" class="pt-action flex-row" hidden>
+        <i class="bi bi-box-arrow-in-right"></i> Iniciar sesión
+      </a>
+      <a id="home-link" href="/" class="pt-action flex-row" hidden>
+        <i class="bi bi-house-door"></i> Mi inicio
+      </a>
+    </div>
 
     <div id="restaurant-header" class="restaurant-header"></div>
 
@@ -178,20 +186,52 @@ const tplRestaurant: Restaurant = {
     gap: 24px;
   }
 
-  .back-link {
-    justify-content: flex-start;
-    gap: 6px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--clr-primary);
-    letter-spacing: 1px;
-    width: fit-content;
-    padding: 6px 0;
-    transition: var(--transition);
+  .public-topbar {
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 12px;
   }
 
-  .back-link[hidden] {
+  .pt-brand {
+    justify-content: flex-start;
+    text-decoration: none;
+  }
+
+  .pt-logo {
+    height: 40px;
+    width: auto;
+    object-fit: contain;
+  }
+
+  .pt-action {
+    justify-content: flex-end;
+    gap: 6px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--clr-primary);
+    letter-spacing: 0.3px;
+    text-decoration: none;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1.5px solid var(--clr-border);
+    transition: var(--transition);
+    white-space: nowrap;
+  }
+
+  .pt-action[hidden] {
     display: none;
+  }
+
+  .pt-action i {
+    font-size: 0.95rem;
+  }
+
+  @media (hover: hover) {
+    .pt-action:hover {
+      border-color: var(--clr-primary);
+      background: var(--clr-white2);
+    }
   }
 
   .restaurant-header {
@@ -352,10 +392,6 @@ const tplRestaurant: Restaurant = {
   }
 
   @media (hover: hover) {
-    .back-link:hover {
-      color: var(--clr-text);
-    }
-
     .type-pill:hover {
       border-color: var(--clr-border2);
     }
@@ -901,14 +937,11 @@ const tplRestaurant: Restaurant = {
 
     document.title = `${official.name} · STAURANT`;
 
-    // "Volver" solo tiene sentido para usuarios con cuenta (van a su inicio).
-    const backLink = document.getElementById(
-      "back-link",
-    ) as HTMLAnchorElement | null;
-    if (backLink) {
-      backLink.hidden = !authed;
-      backLink.href = "/";
-    }
+    // Barra pública: anónimo ve "Iniciar sesión"; con cuenta ve "Mi inicio".
+    const loginLink = document.getElementById("login-link");
+    const homeLink = document.getElementById("home-link");
+    if (loginLink) loginLink.hidden = authed;
+    if (homeLink) homeLink.hidden = !authed;
 
     wireControls();
     renderAll();
