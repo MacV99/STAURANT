@@ -1,6 +1,8 @@
 ---
 import Layout1 from "../layouts/Layout1.astro";
 import NoticeDialog from "../components/NoticeDialog.astro";
+import DishForm from "../components/DishForm.astro";
+import AuthModal from "../components/AuthModal.astro";
 ---
 
 <Layout1 title="Restaurante oficial · STAURANT">
@@ -18,6 +20,8 @@ import NoticeDialog from "../components/NoticeDialog.astro";
   </div>
 
   <NoticeDialog />
+  <AuthModal />
+  <DishForm />
 </Layout1>
 
 <style>
@@ -207,6 +211,56 @@ import NoticeDialog from "../components/NoticeDialog.astro";
     align-self: flex-start;
   }
 
+  /* Acción de calificar por plato (carta pública) */
+  .oficial-dish .od-action {
+    margin-top: 10px;
+  }
+
+  .od-rate-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: fit-content;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1.5px solid var(--clr-primary);
+    background: transparent;
+    color: var(--clr-primary);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .od-rate-btn i {
+    font-size: 0.9rem;
+  }
+
+  /* Estado "ya calificaste": muestra tu nota + acción editar */
+  .od-rate-btn.is-rated {
+    border-color: var(--clr-border);
+    color: var(--clr-text);
+  }
+
+  .od-rate-btn .od-my-score {
+    font-weight: 800;
+    color: var(--clr-primary);
+  }
+
+  @media (hover: hover) {
+    .od-rate-btn:hover {
+      background: var(--clr-primary);
+      color: var(--clr-white);
+    }
+
+    .od-rate-btn.is-rated:hover {
+      background: var(--clr-white2);
+      color: var(--clr-text);
+    }
+  }
+
   @media (min-width: 768px) {
     .oficial-card {
       padding: 24px 28px;
@@ -224,11 +278,15 @@ import NoticeDialog from "../components/NoticeDialog.astro";
   import {
     initCache,
     getRestaurants,
+    getDishesByRestaurant,
     getOfficialRestaurant,
     getOfficialDishes,
     getOfficialRestaurantStat,
     getOfficialDishStat,
     adoptOfficialRestaurant,
+    syncOfficialMenus,
+    markAsVisited,
+    fetchOfficialStats,
     type OfficialRestaurant,
     type OfficialDish,
   } from "../lib/data.ts";
@@ -237,6 +295,159 @@ import NoticeDialog from "../components/NoticeDialog.astro";
   let official: OfficialRestaurant | null = null;
   let dishes: OfficialDish[] = [];
   let adopting = false;
+  // userId = null → visitante anónimo (puede navegar la carta pero no calificar).
+  let userId: string | null = null;
+
+  // ─── Auth / caché del visitante ─────────────────────────────────────────────
+
+  /** Sincroniza el estado de sesión: si hay usuario, deja el caché personal listo.
+   *  Devuelve true si quedó autenticado. */
+  async function ensureAuthState(): Promise<boolean> {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      userId = null;
+      return false;
+    }
+    userId = session.user.id;
+    await initCache(userId);
+    return true;
+  }
+
+  /** Calificación PERSONAL del visitante para un plato oficial (o null). */
+  function getMyRatingFor(officialDishId: string): number | null {
+    if (!userId || !official) return null;
+    const rid = getRestaurants().find(
+      (r) => r.officialRestaurantId === official!.id,
+    )?.id;
+    if (!rid) return null;
+    return (
+      getDishesByRestaurant(rid).find((d) => d.officialDishId === officialDishId)
+        ?.rating ?? null
+    );
+  }
+
+  // ─── Intención pendiente (reanudar tras redirect de Google) ─────────────────
+
+  /** Persiste a dónde volver y qué acción reanudar tras el login con Google. */
+  function storeIntent(officialDishId?: string): void {
+    if (!official) return;
+    localStorage.setItem("staurant_return_to", `/oficial?id=${official.id}`);
+    localStorage.setItem(
+      "staurant_pending",
+      JSON.stringify({
+        officialId: official.id,
+        officialDishId: officialDishId ?? null,
+      }),
+    );
+  }
+
+  // ─── Flujo de calificación ──────────────────────────────────────────────────
+
+  /** Punto de entrada del botón "Calificar": gatea auth sin sacar de la carta. */
+  function rateFlow(od: OfficialDish): void {
+    if (userId) {
+      void continueRate(od);
+      return;
+    }
+    (window as any).authModal?.open({
+      title: "Inicia sesión para calificar",
+      onSuccess: async () => {
+        if (await ensureAuthState()) {
+          renderDishes();
+          await continueRate(od);
+        }
+      },
+      onBeforeGoogle: () => storeIntent(od.id),
+    });
+  }
+
+  /** Con sesión activa: adopta el restaurante (queda VISITADO), ubica el plato
+   *  personal clonado y abre el DishForm para poner la nota con el drum. */
+  async function continueRate(od: OfficialDish): Promise<void> {
+    if (!userId || !official) return;
+
+    let rid =
+      getRestaurants().find((r) => r.officialRestaurantId === official!.id)?.id ??
+      null;
+    if (!rid) {
+      const created = await adoptOfficialRestaurant(official.id);
+      if (!created) {
+        (window as any).noticeDialog?.show(
+          "No se pudo preparar la calificación. Intenta de nuevo.",
+          { variant: "error" },
+        );
+        return;
+      }
+      rid = created.id;
+    }
+
+    // Calificar un plato implica que visitó el restaurante.
+    markAsVisited(rid);
+
+    let personal = getDishesByRestaurant(rid).find(
+      (d) => d.officialDishId === od.id,
+    );
+    if (!personal) {
+      // Plato oficial nuevo aún no clonado localmente → sincronizar y reintentar.
+      await syncOfficialMenus();
+      personal = getDishesByRestaurant(rid).find(
+        (d) => d.officialDishId === od.id,
+      );
+    }
+    if (!personal) {
+      (window as any).noticeDialog?.show(
+        "No se pudo preparar la calificación. Intenta de nuevo.",
+        { variant: "error" },
+      );
+      return;
+    }
+
+    (window as any).dishForm?.open("edit", rid, personal);
+  }
+
+  /** Botón "Agregar a mi colección" del header (adopta y navega al detalle). */
+  async function doAdopt(): Promise<void> {
+    if (!official) return;
+    if (!userId) {
+      (window as any).authModal?.open({
+        title: "Inicia sesión para guardar",
+        onSuccess: async () => {
+          if (await ensureAuthState()) {
+            renderHeader();
+            await doAdopt();
+          }
+        },
+        onBeforeGoogle: () => storeIntent(),
+      });
+      return;
+    }
+
+    // Candado anti-duplicado: si ya quedó vinculado (otra pestaña, sync, doble
+    // clic) navegamos al existente en vez de crear otro.
+    const already = getRestaurants().find(
+      (r) => r.officialRestaurantId === official!.id,
+    );
+    if (already) {
+      navigate(`/restaurante?id=${already.id}`);
+      return;
+    }
+
+    adopting = true;
+    renderHeader();
+    const created = await adoptOfficialRestaurant(official.id);
+    adopting = false;
+    if (created) {
+      navigate(`/restaurante?id=${created.id}`);
+    } else {
+      renderHeader();
+      (window as any).noticeDialog?.show(
+        "No se pudo agregar el restaurante. Inténtalo de nuevo.",
+        { variant: "error" },
+      );
+    }
+  }
 
   function escapeHtml(s: string): string {
     return s
@@ -330,31 +541,7 @@ import NoticeDialog from "../components/NoticeDialog.astro";
         btn.innerHTML = `<i class="bi bi-hourglass-split"></i> Agregando...`;
       } else {
         btn.innerHTML = `<i class="bi bi-plus-lg"></i> Agregar a mi colección`;
-        btn.onclick = async () => {
-          // Candado anti-duplicado: si entre el render y el clic ya quedó vinculado
-          // a este oficial (otra pestaña, sync en segundo plano, doble clic), no se
-          // vuelve a adoptar — se navega al que ya existe.
-          const already = getRestaurants().find(
-            (r) => r.officialRestaurantId === official!.id,
-          );
-          if (already) {
-            navigate(`/restaurante?id=${already.id}`);
-            return;
-          }
-          adopting = true;
-          renderHeader();
-          const created = await adoptOfficialRestaurant(official!.id);
-          adopting = false;
-          if (created) {
-            navigate(`/restaurante?id=${created.id}`);
-          } else {
-            renderHeader();
-            (window as any).noticeDialog?.show(
-              "No se pudo agregar el restaurante. Inténtalo de nuevo.",
-              { variant: "error" },
-            );
-          }
-        };
+        btn.onclick = () => void doAdopt();
       }
       card.appendChild(btn);
     }
@@ -412,6 +599,22 @@ import NoticeDialog from "../components/NoticeDialog.astro";
         notes.textContent = d.notes;
         info.appendChild(notes);
       }
+
+      // Acción de calificar. Muestra la nota personal si ya calificó.
+      const action = document.createElement("div");
+      action.className = "od-action";
+      const myRating = getMyRatingFor(d.id);
+      const rateBtn = document.createElement("button");
+      rateBtn.type = "button";
+      rateBtn.className = "od-rate-btn" + (myRating !== null ? " is-rated" : "");
+      rateBtn.innerHTML =
+        myRating !== null
+          ? `<i class="bi bi-star-fill"></i> Tu nota <span class="od-my-score">${myRating}</span> · Editar`
+          : `<i class="bi bi-star"></i> Calificar`;
+      rateBtn.onclick = () => rateFlow(d);
+      action.appendChild(rateBtn);
+      info.appendChild(action);
+
       article.appendChild(info);
 
       if (d.imageUrl) {
@@ -436,18 +639,23 @@ import NoticeDialog from "../components/NoticeDialog.astro";
     if (official) renderAll();
   });
   document.addEventListener("cache:synced", () => {
-    if (official) renderHeader();
+    if (official) renderDishes();
+  });
+  // Tras calificar en el DishForm: repinta la nota propia y refresca el promedio
+  // global (el RPC agrega la nueva calificación del usuario).
+  document.addEventListener("dish:updated", () => {
+    if (!official) return;
+    renderDishes();
+    void fetchOfficialStats();
   });
 
   document.addEventListener("astro:page-load", async () => {
     const headerEl = document.getElementById("oficial-header");
     if (!headerEl) return;
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session) {
-      window.location.href = "/login";
+    const id = new URLSearchParams(window.location.search).get("id") ?? "";
+    if (!id) {
+      window.location.href = "/explorar";
       return;
     }
 
@@ -462,13 +670,12 @@ import NoticeDialog from "../components/NoticeDialog.astro";
       }
     }
 
-    await initCache(session.user.id);
-
-    const id = new URLSearchParams(window.location.search).get("id") ?? "";
-    if (!id) {
-      window.location.href = "/explorar";
-      return;
-    }
+    // Carta PÚBLICA: un visitante anónimo puede navegarla. Si hay sesión, dejamos
+    // el caché personal listo para mostrar y gestionar sus calificaciones.
+    const authed = await ensureAuthState();
+    // Sin sesión no corre initCache (que dispara fetchOfficialStats), así que
+    // pedimos las stats globales directo para pintar los promedios de la carta.
+    if (!authed) void fetchOfficialStats();
 
     const [off, ds] = await Promise.all([
       getOfficialRestaurant(id),
@@ -484,5 +691,29 @@ import NoticeDialog from "../components/NoticeDialog.astro";
 
     document.title = `${official.name} · STAURANT`;
     renderAll();
+
+    // Reanudar la acción pendiente tras volver del login con Google.
+    if (userId) {
+      const raw = localStorage.getItem("staurant_pending");
+      if (raw) {
+        localStorage.removeItem("staurant_pending");
+        try {
+          const p = JSON.parse(raw) as {
+            officialId: string;
+            officialDishId: string | null;
+          };
+          if (p.officialId === official.id) {
+            if (p.officialDishId) {
+              const od = dishes.find((d) => d.id === p.officialDishId);
+              if (od) await continueRate(od);
+            } else {
+              await doAdopt();
+            }
+          }
+        } catch {
+          /* intención corrupta → ignorar */
+        }
+      }
+    }
   });
 </script>

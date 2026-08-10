@@ -15,8 +15,18 @@
     error,
   } = await supabase.auth.getSession();
 
+  // returnTo: si una acción gateada (ej: calificar en la carta pública) inició
+  // el login con Google, volvemos a esa misma página para reanudar sin perder
+  // el ritmo. Solo se aceptan rutas internas (empiezan con "/") por seguridad.
+  const returnTo = localStorage.getItem("staurant_return_to");
+  localStorage.removeItem("staurant_return_to");
+  const safeReturn =
+    returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")
+      ? returnTo
+      : "/";
+
   if (session) {
-    window.location.replace("/");
+    window.location.replace(safeReturn);
   } else {
     const params = error ? `?error=${encodeURIComponent(error.message)}` : "";
     window.location.replace(`/login${params}`);

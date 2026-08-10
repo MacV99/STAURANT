@@ -8,10 +8,16 @@ import FormModal from "./FormModal.astro";
   <input type="hidden" id="df-type-id" />
   <input type="hidden" id="df-rating" value="5" />
 
-  <p id="df-official-note" class="official-note flex-row" hidden>
-    <i class="bi bi-patch-check-fill"></i>
-    <span>Plato oficial. Solo puedes registrar tu calificación.</span>
-  </p>
+  <div class="official-fields flex-column" id="df-official-fields" hidden>
+    <div class="official-row flex-column" id="df-official-type-row">
+      <span class="official-label">Tipo de plato</span>
+      <span class="official-value" id="df-official-type"></span>
+    </div>
+    <div class="official-row flex-column">
+      <span class="official-label">Nombre del plato</span>
+      <span class="official-value" id="df-official-name"></span>
+    </div>
+  </div>
 
   <div class="type-field flex-column" id="df-type-field">
     <span class="label-text flex-row"
@@ -100,58 +106,40 @@ import FormModal from "./FormModal.astro";
     font-size: 0.9rem;
   }
 
-  .official-note {
-    justify-content: flex-start;
-    gap: 8px;
-    padding: 10px 12px;
-    border-radius: var(--border-radius);
-    background: rgba(212, 160, 23, 0.12);
-    border: 1px solid rgba(212, 160, 23, 0.45);
-    font-size: 0.8rem;
-    font-weight: 500;
-    line-height: 1.4;
-    color: var(--clr-text);
+  /* Plato oficial: nombre y tipo se muestran como texto plano (no editables).
+     Solo notas y calificación quedan como inputs. */
+  .official-fields {
+    align-items: stretch;
+    gap: 14px;
   }
 
-  .official-note[hidden] {
+  .official-fields[hidden] {
     display: none;
   }
 
-  /* Campos bloqueados en platos oficiales (nombre, notas, tipo) */
-  #df-name-field.is-locked input,
-  #df-notes-field.is-locked textarea {
-    background: var(--clr-white2);
+  .official-row {
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .official-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 1px;
     color: var(--clr-text);
-    opacity: 0.7;
-    cursor: not-allowed;
+    text-transform: uppercase;
   }
 
-  #df-notes-field.is-locked textarea {
-    resize: none;
+  .official-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--clr-text);
+    text-transform: uppercase;
+    line-height: 1.3;
   }
 
-  .type-combobox.is-locked {
-    pointer-events: none;
-  }
-
-  .type-combobox.is-locked .type-input-wrap {
-    background: var(--clr-white2);
-    opacity: 0.7;
-  }
-
-  .type-combobox.is-locked .type-search-input {
-    cursor: not-allowed;
-  }
-
-  .type-combobox.is-locked .type-chevron,
-  .type-combobox.is-locked .type-clear-btn {
+  #df-official-type-row[hidden] {
     display: none;
-  }
-
-  .official-note i {
-    color: #d4a017;
-    font-size: 0.95rem;
-    flex-shrink: 0;
   }
 
   .rating-field {
@@ -561,13 +549,20 @@ import FormModal from "./FormModal.astro";
     const drumOuterEl = document.getElementById("df-drum-outer") as HTMLElement;
     const drumEl = document.getElementById("df-rating-drum") as HTMLElement;
     const drumTrackEl = document.getElementById("df-drum-track") as HTMLElement;
-    const officialNoteEl = document.getElementById(
-      "df-official-note",
+    const officialFieldsEl = document.getElementById(
+      "df-official-fields",
     ) as HTMLElement;
+    const officialTypeRowEl = document.getElementById(
+      "df-official-type-row",
+    ) as HTMLElement;
+    const officialTypeEl = document.getElementById(
+      "df-official-type",
+    ) as HTMLElement;
+    const officialNameEl = document.getElementById(
+      "df-official-name",
+    ) as HTMLElement;
+    const typeFieldEl = document.getElementById("df-type-field") as HTMLElement;
     const nameFieldEl = document.getElementById("df-name-field") as HTMLElement;
-    const notesFieldEl = document.getElementById(
-      "df-notes-field",
-    ) as HTMLElement;
 
     // Platos oficiales: nombre/tipo/notas los administra el sistema, solo se permite
     // calificar. Ocultamos esos campos y mostramos el aviso correspondiente.
@@ -751,15 +746,12 @@ import FormModal from "./FormModal.astro";
       restaurantIdInput.value = restaurantId;
 
       isOfficial = mode === "edit" && !!data?.officialDishId;
-      // Plato oficial: nombre, tipo y notas se MUESTRAN pero quedan bloqueados
-      // (visibles, no editables). Solo la calificación es modificable.
-      officialNoteEl.hidden = !isOfficial;
-      nameInput.readOnly = isOfficial;
-      nameFieldEl.classList.toggle("is-locked", isOfficial);
-      notesInput.readOnly = isOfficial;
-      notesFieldEl.classList.toggle("is-locked", isOfficial);
-      searchInput.readOnly = isOfficial;
-      comboboxEl.classList.toggle("is-locked", isOfficial);
+      // Plato oficial: nombre y tipo los administra el restaurante → se muestran
+      // como texto plano (no inputs). Solo notas y calificación son editables.
+      // Ocultamos los campos editables de nombre/tipo y mostramos el bloque display.
+      officialFieldsEl.hidden = !isOfficial;
+      typeFieldEl.hidden = isOfficial;
+      nameFieldEl.hidden = isOfficial;
 
       if (mode === "edit" && data) {
         titleEl.textContent = isOfficial ? "Calificar plato" : "Editar plato";
@@ -773,8 +765,15 @@ import FormModal from "./FormModal.astro";
           setRated(false);
         }
         initTypeCombobox(data.typeId ?? null);
-        // El botón de limpiar tipo no debe aparecer en platos oficiales.
-        if (isOfficial) clearBtn.hidden = true;
+
+        // Rellenar el bloque de solo lectura para platos oficiales.
+        if (isOfficial) {
+          const typeName =
+            getDishTypes().find((t) => t.id === data.typeId)?.name ?? "";
+          officialNameEl.textContent = data.name;
+          officialTypeEl.textContent = typeName;
+          officialTypeRowEl.hidden = !typeName;
+        }
       } else {
         titleEl.textContent = "Nuevo plato";
         idInput.value = "";
