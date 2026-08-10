@@ -1,34 +1,179 @@
 ---
 import Layout1 from "../layouts/Layout1.astro";
-import NoticeDialog from "../components/NoticeDialog.astro";
-import DishForm from "../components/DishForm.astro";
+import DishCard from "../components/DishCard.astro";
+import RestaurantHeader from "../components/RestaurantHeader.astro";
+import SortBar from "../components/SortBar.astro";
 import AuthModal from "../components/AuthModal.astro";
+import NoticeDialog from "../components/NoticeDialog.astro";
+import type { Dish, Restaurant } from "../lib/data";
+
+// Plantillas para clonar en runtime (mismo patrón que restaurante.astro): así la
+// carta pública del QR usa EXACTAMENTE las mismas cards que el detalle personal.
+const tplDish: Dish = {
+  id: "",
+  restaurantId: "",
+  typeId: null,
+  name: "...",
+  rating: 5,
+  notes: " ",
+  createdAt: "",
+  updatedAt: "",
+  officialDishId: null,
+};
+const tplRestaurant: Restaurant = {
+  id: "",
+  name: "...",
+  status: "visited",
+  notes: " ",
+  cities: [],
+  createdAt: "",
+  updatedAt: "",
+  officialRestaurantId: "x",
+};
 ---
 
-<Layout1 title="Restaurante oficial · STAURANT">
-  <div class="oficial-page flex-column">
-    <a id="oficial-back" href="/explorar" class="back-link flex-row">
-      <i class="bi bi-arrow-left"></i> Explorar
+<Layout1 title="Restaurante · STAURANT">
+  <div class="detail-page flex-column">
+    <a id="back-link" href="/" class="back-link flex-row" hidden>
+      <i class="bi bi-arrow-left"></i> Volver
     </a>
 
-    <div id="oficial-header" class="oficial-header"></div>
+    <div id="restaurant-header" class="restaurant-header"></div>
 
-    <div class="oficial-dishes flex-column">
-      <h2 class="oficial-dishes-title">Carta</h2>
-      <div id="oficial-dishes-list" class="flex-column"></div>
+    <div class="dishes-section flex-column">
+      <div class="dishes-top flex-row">
+        <h2 class="dishes-title">Platos</h2>
+      </div>
+
+      <div class="dish-search-wrap">
+        <i class="bi bi-search-fill dish-search-icon"></i>
+        <input
+          id="dish-search"
+          class="dish-search-input"
+          type="search"
+          placeholder="Buscar plato..."
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button
+          id="dish-search-clear"
+          class="dish-search-clear"
+          type="button"
+          aria-label="Limpiar búsqueda"
+          hidden
+        >
+          <i class="bi bi-x-circle-fill"></i>
+        </button>
+      </div>
+
+      <div class="dishes-controls flex-row">
+        <SortBar
+          pills={[
+            { field: "rating", label: "Rating" },
+            { field: "name", label: "Nombre" },
+          ]}
+        />
+        <div class="type-filter-wrap">
+          <button id="dish-type-btn" class="type-pill">
+            <span class="type-pill-label">Tipo</span>
+            <span id="dish-type-value" class="type-pill-value">Todos</span>
+            <i class="bi bi-chevron-down"></i>
+          </button>
+          <div id="dish-type-dropdown" class="type-dropdown" hidden></div>
+        </div>
+      </div>
+
+      <div id="dishes-list" class="flex-column"></div>
     </div>
   </div>
 
-  <NoticeDialog />
   <AuthModal />
-  <DishForm />
+  <NoticeDialog />
+
+  <template id="tpl-dish-card">
+    <DishCard dish={tplDish} typeName="..." />
+  </template>
+
+  <template id="tpl-restaurant-header">
+    <RestaurantHeader restaurant={tplRestaurant} avg={5} dishCount={0} />
+  </template>
 </Layout1>
 
+<style is:global>
+  #dish-type-dropdown .type-option {
+    padding: 8px 12px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--clr-text);
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background 0.1s ease;
+    border-bottom: 1px solid var(--clr-border);
+  }
+
+  #dish-type-dropdown .type-option:last-child {
+    border-bottom: none;
+  }
+
+  #dish-type-dropdown .type-option.is-selected {
+    color: var(--clr-primary);
+    font-weight: 700;
+  }
+
+  #dish-type-dropdown .type-option.is-none {
+    color: var(--clr-text);
+    opacity: 0.55;
+    text-transform: none;
+    letter-spacing: 0;
+    border-bottom: 1px solid var(--clr-border);
+  }
+
+  #dish-type-dropdown .type-option.is-empty {
+    color: var(--clr-text);
+    opacity: 0.5;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+    cursor: default;
+    text-align: center;
+    padding: 14px;
+  }
+
+  @media (hover: hover) {
+    #dish-type-dropdown .type-option:hover,
+    #dish-type-dropdown .type-option:focus {
+      background: var(--clr-white2);
+    }
+  }
+
+  /* Precio del plato en la carta oficial (dentro de la DishCard reusada) */
+  .dish-card .od-price {
+    display: block;
+    width: fit-content;
+    margin-top: 5px;
+    font-size: 0.92rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    color: var(--clr-primary);
+  }
+
+  /* Card de la carta pública: toda la tarjeta invita a calificar */
+  .dish-card.is-rateable {
+    cursor: pointer;
+  }
+
+  @media (hover: hover) {
+    .dish-card.is-rateable:hover {
+      border-color: var(--clr-border2);
+    }
+  }
+</style>
+
 <style>
-  .oficial-page {
+  .detail-page {
     width: 100%;
     max-width: 760px;
-    padding: 20px 16px 100px;
+    padding: 20px 16px 80px;
     align-items: stretch;
     gap: 24px;
   }
@@ -45,18 +190,163 @@ import AuthModal from "../components/AuthModal.astro";
     transition: var(--transition);
   }
 
-  .oficial-dishes {
+  .back-link[hidden] {
+    display: none;
+  }
+
+  .restaurant-header {
+    width: 100%;
+  }
+
+  .dishes-section {
     align-items: stretch;
     gap: 12px;
   }
 
-  .oficial-dishes-title {
+  .dishes-top {
+    justify-content: flex-start;
+  }
+
+  .dishes-title {
     font-size: 1rem;
     letter-spacing: 2px;
     color: var(--clr-text);
   }
 
-  #oficial-dishes-list {
+  .dish-search-wrap {
+    position: relative;
+    width: 100%;
+  }
+
+  .dish-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--clr-text);
+    opacity: 0.4;
+    font-size: 0.85rem;
+    pointer-events: none;
+  }
+
+  .dish-search-input {
+    width: 100%;
+    padding: 9px 14px 9px 34px;
+    border-radius: var(--border-radius);
+    border: 1.5px solid var(--clr-border);
+    background: var(--clr-white);
+    font-size: 0.88rem;
+    color: var(--clr-text);
+    transition: border-color var(--transition);
+  }
+
+  .dish-search-input::placeholder {
+    color: var(--clr-text);
+    opacity: 0.5;
+  }
+
+  .dish-search-input:focus {
+    outline: none;
+    border-color: var(--clr-border2);
+  }
+
+  .dish-search-input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+  }
+
+  .dish-search-input:not(:placeholder-shown) {
+    padding-right: 38px;
+  }
+
+  .dish-search-clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    padding: 6px;
+    color: var(--clr-text);
+    opacity: 0.55;
+    cursor: pointer;
+    font-size: 1.05rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: opacity var(--transition);
+  }
+
+  .dish-search-clear[hidden] {
+    display: none;
+  }
+
+  @media (hover: hover) {
+    .dish-search-clear:hover {
+      opacity: 1;
+    }
+  }
+
+  .dishes-controls {
+    justify-content: flex-start;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .type-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: solid 1.5px var(--clr-border);
+    background: var(--clr-white);
+    color: var(--clr-text);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: none;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .type-pill.active {
+    background: var(--clr-primary);
+    border-color: var(--clr-primary);
+    color: var(--clr-white);
+  }
+
+  .type-pill-label {
+    opacity: 0.5;
+  }
+
+  .type-pill-value {
+    font-weight: 700;
+  }
+
+  .type-pill i {
+    font-size: 0.65rem;
+  }
+
+  .type-filter-wrap {
+    position: relative;
+  }
+
+  .type-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    min-width: max-content;
+    background: var(--clr-white);
+    border: 1.5px solid var(--clr-border);
+    border-radius: var(--border-radius);
+    z-index: 200;
+    max-height: 220px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  #dishes-list {
     align-items: stretch;
     gap: 5px;
   }
@@ -65,209 +355,15 @@ import AuthModal from "../components/AuthModal.astro";
     .back-link:hover {
       color: var(--clr-text);
     }
+
+    .type-pill:hover {
+      border-color: var(--clr-border2);
+    }
   }
 
   @media (min-width: 768px) {
-    .oficial-page {
+    .detail-page {
       padding: 28px 24px 80px;
-    }
-  }
-</style>
-
-<style is:global>
-  /* Header del restaurante oficial */
-  .oficial-card {
-    background:
-      linear-gradient(
-        315deg,
-        rgba(212, 160, 23, 0.14) 0%,
-        rgba(255, 248, 230, 0) 60%
-      ),
-      var(--clr-white);
-    border: 1px solid rgba(212, 160, 23, 0.5);
-    border-radius: 20px;
-    padding: 22px 20px;
-    align-items: stretch;
-    gap: 12px;
-  }
-
-  .oficial-card .oc-top {
-    justify-content: flex-start;
-    gap: 14px;
-  }
-
-  .oficial-card .oc-meta {
-    align-items: flex-start;
-    gap: 5px;
-    flex: 1;
-    min-width: 0;
-  }
-
-  .oficial-card h1 {
-    font-size: 1.3rem;
-    font-weight: 800;
-    letter-spacing: 0.5px;
-    color: var(--clr-text);
-    word-break: break-word;
-    line-height: 1.25;
-  }
-
-  .oficial-card .oc-pills {
-    justify-content: flex-start;
-    gap: 6px;
-    flex-wrap: wrap;
-  }
-
-  .oficial-card .oc-line {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 0.82rem;
-    color: var(--clr-text);
-    opacity: 0.7;
-  }
-
-  .oficial-card .oc-notes {
-    font-size: 0.85rem;
-    color: var(--clr-text);
-    line-height: 1.5;
-    opacity: 0.8;
-  }
-
-  .oc-adopt-btn {
-    width: 100%;
-    justify-content: center;
-    gap: 8px;
-    margin-top: 4px;
-  }
-
-  /* Etiqueta informativa (no clickeable) cuando ya está en tu lista */
-  .oc-owned-tag {
-    width: 100%;
-    justify-content: center;
-    gap: 8px;
-    margin-top: 4px;
-    padding: 12px 16px;
-    border-radius: var(--border-radius);
-    font-size: 0.85rem;
-    font-weight: 700;
-    letter-spacing: 0.3px;
-    color: #1a7a38;
-    background: #d8f5e2;
-    border: 1px solid #a8e0b8;
-  }
-
-  .oc-owned-tag i {
-    font-size: 0.95rem;
-  }
-
-  /* Plato oficial (solo lectura) */
-  .oficial-dish {
-    background: var(--clr-white);
-    border: 1px solid var(--clr-border);
-    border-radius: 14px;
-    padding: 14px 16px;
-    justify-content: space-between;
-    gap: 12px;
-  }
-
-  .oficial-dish .od-info {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .oficial-dish h4 {
-    font-size: 1rem;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    color: var(--clr-text);
-  }
-
-  .oficial-dish .od-notes {
-    font-size: 0.8rem;
-    color: var(--clr-text);
-    margin-top: 3px;
-    line-height: 1.4;
-    opacity: 0.75;
-  }
-
-  .oficial-dish .od-price {
-    display: block;
-    width: fit-content;
-    margin-top: 5px;
-    font-size: 0.95rem;
-    font-weight: 800;
-    letter-spacing: 0.3px;
-    color: var(--clr-primary);
-  }
-
-  .oficial-dish .od-thumb {
-    flex-shrink: 0;
-    width: 72px;
-    height: 72px;
-    object-fit: cover;
-    border-radius: 12px;
-    border: 1px solid var(--clr-border);
-    align-self: flex-start;
-  }
-
-  /* Acción de calificar por plato (carta pública) */
-  .oficial-dish .od-action {
-    margin-top: 10px;
-  }
-
-  .od-rate-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    width: fit-content;
-    padding: 8px 14px;
-    border-radius: 999px;
-    border: 1.5px solid var(--clr-primary);
-    background: transparent;
-    color: var(--clr-primary);
-    font-size: 0.8rem;
-    font-weight: 700;
-    letter-spacing: 0.4px;
-    cursor: pointer;
-    transition: var(--transition);
-  }
-
-  .od-rate-btn i {
-    font-size: 0.9rem;
-  }
-
-  /* Estado "ya calificaste": muestra tu nota + acción editar */
-  .od-rate-btn.is-rated {
-    border-color: var(--clr-border);
-    color: var(--clr-text);
-  }
-
-  .od-rate-btn .od-my-score {
-    font-weight: 800;
-    color: var(--clr-primary);
-  }
-
-  @media (hover: hover) {
-    .od-rate-btn:hover {
-      background: var(--clr-primary);
-      color: var(--clr-white);
-    }
-
-    .od-rate-btn.is-rated:hover {
-      background: var(--clr-white2);
-      color: var(--clr-text);
-    }
-  }
-
-  @media (min-width: 768px) {
-    .oficial-card {
-      padding: 24px 28px;
-    }
-
-    .oficial-card h1 {
-      font-size: 1.6rem;
     }
   }
 </style>
@@ -292,16 +388,21 @@ import AuthModal from "../components/AuthModal.astro";
   } from "../lib/data.ts";
   import { getRatingClass } from "../scripts/store.ts";
 
+  // ─── Estado del módulo ──────────────────────────────────────────────────────
+
   let official: OfficialRestaurant | null = null;
-  let dishes: OfficialDish[] = [];
-  let adopting = false;
+  let officialDishes: OfficialDish[] = [];
   // userId = null → visitante anónimo (puede navegar la carta pero no calificar).
   let userId: string | null = null;
 
-  // ─── Auth / caché del visitante ─────────────────────────────────────────────
+  type SortField = "rating" | "name";
+  let sortField: SortField = "rating";
+  let sortDir: "asc" | "desc" = "desc";
+  let dishSearch = "";
+  let dishTypeFilter = ""; // por typeName (los oficiales no tienen typeId)
 
-  /** Sincroniza el estado de sesión: si hay usuario, deja el caché personal listo.
-   *  Devuelve true si quedó autenticado. */
+  // ─── Auth ───────────────────────────────────────────────────────────────────
+
   async function ensureAuthState(): Promise<boolean> {
     const {
       data: { session },
@@ -315,22 +416,8 @@ import AuthModal from "../components/AuthModal.astro";
     return true;
   }
 
-  /** Calificación PERSONAL del visitante para un plato oficial (o null). */
-  function getMyRatingFor(officialDishId: string): number | null {
-    if (!userId || !official) return null;
-    const rid = getRestaurants().find(
-      (r) => r.officialRestaurantId === official!.id,
-    )?.id;
-    if (!rid) return null;
-    return (
-      getDishesByRestaurant(rid).find((d) => d.officialDishId === officialDishId)
-        ?.rating ?? null
-    );
-  }
-
   // ─── Intención pendiente (reanudar tras redirect de Google) ─────────────────
 
-  /** Persiste a dónde volver y qué acción reanudar tras el login con Google. */
   function storeIntent(officialDishId?: string): void {
     if (!official) return;
     localStorage.setItem("staurant_return_to", `/oficial?id=${official.id}`);
@@ -345,7 +432,6 @@ import AuthModal from "../components/AuthModal.astro";
 
   // ─── Flujo de calificación ──────────────────────────────────────────────────
 
-  /** Punto de entrada del botón "Calificar": gatea auth sin sacar de la carta. */
   function rateFlow(od: OfficialDish): void {
     if (userId) {
       void continueRate(od);
@@ -354,17 +440,15 @@ import AuthModal from "../components/AuthModal.astro";
     (window as any).authModal?.open({
       title: "Inicia sesión para calificar",
       onSuccess: async () => {
-        if (await ensureAuthState()) {
-          renderDishes();
-          await continueRate(od);
-        }
+        if (await ensureAuthState()) await continueRate(od);
       },
       onBeforeGoogle: () => storeIntent(od.id),
     });
   }
 
-  /** Con sesión activa: adopta el restaurante (queda VISITADO), ubica el plato
-   *  personal clonado y abre el DishForm para poner la nota con el drum. */
+  /** Con sesión: adopta el restaurante (queda VISITADO), y lleva al usuario a su
+   *  vista REAL (/restaurante) con el modal de calificación abierto en ese plato.
+   *  Así la experiencia es idéntica a calificar un oficial desde el perfil. */
   async function continueRate(od: OfficialDish): Promise<void> {
     if (!userId || !official) return;
 
@@ -390,7 +474,6 @@ import AuthModal from "../components/AuthModal.astro";
       (d) => d.officialDishId === od.id,
     );
     if (!personal) {
-      // Plato oficial nuevo aún no clonado localmente → sincronizar y reintentar.
       await syncOfficialMenus();
       personal = getDishesByRestaurant(rid).find(
         (d) => d.officialDishId === od.id,
@@ -404,253 +487,372 @@ import AuthModal from "../components/AuthModal.astro";
       return;
     }
 
-    (window as any).dishForm?.open("edit", rid, personal);
+    // La página /restaurante lee esta señal y abre el DishForm en ese plato.
+    sessionStorage.setItem("staurant_open_rate", personal.id);
+    navigate(`/restaurante?id=${rid}`);
   }
 
-  /** Botón "Agregar a mi colección" del header (adopta y navega al detalle). */
-  async function doAdopt(): Promise<void> {
-    if (!official) return;
-    if (!userId) {
-      (window as any).authModal?.open({
-        title: "Inicia sesión para guardar",
-        onSuccess: async () => {
-          if (await ensureAuthState()) {
-            renderHeader();
-            await doAdopt();
-          }
-        },
-        onBeforeGoogle: () => storeIntent(),
-      });
-      return;
-    }
+  // ─── Render (mismos componentes que /restaurante) ───────────────────────────
 
-    // Candado anti-duplicado: si ya quedó vinculado (otra pestaña, sync, doble
-    // clic) navegamos al existente en vez de crear otro.
-    const already = getRestaurants().find(
-      (r) => r.officialRestaurantId === official!.id,
-    );
-    if (already) {
-      navigate(`/restaurante?id=${already.id}`);
-      return;
-    }
-
-    adopting = true;
-    renderHeader();
-    const created = await adoptOfficialRestaurant(official.id);
-    adopting = false;
-    if (created) {
-      navigate(`/restaurante?id=${created.id}`);
-    } else {
-      renderHeader();
-      (window as any).noticeDialog?.show(
-        "No se pudo agregar el restaurante. Inténtalo de nuevo.",
-        { variant: "error" },
-      );
-    }
+  function buildGlobalRatingPill(avg: number, count: number): HTMLElement {
+    const pill = document.createElement("span");
+    pill.className = "global-rating-pill";
+    pill.title = `Promedio global basado en ${count} ${count === 1 ? "calificación" : "calificaciones"}`;
+    pill.innerHTML = `<i class="bi bi-globe2"></i> ${avg} <span class="grp-count">· ${count}</span>`;
+    return pill;
   }
 
-  function escapeHtml(s: string): string {
-    return s
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
+  function buildHeaderElement(): Element {
+    const tpl = document.getElementById(
+      "tpl-restaurant-header",
+    ) as HTMLTemplateElement;
+    const div = (tpl.content.cloneNode(true) as DocumentFragment).querySelector(
+      ".rh-card",
+    )!;
+    div.removeAttribute("style");
+    div.classList.add("is-official");
 
-  function globalRatingPill(avg: number, count: number): string {
-    return `<span class="global-rating-pill" title="Promedio global basado en ${count} ${count === 1 ? "calificación" : "calificaciones"}"><i class="bi bi-globe2"></i> ${avg} <span class="grp-count">· ${count}</span></span>`;
-  }
-
-  function ratingBadge(avg: number | null): string {
-    if (avg === null) {
-      return `<span class="rating-badge badge-empty"><i class="bi bi-star"></i></span>`;
-    }
-    return `<span class="rating-badge ${getRatingClass(avg)}"><span class="rating-num">${avg}</span></span>`;
-  }
-
-  function renderHeader() {
-    const headerEl = document.getElementById("oficial-header");
-    if (!headerEl || !official) return;
-
-    const stat = getOfficialRestaurantStat(official.id);
-    const avg = stat && stat.ratingsCount > 0 ? stat.avgRating : null;
-    const adoptedRestaurant = getRestaurants().find(
-      (r) => r.officialRestaurantId === official!.id,
-    );
-
-    const card = document.createElement("div");
-    card.className = "oficial-card flex-column";
-
-    const top = document.createElement("div");
-    top.className = "oc-top flex-row";
-    top.innerHTML = ratingBadge(avg);
-
-    const meta = document.createElement("div");
-    meta.className = "oc-meta flex-column";
-
-    const h1 = document.createElement("h1");
-    h1.textContent = official.name;
+    // Nombre + sello verificado
+    const h1 = div.querySelector("h1")!;
+    h1.textContent = "";
+    const tailSpan = document.createElement("span");
+    tailSpan.className = "name-tail-nowrap";
+    tailSpan.textContent = official!.name;
     const verified = document.createElement("i");
     verified.className = "bi bi-patch-check-fill verified-badge";
     verified.title = "Restaurante verificado";
-    h1.appendChild(verified);
-    meta.appendChild(h1);
+    tailSpan.appendChild(verified);
+    h1.appendChild(tailSpan);
 
-    const pills = document.createElement("div");
-    pills.className = "oc-pills flex-row";
-    let pillsHtml = "";
-    if (official.city) {
-      pillsHtml += `<span class="oc-line"><i class="bi bi-geo-alt"></i> ${escapeHtml(official.city)}</span>`;
+    // Conteo de platos
+    const pill = div.querySelector(".dish-count-pill");
+    if (pill)
+      pill.innerHTML = `<i class="bi bi-journal-text"></i> ${officialDishes.length} ${officialDishes.length === 1 ? "plato" : "platos"}`;
+
+    // Ciudad
+    const citiesEl = div.querySelector(".rh-cities") as HTMLElement | null;
+    const citiesListEl = div.querySelector(".rh-cities-list");
+    if (citiesEl && citiesListEl && official!.city) {
+      citiesListEl.textContent = official!.city;
+      citiesEl.hidden = false;
+    }
+
+    // Badge de rating GLOBAL
+    const stat = getOfficialRestaurantStat(official!.id);
+    const avg = stat && stat.ratingsCount > 0 ? stat.avgRating : null;
+    const badge = div.querySelector(".rating-badge")!;
+    if (avg === null) {
+      badge.className = "rating-badge badge-empty";
+      badge.innerHTML = '<i class="bi bi-star"></i>';
+    } else {
+      badge.className = `rating-badge ${getRatingClass(avg)}`;
+      badge.innerHTML = `<span class="rating-num">${avg}</span>`;
     }
     if (stat && stat.ratingsCount > 0) {
-      pillsHtml += globalRatingPill(stat.avgRating, stat.ratingsCount);
-    }
-    pills.innerHTML = pillsHtml;
-    if (pills.childElementCount > 0) meta.appendChild(pills);
-
-    if (official.address) {
-      const addr = document.createElement("span");
-      addr.className = "oc-line";
-      addr.innerHTML = `<i class="bi bi-pin-map"></i> ${escapeHtml(official.address)}`;
-      meta.appendChild(addr);
+      const pillsRow = div.querySelector<HTMLElement>(".rh-pills");
+      pillsRow?.insertBefore(
+        buildGlobalRatingPill(stat.avgRating, stat.ratingsCount),
+        pillsRow.firstChild,
+      );
     }
 
-    top.appendChild(meta);
-    card.appendChild(top);
-
-    if (official.notes) {
-      const notes = document.createElement("p");
-      notes.className = "oc-notes";
-      notes.textContent = official.notes;
-      card.appendChild(notes);
-    }
-
-    // Si ya está en tu lista → solo etiqueta informativa (sin acción).
-    // Si no lo tienes → botón para agregarlo a tu colección.
-    if (adoptedRestaurant) {
-      const tag = document.createElement("div");
-      tag.className = "oc-owned-tag flex-row";
-      tag.innerHTML = `<i class="bi bi-check-circle-fill"></i> Ya está en tu lista`;
-      card.appendChild(tag);
+    // Notas
+    const notesEl = div.querySelector<HTMLElement>(".rh-notes");
+    if (official!.notes) {
+      if (notesEl) notesEl.textContent = official!.notes;
     } else {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "boton oc-adopt-btn flex-row";
-      if (adopting) {
-        btn.disabled = true;
-        btn.innerHTML = `<i class="bi bi-hourglass-split"></i> Agregando...`;
-      } else {
-        btn.innerHTML = `<i class="bi bi-plus-lg"></i> Agregar a mi colección`;
-        btn.onclick = () => void doAdopt();
-      }
-      card.appendChild(btn);
+      notesEl?.remove();
     }
 
-    headerEl.replaceChildren(card);
+    // Sin menú de editar/eliminar: no es el restaurante del usuario todavía.
+    div.querySelector(".rh-menu")?.remove();
+
+    return div;
   }
 
-  function renderDishes() {
-    const listEl = document.getElementById("oficial-dishes-list");
+  function buildDishCardElement(od: OfficialDish): Element {
+    const tpl = document.getElementById("tpl-dish-card") as HTMLTemplateElement;
+    const article = (
+      tpl.content.cloneNode(true) as DocumentFragment
+    ).querySelector("article")!;
+    article.setAttribute("data-id", od.id);
+    article.querySelector("h4")!.textContent = od.name;
+
+    const infoEl = article.querySelector<HTMLElement>(".dish-info")!;
+
+    // Tipo
+    const typeTagEl = article.querySelector<HTMLElement>(".dish-type-tag");
+    if (od.typeName && typeTagEl) typeTagEl.textContent = od.typeName;
+    else typeTagEl?.remove();
+
+    // Precio (dato exclusivo de la carta oficial)
+    if (od.price !== null) {
+      const price = document.createElement("span");
+      price.className = "od-price";
+      price.textContent = `$${od.price.toLocaleString("es-CO")}`;
+      infoEl.appendChild(price);
+    }
+
+    // Pill de rating global del plato
+    const stat = getOfficialDishStat(od.id);
+    if (stat && stat.ratingsCount > 0) {
+      infoEl.appendChild(
+        buildGlobalRatingPill(stat.avgRating, stat.ratingsCount),
+      );
+    }
+
+    // Notas / descripción de la carta
+    const notesEl = article.querySelector<HTMLElement>(".dish-notes");
+    if (od.notes) {
+      if (notesEl) notesEl.textContent = od.notes;
+    } else {
+      notesEl?.remove();
+    }
+
+    // Badge = rating GLOBAL, clickeable para calificar (igual que en el detalle).
+    const avg = stat && stat.ratingsCount > 0 ? stat.avgRating : null;
+    const badge = article.querySelector(".rating-badge")!;
+    if (avg === null) {
+      badge.className = "rating-badge badge-empty badge-btn";
+      badge.innerHTML = '<i class="bi bi-star"></i>';
+    } else {
+      badge.className = `rating-badge ${getRatingClass(avg)} badge-btn`;
+      badge.innerHTML = `<span class="rating-num">${avg}</span>`;
+    }
+    badge.addEventListener("click", (e) => {
+      e.stopPropagation();
+      rateFlow(od);
+    });
+
+    // Sin menú de acciones personales; tocar la card califica.
+    article.querySelector(".dish-actions")?.remove();
+    article.classList.add("is-rateable");
+    article.addEventListener("click", () => rateFlow(od));
+
+    return article;
+  }
+
+  function getFilteredSortedDishes(): OfficialDish[] {
+    let ds = officialDishes;
+    if (dishSearch) {
+      const q = dishSearch.toLowerCase();
+      ds = ds.filter(
+        (d) =>
+          d.name.toLowerCase().includes(q) ||
+          (d.notes ?? "").toLowerCase().includes(q) ||
+          (d.typeName ?? "").toLowerCase().includes(q),
+      );
+    }
+    if (dishTypeFilter) ds = ds.filter((d) => (d.typeName ?? "") === dishTypeFilter);
+    return [...ds].sort((a, b) => {
+      let cmp = 0;
+      if (sortField === "name") cmp = a.name.localeCompare(b.name);
+      else {
+        const ra = getOfficialDishStat(a.id)?.avgRating ?? -1;
+        const rb = getOfficialDishStat(b.id)?.avgRating ?? -1;
+        cmp = ra - rb;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }
+
+  function renderDishes(): void {
+    const listEl = document.getElementById("dishes-list");
+    const sortBarEl = document.querySelector<HTMLElement>(".sort-bar");
     if (!listEl) return;
 
-    if (dishes.length === 0) {
-      listEl.innerHTML = `<div class="empty-state flex-column">
-           <i class="bi bi-egg-fried"></i>
-           <p>Este restaurante aún no tiene platos en su carta.</p>
-         </div>`;
+    if (sortBarEl) sortBarEl.hidden = officialDishes.length < 2;
+
+    const filtered = getFilteredSortedDishes();
+    if (filtered.length === 0) {
+      const isFiltering = !!dishSearch || !!dishTypeFilter;
+      listEl.innerHTML = isFiltering
+        ? `<div class="empty-state flex-column">
+             <i class="bi bi-search"></i>
+             <p>Sin resultados para la búsqueda.</p>
+           </div>`
+        : `<div class="empty-state flex-column">
+             <i class="bi bi-egg-fried"></i>
+             <p>Este restaurante aún no tiene platos en su carta.</p>
+           </div>`;
       return;
     }
 
     listEl.innerHTML = "";
-    dishes.forEach((d) => {
-      const stat = getOfficialDishStat(d.id);
-      const avg = stat && stat.ratingsCount > 0 ? stat.avgRating : null;
+    listEl.classList.toggle("stagger-in", !dishSearch && !dishTypeFilter);
+    filtered.forEach((od) => listEl.appendChild(buildDishCardElement(od)));
+  }
 
-      const article = document.createElement("article");
-      article.className = "oficial-dish flex-row";
-      article.innerHTML = ratingBadge(avg);
+  function renderAll(): void {
+    const headerEl = document.getElementById("restaurant-header");
+    if (headerEl && official) headerEl.replaceChildren(buildHeaderElement());
+    renderDishes();
+    updateTypeFilterUI();
+  }
 
-      const info = document.createElement("div");
-      info.className = "od-info";
-      const h4 = document.createElement("h4");
-      h4.textContent = d.name;
-      info.appendChild(h4);
-      if (d.typeName) {
-        const tag = document.createElement("span");
-        tag.className = "dish-type-tag";
-        tag.textContent = d.typeName;
-        info.appendChild(tag);
-      }
-      if (d.price !== null) {
-        const price = document.createElement("span");
-        price.className = "od-price";
-        price.textContent = `$${d.price.toLocaleString("es-CO")}`;
-        info.appendChild(price);
-      }
-      if (stat && stat.ratingsCount > 0) {
-        const pillWrap = document.createElement("div");
-        pillWrap.style.marginTop = "4px";
-        pillWrap.innerHTML = globalRatingPill(stat.avgRating, stat.ratingsCount);
-        info.appendChild(pillWrap);
-      }
-      if (d.notes) {
-        const notes = document.createElement("p");
-        notes.className = "od-notes";
-        notes.textContent = d.notes;
-        info.appendChild(notes);
-      }
+  // ─── Filtro por tipo ────────────────────────────────────────────────────────
 
-      // Acción de calificar. Muestra la nota personal si ya calificó.
-      const action = document.createElement("div");
-      action.className = "od-action";
-      const myRating = getMyRatingFor(d.id);
-      const rateBtn = document.createElement("button");
-      rateBtn.type = "button";
-      rateBtn.className = "od-rate-btn" + (myRating !== null ? " is-rated" : "");
-      rateBtn.innerHTML =
-        myRating !== null
-          ? `<i class="bi bi-star-fill"></i> Tu nota <span class="od-my-score">${myRating}</span> · Editar`
-          : `<i class="bi bi-star"></i> Calificar`;
-      rateBtn.onclick = () => rateFlow(d);
-      action.appendChild(rateBtn);
-      info.appendChild(action);
+  function distinctTypeNames(): string[] {
+    const set = new Set<string>();
+    for (const d of officialDishes) if (d.typeName) set.add(d.typeName);
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }
 
-      article.appendChild(info);
+  function updateTypeFilterUI(): void {
+    const btn = document.getElementById(
+      "dish-type-btn",
+    ) as HTMLButtonElement | null;
+    const valueEl = document.getElementById("dish-type-value");
+    if (!btn || !valueEl) return;
+    const names = distinctTypeNames();
+    if (names.length === 0) {
+      dishTypeFilter = "";
+      btn.hidden = true;
+      return;
+    }
+    btn.hidden = false;
+    if (dishTypeFilter && !names.includes(dishTypeFilter)) dishTypeFilter = "";
+    valueEl.textContent = dishTypeFilter || "Todos";
+    btn.classList.toggle("active", !!dishTypeFilter);
+  }
 
-      if (d.imageUrl) {
-        const thumb = document.createElement("img");
-        thumb.className = "od-thumb";
-        thumb.src = d.imageUrl;
-        thumb.alt = d.name;
-        thumb.loading = "lazy";
-        article.appendChild(thumb);
-      }
+  function renderTypeDropdown(): void {
+    const dropdownEl = document.getElementById("dish-type-dropdown");
+    if (!dropdownEl) return;
+    dropdownEl.innerHTML = "";
 
-      listEl.appendChild(article);
+    const noneOpt = document.createElement("div");
+    noneOpt.className = "type-option is-none";
+    noneOpt.textContent = "Todos los tipos";
+    noneOpt.addEventListener("mousedown", (e) => e.preventDefault());
+    noneOpt.addEventListener("click", () => selectType(""));
+    dropdownEl.appendChild(noneOpt);
+
+    distinctTypeNames().forEach((name) => {
+      const opt = document.createElement("div");
+      opt.className = "type-option" + (name === dishTypeFilter ? " is-selected" : "");
+      opt.textContent = name;
+      opt.addEventListener("mousedown", (e) => e.preventDefault());
+      opt.addEventListener("click", () => selectType(name));
+      dropdownEl.appendChild(opt);
     });
   }
 
-  function renderAll() {
-    renderHeader();
+  function selectType(name: string): void {
+    dishTypeFilter = name;
+    const valueEl = document.getElementById("dish-type-value");
+    const btn = document.getElementById("dish-type-btn");
+    if (valueEl) valueEl.textContent = name || "Todos";
+    btn?.classList.toggle("active", !!name);
+    closeTypeDropdown();
     renderDishes();
   }
+
+  function openTypeDropdown(): void {
+    const dropdownEl = document.getElementById("dish-type-dropdown");
+    const btn = document.getElementById("dish-type-btn");
+    if (!dropdownEl || !btn) return;
+    renderTypeDropdown();
+    dropdownEl.hidden = false;
+    btn.classList.add("is-open");
+  }
+
+  function closeTypeDropdown(): void {
+    const dropdownEl = document.getElementById("dish-type-dropdown");
+    const btn = document.getElementById("dish-type-btn");
+    dropdownEl?.setAttribute("hidden", "");
+    btn?.classList.remove("is-open");
+  }
+
+  // ─── Orden / búsqueda ───────────────────────────────────────────────────────
+
+  function updateSortUI(): void {
+    document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach((btn) => {
+      const isActive = btn.dataset.field === sortField;
+      btn.classList.toggle("active", isActive);
+      const icon = btn.querySelector("i");
+      if (icon)
+        icon.className = isActive
+          ? `bi bi-arrow-${sortDir === "asc" ? "up" : "down"}`
+          : "bi bi-arrow-down-up";
+    });
+  }
+
+  function wireControls(): void {
+    // Orden
+    document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach((btn) => {
+      btn.onclick = () => {
+        const field = btn.dataset.field as SortField;
+        if (sortField === field) sortDir = sortDir === "asc" ? "desc" : "asc";
+        else {
+          sortField = field;
+          sortDir = field === "name" ? "asc" : "desc";
+        }
+        updateSortUI();
+        renderDishes();
+      };
+    });
+
+    // Búsqueda
+    const searchEl = document.getElementById(
+      "dish-search",
+    ) as HTMLInputElement | null;
+    const clearEl = document.getElementById(
+      "dish-search-clear",
+    ) as HTMLButtonElement | null;
+    const syncClear = () => {
+      if (clearEl) clearEl.hidden = dishSearch.length === 0;
+    };
+    if (searchEl) {
+      searchEl.value = dishSearch;
+      syncClear();
+      searchEl.oninput = () => {
+        dishSearch = searchEl.value;
+        syncClear();
+        renderDishes();
+      };
+    }
+    if (clearEl) {
+      clearEl.onclick = () => {
+        dishSearch = "";
+        if (searchEl) {
+          searchEl.value = "";
+          searchEl.focus();
+        }
+        syncClear();
+        renderDishes();
+      };
+    }
+
+    // Filtro por tipo
+    const typeBtn = document.getElementById("dish-type-btn");
+    const typeDropdown = document.getElementById("dish-type-dropdown");
+    if (typeBtn && typeDropdown) {
+      typeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (typeDropdown.hidden) openTypeDropdown();
+        else closeTypeDropdown();
+      });
+      document.addEventListener("click", (e) => {
+        const t = e.target as HTMLElement;
+        if (!t.closest("#dish-type-btn") && !t.closest("#dish-type-dropdown"))
+          closeTypeDropdown();
+      });
+    }
+
+    updateSortUI();
+  }
+
+  // ─── Re-render en sincronizaciones globales ─────────────────────────────────
 
   document.addEventListener("stats:synced", () => {
     if (official) renderAll();
   });
-  document.addEventListener("cache:synced", () => {
-    if (official) renderDishes();
-  });
-  // Tras calificar en el DishForm: repinta la nota propia y refresca el promedio
-  // global (el RPC agrega la nueva calificación del usuario).
-  document.addEventListener("dish:updated", () => {
-    if (!official) return;
-    renderDishes();
-    void fetchOfficialStats();
-  });
+
+  // ─── Init en astro:page-load ────────────────────────────────────────────────
 
   document.addEventListener("astro:page-load", async () => {
-    const headerEl = document.getElementById("oficial-header");
+    const headerEl = document.getElementById("restaurant-header");
     if (!headerEl) return;
 
     const id = new URLSearchParams(window.location.search).get("id") ?? "";
@@ -660,29 +862,37 @@ import AuthModal from "../components/AuthModal.astro";
     }
 
     // Skeleton mientras carga
-    const listEl = document.getElementById("oficial-dishes-list");
-    if (listEl && dishes.length === 0) {
+    const listEl = document.getElementById("dishes-list");
+    if (listEl && officialDishes.length === 0) {
       listEl.innerHTML = "";
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < 4; i++) {
         const sk = document.createElement("div");
         sk.className = "skeleton-card skeleton-dish";
         listEl.appendChild(sk);
       }
     }
 
-    // Carta PÚBLICA: un visitante anónimo puede navegarla. Si hay sesión, dejamos
-    // el caché personal listo para mostrar y gestionar sus calificaciones.
     const authed = await ensureAuthState();
-    // Sin sesión no corre initCache (que dispara fetchOfficialStats), así que
-    // pedimos las stats globales directo para pintar los promedios de la carta.
+    // Anónimo: initCache no corre (no dispara stats), pedimos stats directo.
     if (!authed) void fetchOfficialStats();
+
+    // Si ya tiene ESTE restaurante en su perfil → llevarlo a su vista REAL.
+    if (authed) {
+      const adopted = getRestaurants().find(
+        (r) => r.officialRestaurantId === id,
+      );
+      if (adopted) {
+        navigate(`/restaurante?id=${adopted.id}`);
+        return;
+      }
+    }
 
     const [off, ds] = await Promise.all([
       getOfficialRestaurant(id),
       getOfficialDishes(id),
     ]);
     official = off;
-    dishes = ds;
+    officialDishes = ds;
 
     if (!official) {
       window.location.href = "/explorar";
@@ -690,9 +900,20 @@ import AuthModal from "../components/AuthModal.astro";
     }
 
     document.title = `${official.name} · STAURANT`;
+
+    // "Volver" solo tiene sentido para usuarios con cuenta (van a su inicio).
+    const backLink = document.getElementById(
+      "back-link",
+    ) as HTMLAnchorElement | null;
+    if (backLink) {
+      backLink.hidden = !authed;
+      backLink.href = "/";
+    }
+
+    wireControls();
     renderAll();
 
-    // Reanudar la acción pendiente tras volver del login con Google.
+    // Reanudar la calificación pendiente tras volver del login con Google.
     if (userId) {
       const raw = localStorage.getItem("staurant_pending");
       if (raw) {
@@ -702,13 +923,9 @@ import AuthModal from "../components/AuthModal.astro";
             officialId: string;
             officialDishId: string | null;
           };
-          if (p.officialId === official.id) {
-            if (p.officialDishId) {
-              const od = dishes.find((d) => d.id === p.officialDishId);
-              if (od) await continueRate(od);
-            } else {
-              await doAdopt();
-            }
+          if (p.officialId === official.id && p.officialDishId) {
+            const od = officialDishes.find((d) => d.id === p.officialDishId);
+            if (od) await continueRate(od);
           }
         } catch {
           /* intención corrupta → ignorar */
