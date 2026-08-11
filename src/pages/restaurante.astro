@@ -101,54 +101,6 @@ const tplRestaurant: Restaurant = {
   </template>
 </Layout1>
 
-<style is:global>
-  #dish-type-dropdown .type-option {
-    padding: 8px 12px;
-    font-size: 0.72rem;
-    font-weight: 500;
-    color: var(--clr-text);
-    cursor: pointer;
-    text-transform: uppercase;
-    transition: background 0.1s ease;
-    border-bottom: 1px solid var(--clr-border);
-  }
-
-  #dish-type-dropdown .type-option:last-child {
-    border-bottom: none;
-  }
-
-  #dish-type-dropdown .type-option.is-selected {
-    color: var(--clr-primary);
-    font-weight: 700;
-  }
-
-  #dish-type-dropdown .type-option.is-none {
-    color: var(--clr-text);
-    opacity: 0.55;
-    text-transform: none;
-    letter-spacing: 0;
-    border-bottom: 1px solid var(--clr-border);
-  }
-
-  #dish-type-dropdown .type-option.is-empty {
-    color: var(--clr-text);
-    opacity: 0.5;
-    text-transform: none;
-    letter-spacing: 0;
-    font-weight: 400;
-    cursor: default;
-    text-align: center;
-    padding: 14px;
-  }
-
-  @media (hover: hover) {
-    #dish-type-dropdown .type-option:hover,
-    #dish-type-dropdown .type-option:focus {
-      background: var(--clr-white2);
-    }
-  }
-</style>
-
 <style>
   .detail-page {
     width: 100%;
@@ -364,7 +316,14 @@ const tplRestaurant: Restaurant = {
     getTopRatedDishIds,
   } from "../lib/data.ts";
   import type { Restaurant, Dish } from "../lib/data.ts";
-  import { getRatingClass, emit, makeCrown } from "../scripts/store.ts";
+  import {
+    emit,
+    makeCrown,
+    paintRatingBadge,
+    buildGlobalRatingPill,
+    fillRestaurantName,
+    updateSortPills,
+  } from "../scripts/store.ts";
 
   // ─── Sort state (persiste en módulo entre navegaciones) ────────────────────
 
@@ -545,15 +504,6 @@ const tplRestaurant: Restaurant = {
 
   // ─── Generadores de HTML (nivel módulo) ────────────────────────────────────
 
-  function buildGlobalRatingPill(avgRating: number, ratingsCount: number): HTMLElement {
-    const pill = document.createElement("span");
-    pill.className = "global-rating-pill";
-    pill.title = `Promedio global basado en ${ratingsCount} ${ratingsCount === 1 ? "calificación" : "calificaciones"}`;
-    pill.innerHTML = `<i class="bi bi-globe2"></i> ${avgRating} <span class="grp-count">· ${ratingsCount}</span>`;
-    return pill;
-  }
-
-
   function buildHeaderElement(r: Restaurant, avg: number | null): Element {
     const tpl = document.getElementById(
       "tpl-restaurant-header",
@@ -563,24 +513,7 @@ const tplRestaurant: Restaurant = {
     )!;
     div.setAttribute("style", `view-transition-name: restaurant-${r.id}`);
     div.classList.toggle("is-official", !!r.officialRestaurantId);
-    const h1 = div.querySelector("h1")!;
-    h1.textContent = "";
-    if (r.officialRestaurantId) {
-      const idx = r.name.lastIndexOf(" ");
-      const head = idx === -1 ? "" : r.name.slice(0, idx + 1);
-      const tail = idx === -1 ? r.name : r.name.slice(idx + 1);
-      if (head) h1.appendChild(document.createTextNode(head));
-      const tailSpan = document.createElement("span");
-      tailSpan.className = "name-tail-nowrap";
-      tailSpan.textContent = tail;
-      const badge = document.createElement("i");
-      badge.className = "bi bi-patch-check-fill verified-badge";
-      badge.title = "Restaurante verificado";
-      tailSpan.appendChild(badge);
-      h1.appendChild(tailSpan);
-    } else {
-      h1.textContent = r.name;
-    }
+    fillRestaurantName(div.querySelector("h1")!, r.name, !!r.officialRestaurantId);
     const dishes = getDishesByRestaurant(r.id);
     const pill = div.querySelector(".dish-count-pill");
     if (r.status === "pending") {
@@ -599,13 +532,7 @@ const tplRestaurant: Restaurant = {
       citiesEl.hidden = false;
     }
     const badge = div.querySelector(".rating-badge")!;
-    if (avg === null) {
-      badge.className = "rating-badge badge-empty";
-      badge.innerHTML = '<i class="bi bi-star"></i>';
-    } else {
-      badge.className = `rating-badge ${getRatingClass(avg)}`;
-      badge.innerHTML = `<span class="rating-num">${avg}</span>`;
-    }
+    paintRatingBadge(badge, avg);
     if (getTopRatedRestaurantIds().has(r.id)) {
       badge.appendChild(makeCrown("Tu mejor valorado"));
     }
@@ -707,13 +634,7 @@ const tplRestaurant: Restaurant = {
       notesEl?.remove();
     }
     const badge = article.querySelector(".rating-badge")!;
-    if (d.rating === null) {
-      badge.className = "rating-badge badge-empty badge-btn";
-      badge.innerHTML = '<i class="bi bi-star"></i>';
-    } else {
-      badge.className = `rating-badge ${getRatingClass(d.rating)} badge-btn`;
-      badge.innerHTML = `<span class="rating-num">${d.rating}</span>`;
-    }
+    paintRatingBadge(badge, d.rating, { button: true });
     if (topDishIds.has(d.id)) badge.appendChild(makeCrown("Plato estrella"));
     if (d.id === popDishId) badge.classList.add("badge-pop");
     badge.addEventListener("click", (e) => {
@@ -989,15 +910,7 @@ const tplRestaurant: Restaurant = {
     // ─── Sort UI ──────────────────────────────────────────────────────────────
 
     function updateDishSortUI() {
-      document
-        .querySelectorAll<HTMLButtonElement>(".sort-pill")
-        .forEach((btn) => {
-          const isActive = btn.dataset.field === dishSort.field;
-          btn.classList.toggle("active", isActive);
-          btn.querySelector("i")!.className = isActive
-            ? `bi bi-arrow-${dishSort.dir === "asc" ? "up" : "down"}`
-            : "bi bi-arrow-down-up";
-        });
+      updateSortPills(dishSort.field, dishSort.dir);
     }
 
     // ─── Cablear controles ────────────────────────────────────────────────────

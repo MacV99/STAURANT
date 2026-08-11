@@ -206,30 +206,21 @@ import Layout1 from "../layouts/Layout1.astro";
   import { supabase } from "../lib/supabase.ts";
   import {
     initCache,
-    getRestaurants,
+    isOfficialInMyList,
     getAllOfficialRestaurants,
     getOfficialRestaurantStat,
+    escapeHtml,
     type OfficialRestaurant,
   } from "../lib/data.ts";
+  import { buildGlobalRatingPill } from "../scripts/store.ts";
 
   // Estado a nivel de módulo (persiste entre navegaciones ViewTransition).
   let officials: OfficialRestaurant[] = [];
   let exploreSearch = "";
 
-  function escapeHtml(s: string): string {
-    return s
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
-
   function buildCard(o: OfficialRestaurant): HTMLElement {
-    // ¿El usuario ya tiene este oficial en su colección?
-    const adoptedRestaurant = getRestaurants().find(
-      (r) => r.officialRestaurantId === o.id,
-    );
-    const adopted = !!adoptedRestaurant;
+    // ¿El usuario ya tiene este oficial en su lista? (membresía, sin clon)
+    const adopted = isOfficialInMyList(o.id);
     const stat = getOfficialRestaurantStat(o.id);
 
     const card = document.createElement("article");
@@ -258,11 +249,7 @@ import Layout1 from "../layouts/Layout1.astro";
     }
 
     if (stat && stat.ratingsCount > 0) {
-      const pill = document.createElement("span");
-      pill.className = "global-rating-pill";
-      pill.title = `Promedio global basado en ${stat.ratingsCount} ${stat.ratingsCount === 1 ? "calificación" : "calificaciones"}`;
-      pill.innerHTML = `<i class="bi bi-globe2"></i> ${stat.avgRating} <span class="grp-count">· ${stat.ratingsCount}</span>`;
-      meta.appendChild(pill);
+      meta.appendChild(buildGlobalRatingPill(stat.avgRating, stat.ratingsCount));
     }
 
     if (adopted) {
@@ -279,15 +266,9 @@ import Layout1 from "../layouts/Layout1.astro";
     chevron.className = "bi bi-chevron-right ec-chevron";
     card.appendChild(chevron);
 
-    // Si ya lo tienes → abre directo TU restaurante en su sección.
-    // Si no → abre la vista oficial para descubrirlo y agregarlo.
-    card.addEventListener("click", () =>
-      navigate(
-        adoptedRestaurant
-          ? `/restaurante?id=${adoptedRestaurant.id}`
-          : `/oficial?id=${o.id}`,
-      ),
-    );
+    // Perfil oficial único y compartido: siempre se abre la misma vista /oficial,
+    // esté o no en tu lista. El estado personal se refleja dentro del perfil.
+    card.addEventListener("click", () => navigate(`/oficial?id=${o.id}`));
     return card;
   }
 

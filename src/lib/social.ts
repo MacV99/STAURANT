@@ -1,4 +1,5 @@
 import { supabase } from "./supabase.ts";
+import { toRestaurant, toDish, toDishType, roundedAverage } from "./data.ts";
 import type { Restaurant, Dish, DishType } from "./data.ts";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
@@ -20,48 +21,15 @@ export interface FriendRequest extends PublicUser {
   friendshipId: string;
 }
 
-// ─── Mappers (réplica ligera de los de data.ts, que no se exportan) ───────────
+// ─── Mappers ──────────────────────────────────────────────────────────────────
+// Los mappers de filas → dominio (toRestaurant/toDish/toDishType) se reutilizan
+// desde data.ts (fuente única). Aquí solo el de perfil público, propio de social.
 
 function toPublicUser(row: Record<string, unknown>): PublicUser {
   return {
     id: row.id as string,
     username: (row.username as string | null) ?? null,
     name: (row.name as string | null) ?? "",
-  };
-}
-
-function toRestaurant(row: Record<string, unknown>): Restaurant {
-  return {
-    id: row.id as string,
-    name: row.name as string,
-    status: row.status as "visited" | "pending",
-    notes: row.notes as string,
-    cities: (row.cities as string[] | null) ?? [],
-    createdAt: row.created_at as string,
-    updatedAt: (row.updated_at as string | null) ?? (row.created_at as string),
-    officialRestaurantId: (row.official_restaurant_id as string | null) ?? null,
-  };
-}
-
-function toDish(row: Record<string, unknown>): Dish {
-  return {
-    id: row.id as string,
-    restaurantId: row.restaurant_id as string,
-    typeId: (row.type_id as string | null) ?? null,
-    name: row.name as string,
-    rating: row.rating !== null && row.rating !== undefined ? Number(row.rating) : null,
-    notes: row.notes as string,
-    createdAt: row.created_at as string,
-    updatedAt: (row.updated_at as string | null) ?? (row.created_at as string),
-    officialDishId: (row.official_dish_id as string | null) ?? null,
-  };
-}
-
-function toDishType(row: Record<string, unknown>): DishType {
-  return {
-    id: row.id as string,
-    name: row.name as string,
-    createdAt: row.created_at as string,
   };
 }
 
@@ -139,13 +107,89 @@ export async function getUserDishTypes(userId: string): Promise<DishType[]> {
   return (data ?? []).map(toDishType);
 }
 
+/** Restaurantes OFICIALES de un usuario (los que agregó a su lista y visitó),
+ *  mapeados a la MISMA forma Restaurant[]/Dish[] que los personales para que la
+ *  UI del perfil los renderice indistintamente. NO clona nada: son el perfil
+ *  compartido (official_restaurants/official_dishes) + las calificaciones del
+ *  usuario (official_ratings). Se incluye la carta oficial COMPLETA; los platos
+ *  sin calificar quedan con rating null (igual que en el perfil oficial).
+ *
+ *  - restaurant.id  = official_restaurant_id (officialRestaurantId también)
+ *  - dish.id        = official_dish_id (officialDishId también)
+ *  - dish.rating    = calificación del usuario, o null si no lo calificó */
+export async function getUserOfficials(
+  userId: string,
+): Promise<{ restaurants: Restaurant[]; dishes: Dish[] }> {
+  // Membresías visitadas del usuario (las pendientes no se muestran en público,
+  // igual que los restaurantes personales pendientes).
+  const { data: memRows, error: memErr } = await supabase
+    .from("user_official_restaurants")
+    .select("official_restaurant_id, status, created_at, updated_at")
+    .eq("user_id", userId)
+    .eq("status", "visited");
+  if (memErr) { console.error("[getUserOfficials] memberships", memErr); return { restaurants: [], dishes: [] }; }
+
+  const officialIds = (memRows ?? []).map((m) => m.official_restaurant_id as string);
+  if (officialIds.length === 0) return { restaurants: [], dishes: [] };
+
+  const [profRes, dishRes, ratRes] = await Promise.all([
+    supabase.from("official_restaurants").select("*").in("id", officialIds),
+    supabase.from("official_dishes").select("*").in("official_restaurant_id", officialIds),
+    supabase.from("official_ratings").select("official_dish_id, rating").eq("user_id", userId),
+  ]);
+  if (profRes.error || dishRes.error || ratRes.error) {
+    console.error("[getUserOfficials]", profRes.error ?? dishRes.error ?? ratRes.error);
+    return { restaurants: [], dishes: [] };
+  }
+
+  const ratingByDish = new Map<string, number>();
+  for (const r of (ratRes.data ?? []) as Array<{ official_dish_id: string; rating: number | string }>) {
+    ratingByDish.set(r.official_dish_id, Number(r.rating));
+  }
+  const memByOfficial = new Map<string, Record<string, unknown>>();
+  for (const m of memRows ?? []) memByOfficial.set(m.official_restaurant_id as string, m);
+
+  const restaurants: Restaurant[] = (profRes.data ?? []).map((o) => {
+    const m = memByOfficial.get(o.id as string);
+    const created = (m?.created_at as string) ?? new Date().toISOString();
+    return {
+      id: o.id as string,
+      name: o.name as string,
+      status: "visited",
+      notes: (o.notes as string | null) ?? "",
+      cities: o.city ? [(o.city as string).trim().toUpperCase()] : [],
+      createdAt: created,
+      updatedAt: (m?.updated_at as string | null) ?? created,
+      officialRestaurantId: o.id as string,
+    };
+  });
+
+  const dishes: Dish[] = (dishRes.data ?? []).map((od) => {
+    const rating = ratingByDish.get(od.id as string);
+    return {
+      id: od.id as string,
+      restaurantId: od.official_restaurant_id as string,
+      typeId: null,
+      name: od.name as string,
+      rating: rating === undefined ? null : rating,
+      notes: (od.notes as string | null) ?? "",
+      createdAt: (od.created_at as string) ?? new Date().toISOString(),
+      updatedAt: (od.created_at as string) ?? new Date().toISOString(),
+      officialDishId: od.id as string,
+    };
+  });
+
+  return { restaurants, dishes };
+}
+
 /** Promedio de un restaurante calculado desde un array de platos ya cargado.
  *  Equivalente a getRestaurantAverage() de data.ts pero sin tocar el caché. */
 export function restaurantAverage(dishes: Dish[], restaurantId: string): number | null {
-  const rated = dishes.filter((d) => d.restaurantId === restaurantId && d.rating !== null);
-  if (rated.length === 0) return null;
-  const sum = rated.reduce((acc, d) => acc + (d.rating as number), 0);
-  return Math.round((sum / rated.length) * 10) / 10;
+  return roundedAverage(
+    dishes
+      .filter((d) => d.restaurantId === restaurantId && d.rating !== null)
+      .map((d) => d.rating as number),
+  );
 }
 
 // ─── Amistad ──────────────────────────────────────────────────────────────────

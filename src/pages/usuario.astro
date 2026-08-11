@@ -426,9 +426,10 @@ const tplDish: Dish = {
     createDish,
     createDishType,
     markAsVisited,
-    adoptOfficialRestaurant,
+    isOfficialInMyList,
     getOfficialRestaurantStat,
     getOfficialDishStat,
+    escapeHtml,
     type Restaurant,
     type Dish,
     type DishType,
@@ -438,6 +439,7 @@ const tplDish: Dish = {
     getUserRestaurants,
     getUserDishes,
     getUserDishTypes,
+    getUserOfficials,
     getFriendStatus,
     sendFriendRequest,
     acceptRequest,
@@ -446,7 +448,12 @@ const tplDish: Dish = {
     type PublicUser,
     type FriendStatus,
   } from "../lib/social.ts";
-  import { getRatingClass } from "../scripts/store.ts";
+  import {
+    paintRatingBadge,
+    buildGlobalRatingPill,
+    fillRestaurantName,
+    updateSortPills,
+  } from "../scripts/store.ts";
 
   // ─── Estado de módulo (persiste entre navegaciones ViewTransition) ──────────
   let profileUser: PublicUser | null = null;
@@ -473,52 +480,6 @@ const tplDish: Dish = {
     }
   }
   let sortState = getSortState();
-
-  function escapeHtml(s: string): string {
-    return s
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
-
-  function paintBadge(el: Element, rating: number | null): void {
-    if (rating === null) {
-      el.className = "rating-badge badge-empty";
-      el.innerHTML = '<i class="bi bi-star-fill"></i>';
-    } else {
-      el.className = `rating-badge ${getRatingClass(rating)}`;
-      el.innerHTML = `<span class="rating-num">${rating}</span>`;
-    }
-  }
-
-  function fillName(el: HTMLElement, r: Restaurant): void {
-    el.textContent = "";
-    if (r.officialRestaurantId) {
-      const idx = r.name.lastIndexOf(" ");
-      const head = idx === -1 ? "" : r.name.slice(0, idx + 1);
-      const tail = idx === -1 ? r.name : r.name.slice(idx + 1);
-      if (head) el.appendChild(document.createTextNode(head));
-      const tailSpan = document.createElement("span");
-      tailSpan.className = "name-tail-nowrap";
-      tailSpan.textContent = tail;
-      const badge = document.createElement("i");
-      badge.className = "bi bi-patch-check-fill verified-badge";
-      badge.title = "Restaurante verificado";
-      tailSpan.appendChild(badge);
-      el.appendChild(tailSpan);
-    } else {
-      el.textContent = r.name;
-    }
-  }
-
-  function buildGlobalRatingPill(avg: number, count: number): HTMLElement {
-    const pill = document.createElement("span");
-    pill.className = "global-rating-pill";
-    pill.title = `Promedio global basado en ${count} ${count === 1 ? "calificación" : "calificaciones"}`;
-    pill.innerHTML = `<i class="bi bi-globe2"></i> ${avg} <span class="grp-count">· ${count}</span>`;
-    return pill;
-  }
 
   // ─── "Ya lo tengo": cruce contra MI caché (getRestaurants/getDishes son míos) ──
 
@@ -553,13 +514,12 @@ const tplDish: Dish = {
     return existing ? existing.id : createDishType(upper).id;
   }
 
-  /** Asegura que el restaurante del amigo exista en MI lista; lo crea si no. */
+  /** Asegura que el restaurante del amigo exista en MI lista; lo crea si no.
+   *  Los oficiales ya no viven en la tabla `restaurants` (perfil único compartido),
+   *  así que los restaurantes de un amigo son siempre personales aquí. */
   async function ensureMyRestaurant(r: Restaurant): Promise<Restaurant | null> {
     const existing = myRestaurantFor(r);
     if (existing) return existing;
-    if (r.officialRestaurantId) {
-      return await adoptOfficialRestaurant(r.officialRestaurantId);
-    }
     return createRestaurant({ name: r.name, notes: "" });
   }
 
@@ -670,9 +630,38 @@ const tplDish: Dish = {
 
   // ─── Botón "Agregar a los míos" ───────────────────────────────────────────
 
+  /** ¿Tengo este restaurante? Oficial → membresía; personal → cruce por nombre. */
+  function iHaveThis(r: Restaurant): boolean {
+    return r.officialRestaurantId
+      ? isOfficialInMyList(r.officialRestaurantId)
+      : !!myRestaurantFor(r);
+  }
+
   function buildAddButton(r: Restaurant, d?: Dish): HTMLButtonElement {
     const btn = document.createElement("button");
     btn.type = "button";
+
+    // Oficiales: perfil único compartido, no se clona. El botón lleva al perfil
+    // oficial, donde el usuario lo agrega a su lista / califica.
+    if (r.officialRestaurantId) {
+      const inList = isOfficialInMyList(r.officialRestaurantId);
+      btn.className = "u-add-btn flex-row" + (d ? " u-add-icon" : "");
+      if (inList) btn.classList.add("is-added");
+      if (d) {
+        btn.innerHTML = '<i class="bi bi-box-arrow-up-right"></i>';
+        btn.title = "Ver en el perfil oficial";
+      } else {
+        btn.innerHTML = inList
+          ? '<i class="bi bi-check2"></i> En tu lista'
+          : '<i class="bi bi-box-arrow-up-right"></i> Ver perfil';
+      }
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        navigate(`/oficial?id=${r.officialRestaurantId}`);
+      };
+      return btn;
+    }
+
     const mine = myRestaurantFor(r);
     const isAdded = d ? !!(mine && myDishFor(mine, d)) : !!mine;
 
@@ -741,7 +730,7 @@ const tplDish: Dish = {
     article.removeAttribute("style");
     article.classList.toggle("is-official", !!r.officialRestaurantId);
 
-    fillName(article.querySelector("h3")!, r);
+    fillRestaurantName(article.querySelector("h3")!, r.name, !!r.officialRestaurantId);
 
     const dishCount = dishes.filter((d) => d.restaurantId === r.id).length;
     const pill = article.querySelector(".dish-count-pill") as HTMLElement | null;
@@ -750,7 +739,7 @@ const tplDish: Dish = {
     }
 
     // Marca "en tu lista" si ya lo tengo
-    if (myRestaurantFor(r)) {
+    if (iHaveThis(r)) {
       const body = article.querySelector(".card-body");
       if (body) {
         const chk = document.createElement("span");
@@ -760,7 +749,7 @@ const tplDish: Dish = {
       }
     }
 
-    paintBadge(article.querySelector(".rating-badge")!, restaurantAverage(dishes, r.id));
+    paintRatingBadge(article.querySelector(".rating-badge")!, restaurantAverage(dishes, r.id));
 
     article.addEventListener("click", () => openDetail(r.id));
     return article;
@@ -826,13 +815,7 @@ const tplDish: Dish = {
   }
 
   function updateSortUI() {
-    document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach((btn) => {
-      const isActive = btn.dataset.field === sortState.field;
-      btn.classList.toggle("active", isActive);
-      btn.querySelector("i")!.className = isActive
-        ? `bi bi-arrow-${sortState.dir === "asc" ? "up" : "down"}`
-        : "bi bi-arrow-down-up";
-    });
+    updateSortPills(sortState.field, sortState.dir);
   }
 
   // ─── Detalle de un restaurante ───────────────────────────────────────────────
@@ -847,7 +830,7 @@ const tplDish: Dish = {
     card.removeAttribute("style");
     card.classList.toggle("is-official", !!r.officialRestaurantId);
 
-    fillName(card.querySelector("h1")!, r);
+    fillRestaurantName(card.querySelector("h1")!, r.name, !!r.officialRestaurantId);
 
     const list = dishes.filter((d) => d.restaurantId === r.id);
     const pill = card.querySelector(".dish-count-pill");
@@ -862,7 +845,7 @@ const tplDish: Dish = {
       citiesEl.hidden = false;
     }
 
-    paintBadge(card.querySelector(".rating-badge")!, restaurantAverage(dishes, r.id));
+    paintRatingBadge(card.querySelector(".rating-badge")!, restaurantAverage(dishes, r.id));
 
     // Pill de rating global (si es oficial y hay agregados)
     if (r.officialRestaurantId) {
@@ -923,7 +906,7 @@ const tplDish: Dish = {
     if (d.notes) notesEl!.textContent = d.notes;
     else notesEl?.remove();
 
-    paintBadge(article.querySelector(".rating-badge")!, d.rating);
+    paintRatingBadge(article.querySelector(".rating-badge")!, d.rating);
 
     // Reemplazar el menú por "Agregar a los míos"
     const actions = article.querySelector(".dish-actions");
@@ -1033,11 +1016,12 @@ const tplDish: Dish = {
       restEl.replaceChildren(grid);
     }
 
-    const [user, rs, ds, dts, fr] = await Promise.all([
+    const [user, rs, ds, dts, officials, fr] = await Promise.all([
       getPublicProfile(userId),
       getUserRestaurants(userId),
       getUserDishes(userId),
       getUserDishTypes(userId),
+      getUserOfficials(userId),
       getFriendStatus(userId),
     ]);
 
@@ -1057,8 +1041,10 @@ const tplDish: Dish = {
     }
 
     profileUser = user;
-    restaurants = rs;
-    dishes = ds;
+    // Personales + oficiales del amigo (misma forma; oficiales llevan al perfil
+    // compartido /oficial, no se clonan).
+    restaurants = [...rs, ...officials.restaurants];
+    dishes = [...ds, ...officials.dishes];
     dishTypes = dts;
     friend = fr;
 

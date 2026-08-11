@@ -507,13 +507,14 @@ import FormModal from "./FormModal.astro";
 </style>
 
 <script>
-  import type { Dish } from "../lib/data.ts";
+  import type { Dish, OfficialDish } from "../lib/data.ts";
   import {
     createDish,
     updateDish,
     getDishesByRestaurant,
     getDishTypes,
     createDishType,
+    rateOfficialDish,
   } from "../lib/data.ts";
   import { emit, forceUppercase, createOverlay } from "../scripts/store.ts";
 
@@ -566,6 +567,10 @@ import FormModal from "./FormModal.astro";
     // Platos oficiales: nombre/tipo/notas los administra el sistema, solo se permite
     // calificar. Ocultamos esos campos y mostramos el aviso correspondiente.
     let isOfficial = false;
+    // Cuando se califica un plato oficial desde la carta compartida (/oficial) NO
+    // existe un Dish personal: la nota se guarda en official_ratings. Este id marca
+    // ese modo; el submit escribe vía rateOfficialDish en vez de updateDish.
+    let officialRatingDishId: string | null = null;
 
     let isRated = false;
 
@@ -743,6 +748,7 @@ import FormModal from "./FormModal.astro";
       errorEl.textContent = "";
       form.reset();
       restaurantIdInput.value = restaurantId;
+      officialRatingDishId = null;
 
       isOfficial = mode === "edit" && !!data?.officialDishId;
       // Plato oficial: nombre y tipo los administra el restaurante → se muestran
@@ -751,6 +757,7 @@ import FormModal from "./FormModal.astro";
       officialFieldsEl.hidden = !isOfficial;
       typeFieldEl.hidden = isOfficial;
       nameFieldEl.hidden = isOfficial;
+      (document.getElementById("df-notes-field") as HTMLElement).hidden = false;
 
       if (mode === "edit" && data) {
         titleEl.textContent = isOfficial ? "Calificar plato" : "Editar plato";
@@ -779,6 +786,40 @@ import FormModal from "./FormModal.astro";
         ratingInput.value = "5";
         setRated(false);
         initTypeCombobox(null);
+      }
+
+      overlay.classList.add("is-open");
+      requestAnimationFrame(() =>
+        initDrumForValue(parseFloat(ratingInput.value)),
+      );
+    }
+
+    /** Califica un plato OFICIAL desde la carta compartida (/oficial). No hay Dish
+     *  personal: solo se muestra la cabecera del plato + la rueda de calificación.
+     *  El submit guarda en official_ratings vía rateOfficialDish. */
+    function openOfficial(od: OfficialDish, currentRating: number | null) {
+      errorEl.textContent = "";
+      form.reset();
+      isOfficial = true;
+      officialRatingDishId = od.id;
+
+      // Solo cabecera + rueda: ocultar campos editables (nombre/tipo/notas).
+      officialFieldsEl.hidden = false;
+      typeFieldEl.hidden = true;
+      nameFieldEl.hidden = true;
+      (document.getElementById("df-notes-field") as HTMLElement).hidden = true;
+
+      titleEl.textContent = "Calificar plato";
+      officialNameEl.textContent = od.name;
+      officialTypeEl.textContent = od.typeName ?? "";
+      officialTypeEl.hidden = !od.typeName;
+
+      if (currentRating !== null) {
+        setRated(true, currentRating);
+        ratingInput.value = String(currentRating);
+      } else {
+        ratingInput.value = "5";
+        setRated(false);
       }
 
       overlay.classList.add("is-open");
@@ -1138,6 +1179,17 @@ import FormModal from "./FormModal.astro";
       e.preventDefault();
       errorEl.textContent = "";
 
+      // ── Modo calificación de plato OFICIAL (carta compartida) ────────────────
+      // No hay Dish personal: se guarda directo en official_ratings.
+      if (officialRatingDishId) {
+        const rating = isRated ? parseFloat(ratingInput.value) : null;
+        const dishId = officialRatingDishId;
+        close();
+        rateOfficialDish(dishId, rating);
+        emit("official:rated", { officialDishId: dishId, rating });
+        return;
+      }
+
       const name = nameInput.value.trim();
       if (!name) {
         errorEl.textContent = "El nombre del plato es obligatorio.";
@@ -1194,6 +1246,6 @@ import FormModal from "./FormModal.astro";
     };
 
     // Actualizar API global con referencias frescas al DOM actual
-    (window as any).dishForm = { open, close };
+    (window as any).dishForm = { open, openOfficial, close };
   });
 </script>

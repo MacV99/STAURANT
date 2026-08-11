@@ -44,7 +44,7 @@ const createLabel = isUsuario ? "Mi cuenta" : "Crear";
       class:list={["sidebar-item", "flex-row", { active: isExplorar }]}
       aria-current={isExplorar ? "page" : undefined}
     >
-      <i class={isExplorar ? "bi bi-compass-fill" : "bi bi-compass"}></i>
+      <i class={isExplorar ? "bi bi-search" : "bi bi-search"}></i>
       <span>Explorar</span>
     </a>
 
@@ -174,9 +174,7 @@ const createLabel = isUsuario ? "Mi cuenta" : "Crear";
           ? "bi bi-house-door-fill"
           : "bi bi-house-door";
       if (explorarIcon)
-        explorarIcon.className = isExplorar
-          ? "bi bi-compass-fill"
-          : "bi bi-compass";
+        explorarIcon.className = "bi bi-search";
       if (amigosIcon)
         amigosIcon.className = isAmigos ? "bi bi-people-fill" : "bi bi-people";
       if (perfilIcon)

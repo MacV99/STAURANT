@@ -48,6 +48,36 @@ export interface OfficialStat {
   ratingsCount: number;
 }
 
+/** Membresía per-user de un restaurante oficial: lo hace aparecer en "Mi inicio"
+ *  y guarda su estado visitado/pendiente. NO clona el perfil — el perfil vive en
+ *  official_restaurants/official_dishes, compartido por todos. */
+export interface OfficialMembership {
+  officialRestaurantId: string;
+  status: "visited" | "pending";
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Fila unificada para "Mi inicio": mezcla restaurantes personales y oficiales
+ *  bajo la misma forma, para que la lista los renderice indistintamente. */
+export interface HomeEntry {
+  kind: "personal" | "official";
+  id: string; // personal → restaurant.id; official → official_restaurant_id
+  href: string;
+  name: string;
+  status: "visited" | "pending";
+  notes: string;
+  cities: string[];
+  createdAt: string;
+  updatedAt: string;
+  isOfficial: boolean;
+  officialRestaurantId: string | null;
+  avg: number | null; // MI promedio
+  dishCount: number;
+  hasUnrated: boolean;
+  searchText: string; // nombre + notas + platos, minúsculas (buscador del inicio)
+}
+
 export interface DishType {
   id: string;
   name: string;
@@ -58,12 +88,17 @@ export interface DishType {
 
 interface AppCache {
   userId: string;
-  restaurants: Restaurant[];
-  dishes: Dish[];
+  restaurants: Restaurant[]; // solo personales (no oficiales)
+  dishes: Dish[]; // solo platos personales
   dishTypes: DishType[];
+  // Overlay de oficiales (modelo IMDb: perfil compartido + capa per-user)
+  memberships: OfficialMembership[]; // oficiales en "mi lista" + estado
+  ratings: Record<string, number>; // officialDishId → mi calificación
+  officialRestaurants: OfficialRestaurant[]; // perfiles de mis membresías (para el inicio)
+  officialDishes: OfficialDish[]; // platos de mis membresías (conteo / sin calificar)
 }
 
-const CACHE_KEY = "staurant_cache_v4";
+const CACHE_KEY = "staurant_cache_v5";
 const STATS_CACHE_KEY = "staurant_official_stats_v1";
 let _userId: string | null = null;
 
@@ -107,20 +142,67 @@ function getCache(): AppCache {
   const persisted = readLocalStorage();
   if (persisted && persisted.userId === _userId) { _mem = persisted; return _mem; }
   // 3. Sin datos válidos → vacío
-  return { userId: _userId!, restaurants: [], dishes: [], dishTypes: [] };
+  return emptyCache();
+}
+
+function emptyCache(): AppCache {
+  return {
+    userId: _userId!,
+    restaurants: [],
+    dishes: [],
+    dishTypes: [],
+    memberships: [],
+    ratings: {},
+    officialRestaurants: [],
+    officialDishes: [],
+  };
 }
 
 async function fetchFromSupabase(): Promise<AppCache> {
-  const [rRes, dRes, dtRes] = await Promise.all([
+  const [rRes, dRes, dtRes, mRes, ratRes] = await Promise.all([
     supabase.from("restaurants").select("*").eq("user_id", _userId).order("created_at", { ascending: false }),
     supabase.from("dishes").select("*").eq("user_id", _userId).order("created_at", { ascending: false }),
     supabase.from("dish_types").select("*").eq("user_id", _userId).order("name", { ascending: true }),
+    supabase.from("user_official_restaurants").select("*").eq("user_id", _userId),
+    supabase.from("official_ratings").select("*").eq("user_id", _userId),
   ]);
+
+  const memberships = (mRes.data ?? []).map(toMembership);
+  const ratings: Record<string, number> = {};
+  for (const row of (ratRes.data ?? []) as Array<{ official_dish_id: string; rating: number | string }>) {
+    ratings[row.official_dish_id] = Number(row.rating);
+  }
+
+  // Perfiles + cartas de mis oficiales, para renderizar sus cards en el inicio.
+  const { officialRestaurants, officialDishes } = await fetchOfficialProfilesFor(
+    memberships.map((m) => m.officialRestaurantId),
+  );
+
   return {
     userId: _userId!,
     restaurants: (rRes.data ?? []).map(toRestaurant),
     dishes: (dRes.data ?? []).map(toDish),
     dishTypes: (dtRes.data ?? []).map(toDishType),
+    memberships,
+    ratings,
+    officialRestaurants,
+    officialDishes,
+  };
+}
+
+/** Trae perfiles oficiales + sus platos para un conjunto de ids (mis membresías). */
+async function fetchOfficialProfilesFor(
+  officialIds: string[],
+): Promise<{ officialRestaurants: OfficialRestaurant[]; officialDishes: OfficialDish[] }> {
+  const ids = [...new Set(officialIds)];
+  if (ids.length === 0) return { officialRestaurants: [], officialDishes: [] };
+  const [orRes, odRes] = await Promise.all([
+    supabase.from("official_restaurants").select("*").in("id", ids),
+    supabase.from("official_dishes").select("*").in("official_restaurant_id", ids),
+  ]);
+  return {
+    officialRestaurants: (orRes.data ?? []).map(toOfficialRestaurant),
+    officialDishes: (odRes.data ?? []).map(toOfficialDish),
   };
 }
 
@@ -173,8 +255,6 @@ async function refreshCacheInBackground(): Promise<void> {
     document.dispatchEvent(new CustomEvent("cache:synced"));
   }
 
-  // Sincronizar carta de oficiales después de tener el estado fresco
-  await syncOfficialMenus();
   // Refrescar stats globales (cambian cuando otros users califican)
   bgSync(fetchOfficialStats);
 }
@@ -209,9 +289,6 @@ export async function initCache(userId: string): Promise<void> {
   if (fresh.dishTypes.length === 0) {
     ["HAMBURGUESA", "PERRO CALIENTE", "PIZZA"].forEach(name => createDishType(name));
   }
-
-  // Pull de la carta oficial en background tras la carga inicial
-  bgSync(syncOfficialMenus);
 }
 
 /** Borra el caché local (llamar en logout). */
@@ -237,7 +314,7 @@ export function escapeHtml(str: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function toRestaurant(row: Record<string, unknown>): Restaurant {
+export function toRestaurant(row: Record<string, unknown>): Restaurant {
   return {
     id: row.id as string,
     name: row.name as string,
@@ -250,7 +327,7 @@ function toRestaurant(row: Record<string, unknown>): Restaurant {
   };
 }
 
-function toDish(row: Record<string, unknown>): Dish {
+export function toDish(row: Record<string, unknown>): Dish {
   return {
     id: row.id as string,
     restaurantId: row.restaurant_id as string,
@@ -264,11 +341,20 @@ function toDish(row: Record<string, unknown>): Dish {
   };
 }
 
-function toDishType(row: Record<string, unknown>): DishType {
+export function toDishType(row: Record<string, unknown>): DishType {
   return {
     id: row.id as string,
     name: row.name as string,
     createdAt: row.created_at as string,
+  };
+}
+
+function toMembership(row: Record<string, unknown>): OfficialMembership {
+  return {
+    officialRestaurantId: row.official_restaurant_id as string,
+    status: (row.status as "visited" | "pending") ?? "pending",
+    createdAt: row.created_at as string,
+    updatedAt: (row.updated_at as string | null) ?? (row.created_at as string),
   };
 }
 
@@ -290,9 +376,14 @@ export function getDishes(): Dish[] {
 /** Ciudades distintas ya usadas por el usuario (MAYÚSCULAS, ordenadas alfabéticamente).
  *  Alimenta el autocomplete del formulario y el filtro por ciudad del Inicio. */
 export function getCities(): string[] {
+  const cache = getCache();
   const set = new Set<string>();
-  for (const r of getCache().restaurants) {
+  for (const r of cache.restaurants) {
     for (const c of r.cities) set.add(c);
+  }
+  // Ciudades de mis oficiales (mismo criterio MAYÚSCULAS que las personales).
+  for (const o of cache.officialRestaurants) {
+    if (o.city) set.add(o.city.trim().toUpperCase());
   }
   return [...set].sort((a, b) => a.localeCompare(b));
 }
@@ -515,15 +606,20 @@ export function deleteDishType(id: string): void {
 
 // ─── Derived (síncronos) ───────────────────────────────────────────────────────
 
-export function getRestaurantAverage(restaurantId: string): number | null {
-  const rated = getDishesByRestaurant(restaurantId).filter((d) => d.rating !== null);
-  if (rated.length === 0) return null;
-  const sum = rated.reduce((acc, d) => acc + d.rating!, 0);
-  return Math.round((sum / rated.length) * 10) / 10;
+/** Promedio redondeado a 1 decimal de un conjunto de calificaciones (null si vacío).
+ *  Fuente única del redondeo de promedios (personales y oficiales, aquí y en social.ts). */
+export function roundedAverage(ratings: number[]): number | null {
+  if (ratings.length === 0) return null;
+  const sum = ratings.reduce((acc, r) => acc + r, 0);
+  return Math.round((sum / ratings.length) * 10) / 10;
 }
 
-export function hasUnratedDishes(restaurantId: string): boolean {
-  return getDishesByRestaurant(restaurantId).some((d) => d.rating === null);
+export function getRestaurantAverage(restaurantId: string): number | null {
+  return roundedAverage(
+    getDishesByRestaurant(restaurantId)
+      .filter((d) => d.rating !== null)
+      .map((d) => d.rating!),
+  );
 }
 
 /** IDs de los restaurantes con el promedio PERSONAL más alto (corona 👑).
@@ -623,175 +719,214 @@ export async function getOfficialDishes(officialRestaurantId: string): Promise<O
   return (data ?? []).map(toOfficialDish);
 }
 
-/** Crea un Restaurant personal a partir de un oficial, clonando todos sus platos
- *  como dishes sin calificar en el espacio del usuario.
- *
- *  La persistencia en Supabase es ATÓMICA y AWAITED:
- *  - se inserta el restaurante primero (respetando FK)
- *  - luego todos los dishes en un solo batch insert
- *  - si algo falla se hace rollback del cache local
- *
- *  Esto evita que un refresh en segundo plano sobreescriba la adopción antes
- *  de que se persista (race contra refreshCacheInBackground). */
-export async function adoptOfficialRestaurant(officialId: string): Promise<Restaurant | null> {
-  // Candado anti-duplicado en la fuente: si el usuario ya tiene un restaurante
-  // vinculado a este oficial, no se crea otro — se devuelve el existente.
-  const alreadyAdopted = getCache().restaurants.find(
-    (r) => r.officialRestaurantId === officialId,
+// ─── Membresías + calificaciones de oficiales (overlay per-user, sin clon) ─────
+
+/** ¿El usuario tiene este oficial en su lista? */
+export function isOfficialInMyList(officialRestaurantId: string): boolean {
+  return getCache().memberships.some((m) => m.officialRestaurantId === officialRestaurantId);
+}
+
+/** Mi calificación de un plato oficial (null si no lo he calificado). */
+export function getMyOfficialRating(officialDishId: string): number | null {
+  const r = getCache().ratings[officialDishId];
+  return r === undefined ? null : r;
+}
+
+/** Inserta/actualiza en el cache el perfil oficial y su carta (para el inicio). */
+function upsertOfficialProfile(
+  cache: AppCache,
+  official: OfficialRestaurant,
+  dishes: OfficialDish[],
+): void {
+  const oi = cache.officialRestaurants.findIndex((o) => o.id === official.id);
+  if (oi === -1) cache.officialRestaurants.push(official);
+  else cache.officialRestaurants[oi] = official;
+  cache.officialDishes = cache.officialDishes.filter(
+    (d) => d.officialRestaurantId !== official.id,
   );
-  if (alreadyAdopted) return alreadyAdopted;
+  cache.officialDishes.push(...dishes);
+}
 
-  const [officialRes, dishesRes] = await Promise.all([
-    supabase.from("official_restaurants").select("*").eq("id", officialId).single(),
-    supabase.from("official_dishes").select("*").eq("official_restaurant_id", officialId),
-  ]);
-  if (officialRes.error || !officialRes.data) {
-    console.error("[adoptOfficialRestaurant] official fetch failed", officialRes.error);
-    return null;
-  }
-  if (dishesRes.error) {
-    console.error("[adoptOfficialRestaurant] dishes fetch failed", dishesRes.error);
-    return null;
-  }
-  const official = toOfficialRestaurant(officialRes.data);
-  const officialDishes = (dishesRes.data ?? []).map(toOfficialDish);
-
-  // Mapeo de typeName → DishType personal (creando si no existe).
-  // createDishType escribe al cache + bgSync, ok que sea fire-and-forget para tipos.
-  const typeCache = new Map<string, string | null>();
-  function resolveType(typeName: string | null): string | null {
-    if (!typeName) return null;
-    const upper = typeName.trim().toUpperCase();
-    if (!upper) return null;
-    if (typeCache.has(upper)) return typeCache.get(upper)!;
-    const existing = getDishTypes().find((t) => t.name === upper);
-    const id = existing ? existing.id : createDishType(upper).id;
-    typeCache.set(upper, id);
-    return id;
+/** Agrega un oficial a "mi lista" (membresía, estado pendiente). NO clona el perfil:
+ *  solo registra la pertenencia y cachea el perfil + carta para el inicio. Idempotente:
+ *  si ya está, devuelve la membresía existente. Persiste en Supabase en background. */
+export function addOfficialToMyList(
+  official: OfficialRestaurant,
+  dishes: OfficialDish[],
+): OfficialMembership {
+  const cache = getCache();
+  const existing = cache.memberships.find((m) => m.officialRestaurantId === official.id);
+  if (existing) {
+    upsertOfficialProfile(cache, official, dishes);
+    writeCache(cache);
+    return existing;
   }
 
-  // Construir restaurante + dishes en memoria
   const now = new Date().toISOString();
-  const restaurant: Restaurant = {
-    id: crypto.randomUUID(),
-    name: official.name,
-    notes: official.notes ?? "",
-    cities: official.city ? [official.city.trim().toUpperCase()] : [],
+  const membership: OfficialMembership = {
+    officialRestaurantId: official.id,
     status: "pending",
     createdAt: now,
     updatedAt: now,
-    officialRestaurantId: official.id,
   };
-  const dishes: Dish[] = officialDishes.map((od) => ({
-    id: crypto.randomUUID(),
-    restaurantId: restaurant.id,
-    typeId: resolveType(od.typeName),
-    name: od.name,
-    rating: null,
-    notes: od.notes ?? "",
-    createdAt: now,
-    updatedAt: now,
-    officialDishId: od.id,
-  }));
-
-  // Aplicar al cache local (optimistic)
-  const cache = getCache();
-  cache.restaurants.unshift(restaurant);
-  cache.dishes.unshift(...dishes);
+  cache.memberships.unshift(membership);
+  upsertOfficialProfile(cache, official, dishes);
   writeCache(cache);
 
-  // Persistir en Supabase: restaurante PRIMERO (FK), luego dishes en batch.
-  try {
-    const rRes = await supabase.from("restaurants").insert({
-      id: restaurant.id, user_id: _userId,
-      name: restaurant.name, notes: restaurant.notes, cities: restaurant.cities,
-      status: restaurant.status,
-      created_at: restaurant.createdAt, updated_at: restaurant.updatedAt,
-      official_restaurant_id: restaurant.officialRestaurantId,
-    });
-    if (rRes.error) throw rRes.error;
-
-    if (dishes.length > 0) {
-      const dRes = await supabase.from("dishes").insert(
-        dishes.map((d) => ({
-          id: d.id, user_id: _userId,
-          restaurant_id: d.restaurantId, type_id: d.typeId,
-          name: d.name, rating: d.rating, notes: d.notes,
-          created_at: d.createdAt, updated_at: d.updatedAt,
-          official_dish_id: d.officialDishId,
-        })),
-      );
-      if (dRes.error) throw dRes.error;
-    }
-  } catch (err) {
-    console.error("[adoptOfficialRestaurant] persist error — rolling back local cache", err);
-    const cur = getCache();
-    cur.restaurants = cur.restaurants.filter((r) => r.id !== restaurant.id);
-    cur.dishes = cur.dishes.filter((d) => d.restaurantId !== restaurant.id);
-    writeCache(cur);
-    return null;
-  }
-
-  return restaurant;
+  bgSync(() =>
+    supabase.from("user_official_restaurants").insert({
+      user_id: _userId,
+      official_restaurant_id: official.id,
+      status: membership.status,
+      created_at: membership.createdAt,
+      updated_at: membership.updatedAt,
+    }),
+  );
+  return membership;
 }
 
-/** Para cada restaurante personal vinculado a uno oficial, agrega los platos
- *  que existan en la carta oficial pero no en la copia local del usuario.
- *  Solo AÑADE — nunca borra ni renombra para no destruir calificaciones.
- *  Dispara "cache:synced" si se crearon platos. */
-export async function syncOfficialMenus(): Promise<void> {
+/** Cambia el estado (visitado/pendiente) de un oficial en mi lista. */
+export function setOfficialStatus(
+  officialRestaurantId: string,
+  status: "visited" | "pending",
+): void {
   const cache = getCache();
-  const linked = cache.restaurants.filter((r) => r.officialRestaurantId);
-  if (linked.length === 0) return;
+  const idx = cache.memberships.findIndex(
+    (m) => m.officialRestaurantId === officialRestaurantId,
+  );
+  if (idx === -1 || cache.memberships[idx].status === status) return;
+  const updatedAt = new Date().toISOString();
+  cache.memberships[idx] = { ...cache.memberships[idx], status, updatedAt };
+  writeCache(cache);
+  bgSync(() =>
+    supabase
+      .from("user_official_restaurants")
+      .update({ status, updated_at: updatedAt })
+      .eq("user_id", _userId)
+      .eq("official_restaurant_id", officialRestaurantId),
+  );
+}
 
-  const officialIds = [...new Set(linked.map((r) => r.officialRestaurantId!))];
-  const { data, error } = await supabase
-    .from("official_dishes")
-    .select("*")
-    .in("official_restaurant_id", officialIds);
-  if (error || !data) { console.error("[syncOfficialMenus]", error); return; }
+/** Califica (o re-califica) un plato oficial. `rating=null` elimina mi calificación.
+ *  Marca la membresía como visitada al calificar. Optimista + bgSync. */
+export function rateOfficialDish(officialDishId: string, rating: number | null): void {
+  const cache = getCache();
 
-  const officialDishes = data.map(toOfficialDish);
-  const byOfficial = new Map<string, OfficialDish[]>();
-  for (const od of officialDishes) {
-    const list = byOfficial.get(od.officialRestaurantId) ?? [];
-    list.push(od);
-    byOfficial.set(od.officialRestaurantId, list);
-  }
-
-  let didCreate = false;
-  for (const r of linked) {
-    const personalDishes = cache.dishes.filter((d) => d.restaurantId === r.id);
-    const haveOfficialIds = new Set(
-      personalDishes.map((d) => d.officialDishId).filter((id): id is string => !!id),
+  if (rating === null) {
+    delete cache.ratings[officialDishId];
+    writeCache(cache);
+    bgSync(() =>
+      supabase
+        .from("official_ratings")
+        .delete()
+        .eq("user_id", _userId)
+        .eq("official_dish_id", officialDishId),
     );
-    const officialList = byOfficial.get(r.officialRestaurantId!) ?? [];
-    const missing = officialList.filter((od) => !haveOfficialIds.has(od.id));
-    if (missing.length === 0) continue;
-
-    for (const od of missing) {
-      let typeId: string | null = null;
-      const upper = od.typeName?.trim().toUpperCase();
-      if (upper) {
-        const existing = getDishTypes().find((t) => t.name === upper);
-        typeId = existing ? existing.id : createDishType(upper).id;
-      }
-      createDish(
-        {
-          restaurantId: r.id,
-          typeId,
-          name: od.name,
-          rating: null,
-          notes: od.notes ?? "",
-          officialDishId: od.id,
-        },
-        { skipBump: true },
-      );
-      didCreate = true;
-    }
+    return;
   }
 
-  if (didCreate) document.dispatchEvent(new CustomEvent("cache:synced"));
+  const now = new Date().toISOString();
+  cache.ratings[officialDishId] = rating;
+  writeCache(cache);
+  bgSync(() =>
+    supabase.from("official_ratings").upsert(
+      { user_id: _userId, official_dish_id: officialDishId, rating, updated_at: now },
+      { onConflict: "user_id,official_dish_id" },
+    ),
+  );
+
+  // Calificar implica que visité el restaurante del plato.
+  const od = cache.officialDishes.find((d) => d.id === officialDishId);
+  if (od) setOfficialStatus(od.officialRestaurantId, "visited");
+}
+
+/** Promedio MÍO de un restaurante oficial (avg de mis ratings de su carta). */
+export function getMyOfficialAverage(officialRestaurantId: string): number | null {
+  const cache = getCache();
+  const rated = cache.officialDishes
+    .filter((d) => d.officialRestaurantId === officialRestaurantId)
+    .map((d) => cache.ratings[d.id])
+    .filter((v): v is number => v !== undefined);
+  return roundedAverage(rated);
+}
+
+/** Lista unificada para "Mi inicio": restaurantes personales + oficiales de mi lista.
+ *  Ambos bajo la misma forma para renderizarlos indistintamente. */
+export function getHomeEntries(): HomeEntry[] {
+  const cache = getCache();
+
+  const personal: HomeEntry[] = cache.restaurants.map((r) => {
+    const ds = getDishesByRestaurant(r.id);
+    return {
+      kind: "personal",
+      id: r.id,
+      href: `/restaurante?id=${r.id}`,
+      name: r.name,
+      status: r.status,
+      notes: r.notes,
+      cities: r.cities,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+      isOfficial: false,
+      officialRestaurantId: null,
+      avg: getRestaurantAverage(r.id),
+      dishCount: ds.length,
+      hasUnrated: ds.some((d) => d.rating === null),
+      searchText: [r.name, r.notes, ...ds.map((d) => d.name), ...ds.map((d) => d.notes)]
+        .join(" ")
+        .toLowerCase(),
+    };
+  });
+
+  const official: HomeEntry[] = cache.memberships
+    .map((m) => cache.officialRestaurants.find((o) => o.id === m.officialRestaurantId) ? m : null)
+    .filter((m): m is OfficialMembership => m !== null)
+    .map((m) => {
+      const off = cache.officialRestaurants.find((o) => o.id === m.officialRestaurantId)!;
+      const dishes = cache.officialDishes.filter(
+        (d) => d.officialRestaurantId === m.officialRestaurantId,
+      );
+      return {
+        kind: "official",
+        id: m.officialRestaurantId,
+        href: `/oficial?id=${m.officialRestaurantId}`,
+        name: off.name,
+        status: m.status,
+        notes: off.notes ?? "",
+        cities: off.city ? [off.city.trim().toUpperCase()] : [],
+        createdAt: m.createdAt,
+        updatedAt: m.updatedAt,
+        isOfficial: true,
+        officialRestaurantId: m.officialRestaurantId,
+        avg: getMyOfficialAverage(m.officialRestaurantId),
+        dishCount: dishes.length,
+        hasUnrated: dishes.some((d) => cache.ratings[d.id] === undefined),
+        searchText: [off.name, off.notes ?? "", ...dishes.map((d) => d.name), ...dishes.map((d) => d.notes ?? "")]
+          .join(" ")
+          .toLowerCase(),
+      };
+    });
+
+  return [...personal, ...official];
+}
+
+/** Refresca en background los perfiles/cartas oficiales de mis membresías
+ *  (por si el sistema cambió el menú). Dispara "cache:synced" si algo cambió. */
+export async function refreshOfficialProfiles(): Promise<void> {
+  const cache = getCache();
+  if (cache.memberships.length === 0) return;
+  const { officialRestaurants, officialDishes } = await fetchOfficialProfilesFor(
+    cache.memberships.map((m) => m.officialRestaurantId),
+  );
+  const cur = getCache();
+  const changed =
+    JSON.stringify(cur.officialRestaurants) !== JSON.stringify(officialRestaurants) ||
+    JSON.stringify(cur.officialDishes) !== JSON.stringify(officialDishes);
+  if (!changed) return;
+  cur.officialRestaurants = officialRestaurants;
+  cur.officialDishes = officialDishes;
+  writeCache(cur);
+  document.dispatchEvent(new CustomEvent("cache:synced"));
 }
 
 /** Fetch agregaciones globales (RPCs Supabase) y guarda en cache local.

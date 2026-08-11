@@ -256,16 +256,30 @@ const tplRestaurant: Restaurant = {
   import {
     initCache,
     isCacheLoaded,
-    getRestaurants,
+    getHomeEntries,
     getCities,
-    getDishesByRestaurant,
-    getRestaurantAverage,
-    hasUnratedDishes,
     getOfficialRestaurantStat,
-    getTopRatedRestaurantIds,
-    type Restaurant,
+    escapeHtml,
+    type HomeEntry,
   } from "../lib/data.ts";
-  import { getRatingClass, makeCrown } from "../scripts/store.ts";
+  import {
+    makeCrown,
+    paintRatingBadge,
+    buildGlobalRatingPill,
+    fillRestaurantName,
+    updateSortPills,
+  } from "../scripts/store.ts";
+
+  /** IDs de las entradas del inicio (personales + oficiales) con MI mejor promedio.
+   *  Requiere ≥2 calificadas para destacar; empate → varias coronas. */
+  function getTopEntryIds(entries: HomeEntry[]): Set<string> {
+    const rated = entries.filter(
+      (e): e is HomeEntry & { avg: number } => e.avg !== null,
+    );
+    if (rated.length < 2) return new Set();
+    const max = Math.max(...rated.map((e) => e.avg));
+    return new Set(rated.filter((e) => e.avg === max).map((e) => e.id));
+  }
 
   // ─── Sort state (persiste entre navegaciones en memoria de módulo) ──────────
 
@@ -295,14 +309,6 @@ const tplRestaurant: Restaurant = {
   // ─── City filter state ─────────────────────────────────────────────────────
   let cityFilter: string | null = null; // null = todas las ciudades
 
-  function escapeHtml(s: string): string {
-    return s
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
-
   // Abre el modal de crear restaurante con el nombre prellenado desde la búsqueda.
   function openCreateWithName(name: string) {
     const api = (window as any).restaurantForm;
@@ -319,15 +325,13 @@ const tplRestaurant: Restaurant = {
     }
   }
 
-  function sortRestaurants(list: ReturnType<typeof getRestaurants>) {
+  function sortEntries(list: HomeEntry[]) {
     return [...list].sort((a, b) => {
       let cmp = 0;
       if (sortState.field === "name") {
         cmp = a.name.localeCompare(b.name);
       } else if (sortState.field === "rating") {
-        const ra = getRestaurantAverage(a.id) ?? -1;
-        const rb = getRestaurantAverage(b.id) ?? -1;
-        cmp = ra - rb;
+        cmp = (a.avg ?? -1) - (b.avg ?? -1);
       } else if (sortState.field === "modified") {
         cmp = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
       } else {
@@ -348,25 +352,12 @@ const tplRestaurant: Restaurant = {
   // ─── Sort UI ──────────────────────────────────────────────────────────────
 
   function updateSortUI() {
-    document
-      .querySelectorAll<HTMLButtonElement>(".sort-pill")
-      .forEach((btn) => {
-        const isActive = btn.dataset.field === sortState.field;
-        btn.classList.toggle("active", isActive);
-        btn.querySelector("i")!.className = isActive
-          ? `bi bi-arrow-${sortState.dir === "asc" ? "up" : "down"}`
-          : "bi bi-arrow-down-up";
-      });
+    updateSortPills(sortState.field, sortState.dir);
   }
 
   // ─── Construye un elemento <article> clonando el template del componente ────
 
-  function buildRestaurantCardElement(
-    r: Restaurant,
-    avg: number | null,
-    dishCount: number,
-    isTop: boolean,
-  ): Element {
+  function buildHomeCardElement(e: HomeEntry, isTop: boolean): Element {
     const tpl = document.getElementById(
       "tpl-restaurant-card",
     ) as HTMLTemplateElement;
@@ -374,38 +365,20 @@ const tplRestaurant: Restaurant = {
       tpl.content.cloneNode(true) as DocumentFragment
     ).querySelector("article")!;
 
-    article.setAttribute("data-href", `/restaurante?id=${r.id}`);
-    article.setAttribute("style", `view-transition-name: restaurant-${r.id}`);
-    article.classList.toggle("is-official", !!r.officialRestaurantId);
-    const h3 = article.querySelector("h3")!;
-    h3.textContent = "";
-    if (r.officialRestaurantId) {
-      const idx = r.name.lastIndexOf(" ");
-      const head = idx === -1 ? "" : r.name.slice(0, idx + 1);
-      const tail = idx === -1 ? r.name : r.name.slice(idx + 1);
-      if (head) h3.appendChild(document.createTextNode(head));
-      const tailSpan = document.createElement("span");
-      tailSpan.className = "name-tail-nowrap";
-      tailSpan.textContent = tail;
-      const badge = document.createElement("i");
-      badge.className = "bi bi-patch-check-fill verified-badge";
-      badge.title = "Restaurante verificado";
-      tailSpan.appendChild(badge);
-      h3.appendChild(tailSpan);
-    } else {
-      h3.textContent = r.name;
-    }
+    article.setAttribute("data-href", e.href);
+    article.setAttribute("style", `view-transition-name: restaurant-${e.id}`);
+    article.classList.toggle("is-official", e.isOfficial);
+    fillRestaurantName(article.querySelector("h3")!, e.name, e.isOfficial);
 
     const pill = article.querySelector(".dish-count-pill") as HTMLElement | null;
     if (pill) {
-      pill.innerHTML = `<i class="bi bi-journal-text"></i> ${dishCount} ${dishCount === 1 ? "plato" : "platos"}`;
-      if (dishCount > 0) {
+      pill.innerHTML = `<i class="bi bi-journal-text"></i> ${e.dishCount} ${e.dishCount === 1 ? "plato" : "platos"}`;
+      if (e.dishCount > 0) {
         const dot = document.createElement("span");
-        const hasUnrated = hasUnratedDishes(r.id);
-        if (!hasUnrated) {
+        if (!e.hasUnrated) {
           dot.className = "status-dot status-dot-ok";
           dot.title = "Todos los platos calificados";
-        } else if (r.officialRestaurantId) {
+        } else if (e.isOfficial) {
           dot.className = "status-dot status-dot-official";
           dot.title = "Hay platos sin calificar";
         } else {
@@ -417,29 +390,19 @@ const tplRestaurant: Restaurant = {
     }
 
     // Pill de rating global junto al de cantidad de platos
-    if (r.officialRestaurantId && pill) {
-      const stat = getOfficialRestaurantStat(r.officialRestaurantId);
+    if (e.officialRestaurantId && pill) {
+      const stat = getOfficialRestaurantStat(e.officialRestaurantId);
       if (stat && stat.ratingsCount > 0 && pill.parentElement) {
         const wrapper = document.createElement("div");
         wrapper.style.cssText = "display:flex; flex-direction:row; flex-wrap:wrap; gap:6px;";
         pill.parentElement.insertBefore(wrapper, pill);
         wrapper.appendChild(pill);
-        const gp = document.createElement("span");
-        gp.className = "global-rating-pill";
-        gp.title = `Promedio global basado en ${stat.ratingsCount} ${stat.ratingsCount === 1 ? "calificación" : "calificaciones"}`;
-        gp.innerHTML = `<i class="bi bi-globe2"></i> ${stat.avgRating} <span class="grp-count">· ${stat.ratingsCount}</span>`;
-        wrapper.appendChild(gp);
+        wrapper.appendChild(buildGlobalRatingPill(stat.avgRating, stat.ratingsCount));
       }
     }
 
     const badge = article.querySelector(".rating-badge")!;
-    if (avg === null) {
-      badge.className = "rating-badge badge-empty";
-      badge.innerHTML = '<i class="bi bi-star"></i>';
-    } else {
-      badge.className = `rating-badge ${getRatingClass(avg)}`;
-      badge.innerHTML = `<span class="rating-num">${avg}</span>`;
-    }
+    paintRatingBadge(badge, e.avg);
     if (isTop) badge.appendChild(makeCrown("Tu mejor valorado"));
 
     return article;
@@ -449,23 +412,13 @@ const tplRestaurant: Restaurant = {
 
   function renderList(status: "visited" | "pending", container: HTMLElement) {
     const q = searchQuery.toLowerCase().trim();
-    const all = getRestaurants().filter((r) => {
-      if (r.status !== status) return false;
-      if (cityFilter && !r.cities.includes(cityFilter)) return false;
+    const all = getHomeEntries().filter((e) => {
+      if (e.status !== status) return false;
+      if (cityFilter && !e.cities.includes(cityFilter)) return false;
       if (!q) return true;
-      if (
-        r.name.toLowerCase().includes(q) ||
-        r.notes.toLowerCase().includes(q)
-      ) {
-        return true;
-      }
-      return getDishesByRestaurant(r.id).some(
-        (d) =>
-          d.name.toLowerCase().includes(q) ||
-          d.notes.toLowerCase().includes(q),
-      );
+      return e.searchText.includes(q);
     });
-    const sorted = sortRestaurants(all);
+    const sorted = sortEntries(all);
 
     if (sorted.length === 0) {
       if (q) {
@@ -503,15 +456,10 @@ const tplRestaurant: Restaurant = {
     grid.className = "cards-grid";
     // Stagger solo en render normal; durante búsqueda se omite para no parpadear.
     if (!q) grid.classList.add("stagger-in");
-    const topIds = getTopRatedRestaurantIds();
-    sorted.forEach((r) => {
-      const card = buildRestaurantCardElement(
-        r,
-        getRestaurantAverage(r.id),
-        getDishesByRestaurant(r.id).length,
-        topIds.has(r.id),
-      );
-      card.addEventListener("click", () => navigate(`/restaurante?id=${r.id}`));
+    const topIds = getTopEntryIds(getHomeEntries());
+    sorted.forEach((e) => {
+      const card = buildHomeCardElement(e, topIds.has(e.id));
+      card.addEventListener("click", () => navigate(e.href));
       grid.appendChild(card);
     });
     container.appendChild(grid);
@@ -527,14 +475,14 @@ const tplRestaurant: Restaurant = {
   }
 
   function updateCounts() {
-    const all = getRestaurants();
+    const all = getHomeEntries();
     bumpCount(
       document.getElementById("count-visitados"),
-      String(all.filter((r) => r.status === "visited").length),
+      String(all.filter((e) => e.status === "visited").length),
     );
     bumpCount(
       document.getElementById("count-pendientes"),
-      String(all.filter((r) => r.status === "pending").length),
+      String(all.filter((e) => e.status === "pending").length),
     );
   }
 
@@ -544,7 +492,7 @@ const tplRestaurant: Restaurant = {
     const isVisitados = getActiveTab() === "visitados";
     const status = isVisitados ? "visited" : "pending";
     sortBarEl.hidden =
-      getRestaurants().filter((r) => r.status === status).length < 2;
+      getHomeEntries().filter((e) => e.status === status).length < 2;
 
     // El pill de rating no aplica a pendientes (no tienen calificación).
     // Usamos style.display en vez de hidden para evitar que el display:inline-flex
@@ -637,6 +585,9 @@ const tplRestaurant: Restaurant = {
   document.addEventListener("restaurant:visited", () => renderBoth());
   document.addEventListener("cache:synced", () => renderBoth());
   document.addEventListener("stats:synced", () => renderBoth());
+  // Oficiales: agregado a mi lista / calificado → refrescar el inicio.
+  document.addEventListener("official:added", () => renderBoth());
+  document.addEventListener("official:rated", () => renderBoth());
 
   // ─── PRE-RENDER en astro:after-swap ─────────────────────────────────────────
 
@@ -662,16 +613,16 @@ const tplRestaurant: Restaurant = {
     if (sortBarEl) {
       const status = activeTab === "visitados" ? "visited" : "pending";
       sortBarEl.hidden =
-        getRestaurants().filter((r) => r.status === status).length < 2;
+        getHomeEntries().filter((e) => e.status === status).length < 2;
     }
 
-    const all = getRestaurants();
+    const all = getHomeEntries();
     const cv = document.getElementById("count-visitados");
     const cp = document.getElementById("count-pendientes");
     if (cv)
-      cv.textContent = String(all.filter((r) => r.status === "visited").length);
+      cv.textContent = String(all.filter((e) => e.status === "visited").length);
     if (cp)
-      cp.textContent = String(all.filter((r) => r.status === "pending").length);
+      cp.textContent = String(all.filter((e) => e.status === "pending").length);
 
     document.querySelectorAll<HTMLButtonElement>(".tab-btn").forEach((btn) => {
       const active = btn.dataset.tab === activeTab;

@@ -145,11 +145,6 @@
   position: relative;
 }
 
-.rating-star {
-  font-size: 0.75rem;
-  opacity: 0.8;
-}
-
 .rating-num {
   font-size: 1.05rem;
   font-weight: 900;
@@ -250,20 +245,6 @@
     linear-gradient(315deg, rgba(212, 160, 23, 0.14) 0%, rgba(255, 248, 230, 0) 60%),
     var(--clr-white) !important;
   border-color: rgba(212, 160, 23, 0.5) !important;
-}
-
-.unrated-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  color: #a06010;
-  background: #fff3d6;
-  border: solid 1px #f0c17bad;
-  border-radius: 20px;
-  padding: 2px 8px;
 }
 
 /* === CORONA 👑 (mejor valorado, según calificación personal) ===
@@ -484,6 +465,55 @@
   }
 }
 
+/* === DISH TYPE DROPDOWN (filtro por tipo — restaurante.astro + oficial.astro) ===
+   Options creadas por JS → scope global. Compartido por ambas páginas de detalle. */
+
+#dish-type-dropdown .type-option {
+  padding: 8px 12px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--clr-text);
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: background 0.1s ease;
+  border-bottom: 1px solid var(--clr-border);
+}
+
+#dish-type-dropdown .type-option:last-child {
+  border-bottom: none;
+}
+
+#dish-type-dropdown .type-option.is-selected {
+  color: var(--clr-primary);
+  font-weight: 700;
+}
+
+#dish-type-dropdown .type-option.is-none {
+  color: var(--clr-text);
+  opacity: 0.55;
+  text-transform: none;
+  letter-spacing: 0;
+  border-bottom: 1px solid var(--clr-border);
+}
+
+#dish-type-dropdown .type-option.is-empty {
+  color: var(--clr-text);
+  opacity: 0.5;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+  cursor: default;
+  text-align: center;
+  padding: 14px;
+}
+
+@media (hover: hover) {
+  #dish-type-dropdown .type-option:hover,
+  #dish-type-dropdown .type-option:focus {
+    background: var(--clr-white2);
+  }
+}
+
 /* === RESPONSIVE === */
 
 @media (min-width: 768px) {
@@ -498,10 +528,6 @@
 
   .rating-num {
     font-size: 1.2rem;
-  }
-
-  .rating-star {
-    font-size: 0.82rem;
   }
 }
 

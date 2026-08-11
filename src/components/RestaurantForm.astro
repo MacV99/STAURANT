@@ -314,7 +314,6 @@ import FormModal from "./FormModal.astro";
     getRestaurants,
     getCities,
     searchOfficialRestaurants,
-    adoptOfficialRestaurant,
   } from "../lib/data.ts";
   import { emit, forceUppercase, createOverlay } from "../scripts/store.ts";
   import { navigate } from "astro:transitions/client";
@@ -338,7 +337,6 @@ import FormModal from "./FormModal.astro";
     const closeBtn   = document.getElementById("restaurant-form-close")!;
     const cancelBtn  = document.getElementById("restaurant-form-cancel")!;
     const dropdownEl = document.getElementById("rf-name-dropdown") as HTMLElement;
-    const submitBtn  = document.getElementById("restaurant-form-submit") as HTMLButtonElement;
     const cityCombobox = document.getElementById("rf-city-combobox") as HTMLElement;
     const cityInput  = document.getElementById("rf-city") as HTMLInputElement;
     const cityDropdown = document.getElementById("rf-city-dropdown") as HTMLElement;
@@ -373,7 +371,7 @@ import FormModal from "./FormModal.astro";
         }
         // mousedown + preventDefault: evita blur del input antes del click
         opt.addEventListener("mousedown", (e) => e.preventDefault());
-        opt.addEventListener("click", () => void adoptAndClose(o));
+        opt.addEventListener("click", () => openOfficialProfile(o));
         dropdownEl.appendChild(opt);
       });
       showDropdown();
@@ -388,30 +386,14 @@ import FormModal from "./FormModal.astro";
       showDropdown();
     }
 
-    async function adoptAndClose(o: OfficialRestaurant): Promise<void> {
-      // Guarda la misma invariante de unicidad de nombre que el flujo manual.
-      const duplicate = getRestaurants().find(
-        (r) => r.name.trim().toLowerCase() === o.name.trim().toLowerCase(),
-      );
-      if (duplicate) {
-        errorEl.textContent = `Ya tienes "${o.name}" en tu lista.`;
-        hideDropdown();
-        return;
-      }
-      // Bloquear UI mientras se clona la carta. NO cerrar el modal todavía:
-      // si la adopción falla queremos seguir mostrando el error dentro del form.
-      submitBtn.disabled = true;
+    /** Los oficiales tienen UN perfil compartido: no se clona nada. Seleccionar
+     *  uno cierra el formulario y navega a su perfil oficial, donde el usuario lo
+     *  agrega a su lista al calificar. */
+    function openOfficialProfile(o: OfficialRestaurant): void {
       hideDropdown();
       errorEl.textContent = "";
-      const created = await adoptOfficialRestaurant(o.id);
-      submitBtn.disabled = false;
-      if (created) {
-        close();
-        emit("restaurant:created", created);
-        navigate(`/restaurante?id=${created.id}`);
-      } else {
-        errorEl.textContent = "No se pudo cargar el restaurante oficial. Intenta de nuevo.";
-      }
+      close();
+      navigate(`/oficial?id=${o.id}`);
     }
 
     let searchToken = 0;
@@ -466,8 +448,11 @@ import FormModal from "./FormModal.astro";
       if (!selectedCities.includes(v)) selectedCities.push(v);
       renderCityChips();
       cityInput.value = "";
-      renderCityDropdown(""); // refresca sugerencias (ya sin la recién agregada)
+      // Cerrar el dropdown al seleccionar: así los chips ya agregados quedan
+      // visibles. Mantener el foco (para seguir escribiendo) reabriría el
+      // desplegable vía onfocus, por eso el close va DESPUÉS del focus.
       cityInput.focus();
+      closeCityDropdown();
     }
 
     function removeCity(value: string): void {

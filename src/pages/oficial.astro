@@ -110,52 +110,6 @@ const tplRestaurant: Restaurant = {
 </Layout1>
 
 <style is:global>
-  #dish-type-dropdown .type-option {
-    padding: 8px 12px;
-    font-size: 0.72rem;
-    font-weight: 500;
-    color: var(--clr-text);
-    cursor: pointer;
-    text-transform: uppercase;
-    transition: background 0.1s ease;
-    border-bottom: 1px solid var(--clr-border);
-  }
-
-  #dish-type-dropdown .type-option:last-child {
-    border-bottom: none;
-  }
-
-  #dish-type-dropdown .type-option.is-selected {
-    color: var(--clr-primary);
-    font-weight: 700;
-  }
-
-  #dish-type-dropdown .type-option.is-none {
-    color: var(--clr-text);
-    opacity: 0.55;
-    text-transform: none;
-    letter-spacing: 0;
-    border-bottom: 1px solid var(--clr-border);
-  }
-
-  #dish-type-dropdown .type-option.is-empty {
-    color: var(--clr-text);
-    opacity: 0.5;
-    text-transform: none;
-    letter-spacing: 0;
-    font-weight: 400;
-    cursor: default;
-    text-align: center;
-    padding: 14px;
-  }
-
-  @media (hover: hover) {
-    #dish-type-dropdown .type-option:hover,
-    #dish-type-dropdown .type-option:focus {
-      background: var(--clr-white2);
-    }
-  }
-
   /* Precio del plato en la carta oficial (dentro de la DishCard reusada) */
   .dish-card .od-price {
     display: block;
@@ -410,21 +364,23 @@ const tplRestaurant: Restaurant = {
   import { supabase } from "../lib/supabase.ts";
   import {
     initCache,
-    getRestaurants,
-    getDishesByRestaurant,
-    getRestaurantAverage,
     getOfficialRestaurant,
     getOfficialDishes,
     getOfficialRestaurantStat,
     getOfficialDishStat,
-    adoptOfficialRestaurant,
-    syncOfficialMenus,
-    markAsVisited,
+    addOfficialToMyList,
+    getMyOfficialRating,
+    getMyOfficialAverage,
     fetchOfficialStats,
     type OfficialRestaurant,
     type OfficialDish,
   } from "../lib/data.ts";
-  import { getRatingClass } from "../scripts/store.ts";
+  import {
+    paintRatingBadge,
+    buildGlobalRatingPill,
+    fillRestaurantName,
+    updateSortPills,
+  } from "../scripts/store.ts";
 
   // ─── Estado del módulo ──────────────────────────────────────────────────────
 
@@ -454,23 +410,10 @@ const tplRestaurant: Restaurant = {
     return true;
   }
 
-  /** Restaurante personal del usuario vinculado a este oficial (o undefined). */
-  function getAdoptedRestaurantId(): string | null {
-    if (!userId || !official) return null;
-    return (
-      getRestaurants().find((r) => r.officialRestaurantId === official!.id)?.id ??
-      null
-    );
-  }
-
   /** TU calificación de un plato oficial (null si anónimo / no calificado). */
   function getMyRatingFor(officialDishId: string): number | null {
-    const rid = getAdoptedRestaurantId();
-    if (!rid) return null;
-    return (
-      getDishesByRestaurant(rid).find((d) => d.officialDishId === officialDishId)
-        ?.rating ?? null
-    );
+    if (!userId) return null;
+    return getMyOfficialRating(officialDishId);
   }
 
   // ─── Intención pendiente (reanudar tras redirect de Google) ─────────────────
@@ -497,65 +440,24 @@ const tplRestaurant: Restaurant = {
     (window as any).authModal?.open({
       title: "Inicia sesión para calificar",
       onSuccess: async () => {
-        if (await ensureAuthState()) await continueRate(od);
+        if (await ensureAuthState()) continueRate(od);
       },
       onBeforeGoogle: () => storeIntent(od.id),
     });
   }
 
-  /** Con sesión: adopta el restaurante (queda VISITADO) y abre el MISMO modal de
-   *  calificación (DishForm) aquí mismo, sin sacar al usuario de la carta. Así
-   *  puede calificar varios platos del tirón; cada card queda con su nota. */
-  async function continueRate(od: OfficialDish): Promise<void> {
+  /** Con sesión: agrega el oficial a mi lista (sin clon) y abre el modal de
+   *  calificación aquí mismo. La nota se guarda en official_ratings; la membresía
+   *  queda VISITADA al calificar. Se pueden calificar varios platos del tirón. */
+  function continueRate(od: OfficialDish): void {
     if (!userId || !official) return;
-
-    let rid = getAdoptedRestaurantId();
-    if (!rid) {
-      const created = await adoptOfficialRestaurant(official.id);
-      if (!created) {
-        (window as any).noticeDialog?.show(
-          "No se pudo preparar la calificación. Intenta de nuevo.",
-          { variant: "error" },
-        );
-        return;
-      }
-      rid = created.id;
-    }
-
-    // Calificar un plato implica que visitó el restaurante.
-    markAsVisited(rid);
-
-    let personal = getDishesByRestaurant(rid).find(
-      (d) => d.officialDishId === od.id,
-    );
-    if (!personal) {
-      await syncOfficialMenus();
-      personal = getDishesByRestaurant(rid).find(
-        (d) => d.officialDishId === od.id,
-      );
-    }
-    if (!personal) {
-      (window as any).noticeDialog?.show(
-        "No se pudo preparar la calificación. Intenta de nuevo.",
-        { variant: "error" },
-      );
-      return;
-    }
-
-    // Reflejar la adopción en la UI y abrir el modal de rating en ESTE plato.
+    // Idempotente: registra la pertenencia + cachea perfil/carta para "Mi inicio".
+    addOfficialToMyList(official, officialDishes);
     renderAll();
-    (window as any).dishForm?.open("edit", rid, personal);
+    (window as any).dishForm?.openOfficial(od, getMyOfficialRating(od.id));
   }
 
   // ─── Render (mismos componentes que /restaurante) ───────────────────────────
-
-  function buildGlobalRatingPill(avg: number, count: number): HTMLElement {
-    const pill = document.createElement("span");
-    pill.className = "global-rating-pill";
-    pill.title = `Promedio global basado en ${count} ${count === 1 ? "calificación" : "calificaciones"}`;
-    pill.innerHTML = `<i class="bi bi-globe2"></i> ${avg} <span class="grp-count">· ${count}</span>`;
-    return pill;
-  }
 
   function buildHeaderElement(): Element {
     const tpl = document.getElementById(
@@ -568,16 +470,7 @@ const tplRestaurant: Restaurant = {
     div.classList.add("is-official");
 
     // Nombre + sello verificado
-    const h1 = div.querySelector("h1")!;
-    h1.textContent = "";
-    const tailSpan = document.createElement("span");
-    tailSpan.className = "name-tail-nowrap";
-    tailSpan.textContent = official!.name;
-    const verified = document.createElement("i");
-    verified.className = "bi bi-patch-check-fill verified-badge";
-    verified.title = "Restaurante verificado";
-    tailSpan.appendChild(verified);
-    h1.appendChild(tailSpan);
+    fillRestaurantName(div.querySelector("h1")!, official!.name, true);
 
     // Conteo de platos
     const pill = div.querySelector(".dish-count-pill");
@@ -595,16 +488,9 @@ const tplRestaurant: Restaurant = {
     // Badge = TU promedio del lugar (si ya calificaste algún plato); si no,
     // estrella vacía. La nota de la comunidad va aparte, en el pill global (🌐).
     const stat = getOfficialRestaurantStat(official!.id);
-    const rid = getAdoptedRestaurantId();
-    const myAvg = rid ? getRestaurantAverage(rid) : null;
+    const myAvg = userId ? getMyOfficialAverage(official!.id) : null;
     const badge = div.querySelector(".rating-badge")!;
-    if (myAvg === null) {
-      badge.className = "rating-badge badge-empty";
-      badge.innerHTML = '<i class="bi bi-star"></i>';
-    } else {
-      badge.className = `rating-badge ${getRatingClass(myAvg)}`;
-      badge.innerHTML = `<span class="rating-num">${myAvg}</span>`;
-    }
+    paintRatingBadge(badge, myAvg);
     if (stat && stat.ratingsCount > 0) {
       const pillsRow = div.querySelector<HTMLElement>(".rh-pills");
       pillsRow?.insertBefore(
@@ -670,13 +556,7 @@ const tplRestaurant: Restaurant = {
     // invita a tocar. La nota de la comunidad va en el pill global (🌐).
     const myRating = getMyRatingFor(od.id);
     const badge = article.querySelector(".rating-badge")!;
-    if (myRating === null) {
-      badge.className = "rating-badge badge-empty badge-btn";
-      badge.innerHTML = '<i class="bi bi-star"></i>';
-    } else {
-      badge.className = `rating-badge ${getRatingClass(myRating)} badge-btn`;
-      badge.innerHTML = `<span class="rating-num">${myRating}</span>`;
-    }
+    paintRatingBadge(badge, myRating, { button: true });
     badge.addEventListener("click", (e) => {
       e.stopPropagation();
       rateFlow(od);
@@ -825,15 +705,7 @@ const tplRestaurant: Restaurant = {
   // ─── Orden / búsqueda ───────────────────────────────────────────────────────
 
   function updateSortUI(): void {
-    document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach((btn) => {
-      const isActive = btn.dataset.field === sortField;
-      btn.classList.toggle("active", isActive);
-      const icon = btn.querySelector("i");
-      if (icon)
-        icon.className = isActive
-          ? `bi bi-arrow-${sortDir === "asc" ? "up" : "down"}`
-          : "bi bi-arrow-down-up";
-    });
+    updateSortPills(sortField, sortDir);
   }
 
   function wireControls(): void {
@@ -907,9 +779,9 @@ const tplRestaurant: Restaurant = {
     if (official) renderAll();
   });
 
-  // Tras calificar en el DishForm: repinta tu nota en la card y refresca el
+  // Tras calificar (official_ratings): repinta tu nota en la card y refresca el
   // promedio global (el RPC ya incluye tu nueva calificación).
-  document.addEventListener("dish:updated", () => {
+  document.addEventListener("official:rated", () => {
     if (!official) return;
     renderAll();
     void fetchOfficialStats();
@@ -977,7 +849,7 @@ const tplRestaurant: Restaurant = {
           };
           if (p.officialId === official.id && p.officialDishId) {
             const od = officialDishes.find((d) => d.id === p.officialDishId);
-            if (od) await continueRate(od);
+            if (od) continueRate(od);
           }
         } catch {
           /* intención corrupta → ignorar */
