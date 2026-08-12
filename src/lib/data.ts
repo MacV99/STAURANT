@@ -719,11 +719,153 @@ export async function getOfficialDishes(officialRestaurantId: string): Promise<O
   return (data ?? []).map(toOfficialDish);
 }
 
+// ─── Gestión por el DUEÑO del perfil oficial (modelo IMDb + dueño verificado) ──
+// Un usuario con fila en official_owners puede editar la carta de ESE perfil y ver
+// sus estadísticas agregadas. La seguridad real vive en RLS (Postgres): estas
+// funciones fallan silenciosas si el usuario no es dueño. NO se cachean (el perfil
+// oficial es compartido; /oficial re-lee con getOfficialDishes tras cada cambio).
+
+/** Estadística agregada de UN plato para el panel del dueño. */
+export interface OfficialOwnerDishStat {
+  dishId: string;
+  name: string;
+  avgRating: number | null;
+  votes: number;
+}
+
+/** Payload del panel de estadísticas del dueño (RPC get_official_owner_stats). */
+export interface OfficialOwnerStats {
+  members: number; // usuarios que agregaron el restaurante a su lista (alcance)
+  raters: number; // usuarios distintos que han calificado (participación)
+  totalRatings: number; // total de calificaciones recibidas
+  dishes: OfficialOwnerDishStat[]; // agregado por plato, mejor → peor
+}
+
+/** ¿El usuario actual es dueño de este perfil oficial? RLS permite leer solo las
+ *  filas propias de official_owners, así que un select basta para saberlo. */
+export async function checkOfficialOwnership(
+  officialRestaurantId: string,
+): Promise<boolean> {
+  if (!_userId) return false;
+  const { data, error } = await supabase
+    .from("official_owners")
+    .select("official_restaurant_id")
+    .eq("official_restaurant_id", officialRestaurantId)
+    .eq("user_id", _userId)
+    .maybeSingle();
+  if (error) { console.error("[checkOfficialOwnership]", error); return false; }
+  return !!data;
+}
+
+/** Estadísticas agregadas del perfil (solo dueño). El RPC valida propiedad y nunca
+ *  devuelve filas crudas ni quién votó — solo números. */
+export async function getOfficialOwnerStats(
+  officialRestaurantId: string,
+): Promise<OfficialOwnerStats | null> {
+  const { data, error } = await supabase.rpc("get_official_owner_stats", {
+    rest_id: officialRestaurantId,
+  });
+  if (error || !data) { console.error("[getOfficialOwnerStats]", error); return null; }
+  const d = data as {
+    members: number;
+    raters: number;
+    total_ratings: number;
+    dishes: Array<{ dish_id: string; name: string; avg_rating: number | string | null; votes: number }>;
+  };
+  return {
+    members: d.members ?? 0,
+    raters: d.raters ?? 0,
+    totalRatings: d.total_ratings ?? 0,
+    dishes: (d.dishes ?? []).map((x) => ({
+      dishId: x.dish_id,
+      name: x.name,
+      avgRating: x.avg_rating === null ? null : Number(x.avg_rating),
+      votes: x.votes ?? 0,
+    })),
+  };
+}
+
+/** Crea un plato en la carta oficial (solo dueño; RLS lo verifica). */
+export async function createOfficialDish(input: {
+  officialRestaurantId: string;
+  name: string;
+  typeName?: string | null;
+  price?: number | null;
+  notes?: string | null;
+}): Promise<OfficialDish | null> {
+  const { data, error } = await supabase
+    .from("official_dishes")
+    .insert({
+      official_restaurant_id: input.officialRestaurantId,
+      name: input.name,
+      type_name: input.typeName ?? null,
+      price: input.price ?? null,
+      notes: input.notes ?? null,
+    })
+    .select()
+    .single();
+  if (error || !data) { console.error("[createOfficialDish]", error); return null; }
+  return toOfficialDish(data);
+}
+
+/** Edita un plato de la carta oficial (solo dueño). */
+export async function updateOfficialDish(
+  id: string,
+  patch: Partial<{ name: string; typeName: string | null; price: number | null; notes: string | null }>,
+): Promise<OfficialDish | null> {
+  const row: Record<string, unknown> = {};
+  if (patch.name !== undefined) row.name = patch.name;
+  if (patch.typeName !== undefined) row.type_name = patch.typeName;
+  if (patch.price !== undefined) row.price = patch.price;
+  if (patch.notes !== undefined) row.notes = patch.notes;
+  const { data, error } = await supabase
+    .from("official_dishes")
+    .update(row)
+    .eq("id", id)
+    .select()
+    .single();
+  if (error || !data) { console.error("[updateOfficialDish]", error); return null; }
+  return toOfficialDish(data);
+}
+
+/** Borra un plato de la carta oficial (solo dueño). */
+export async function deleteOfficialDish(id: string): Promise<boolean> {
+  const { error } = await supabase.from("official_dishes").delete().eq("id", id);
+  if (error) { console.error("[deleteOfficialDish]", error); return false; }
+  return true;
+}
+
+/** Edita los datos del perfil oficial: nombre / ciudad / dirección / notas (solo dueño). */
+export async function updateOfficialRestaurant(
+  id: string,
+  patch: Partial<{ name: string; city: string | null; address: string | null; notes: string | null }>,
+): Promise<OfficialRestaurant | null> {
+  const { data, error } = await supabase
+    .from("official_restaurants")
+    .update(patch)
+    .eq("id", id)
+    .select()
+    .single();
+  if (error || !data) { console.error("[updateOfficialRestaurant]", error); return null; }
+  return toOfficialRestaurant(data);
+}
+
 // ─── Membresías + calificaciones de oficiales (overlay per-user, sin clon) ─────
 
 /** ¿El usuario tiene este oficial en su lista? */
 export function isOfficialInMyList(officialRestaurantId: string): boolean {
   return getCache().memberships.some((m) => m.officialRestaurantId === officialRestaurantId);
+}
+
+/** Estado (visitado/pendiente) de un oficial en mi lista, o null si no pertenece.
+ *  Usado por /oficial para apuntar el ← Volver a la pestaña correcta del inicio. */
+export function getMyOfficialStatus(
+  officialRestaurantId: string,
+): "visited" | "pending" | null {
+  const m = getCache().memberships.find(
+    (x) => x.officialRestaurantId === officialRestaurantId,
+  );
+  return m ? m.status : null;
 }
 
 /** Mi calificación de un plato oficial (null si no lo he calificado). */

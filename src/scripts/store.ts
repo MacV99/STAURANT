@@ -102,7 +102,9 @@ type AppEvent =
   | "dish:first-rated"
   | "dish:deleted"
   | "official:rated"
-  | "official:added";
+  | "official:added"
+  | "official:carta-changed"
+  | "official:profile-changed";
 
 export function emit(event: AppEvent, detail?: unknown): void {
   document.dispatchEvent(new CustomEvent(event, { detail }));

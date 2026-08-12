@@ -85,4 +85,16 @@ const { dish: d, typeName } = Astro.props;
     gap: 6px;
     flex-shrink: 0;
   }
+
+  /* Card clickeable (calificar): toda la tarjeta invita a tocar. Se activa en
+     runtime con .is-rateable, tanto en /restaurante como en /oficial. */
+  .dish-card.is-rateable {
+    cursor: pointer;
+  }
+
+  @media (hover: hover) {
+    .dish-card.is-rateable:hover {
+      border-color: var(--clr-border2);
+    }
+  }
 </style>

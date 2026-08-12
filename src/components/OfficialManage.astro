@@ -1,0 +1,469 @@
+---
+/**
+ * Gestión del perfil oficial por su DUEÑO (fila en official_owners).
+ * Contiene tres modales + su lógica, colocados juntos porque solo el dueño los usa:
+ *   1. Editor de carta   → crear / editar un plato oficial (con precio, sin drum).
+ *   2. Panel de stats    → agregados del RPC get_official_owner_stats (solo números).
+ *   3. Editor de perfil  → nombre / ciudad / dirección / notas del restaurante.
+ *
+ * La seguridad real vive en RLS (Postgres). Este componente solo se monta y expone
+ * su API cuando /oficial detecta propiedad; las escrituras fallan igual si no lo eres.
+ *
+ * API global (refrescada en cada page-load):
+ *   window.officialManage = { openDishCreate, openDishEdit, openStats, openProfileEdit }
+ * Eventos emitidos (los escucha /oficial para re-renderizar):
+ *   official:carta-changed   { officialRestaurantId }
+ *   official:profile-changed { official }
+ */
+import FormModal from "./FormModal.astro";
+---
+
+{/* ── 1. Editor de plato oficial ─────────────────────────────────────────── */}
+<FormModal id="odf" title="Nuevo plato" maxWidth="420px">
+  <input type="hidden" id="odf-id" />
+  <input type="hidden" id="odf-restaurant-id" />
+
+  <label for="odf-name">
+    <span class="label-text flex-row"
+      >Nombre del plato <span class="required">*</span></span
+    >
+    <input
+      type="text"
+      id="odf-name"
+      required
+      placeholder="Bandeja paisa, Sushi roll..."
+    />
+  </label>
+
+  <label for="odf-type">
+    <span class="label-text flex-row"
+      >Tipo / categoría <span class="optional">(opcional)</span></span
+    >
+    <input
+      type="text"
+      id="odf-type"
+      placeholder="ENTRADA, POSTRE, BEBIDA..."
+      autocomplete="off"
+      spellcheck="false"
+    />
+  </label>
+
+  <label for="odf-price">
+    <span class="label-text flex-row"
+      >Precio <span class="optional">(opcional)</span></span
+    >
+    <input
+      type="number"
+      id="odf-price"
+      min="0"
+      step="any"
+      inputmode="numeric"
+      placeholder="18000"
+    />
+  </label>
+
+  <label for="odf-notes">
+    <span class="label-text flex-row">Descripción</span>
+    <textarea
+      id="odf-notes"
+      rows="2"
+      placeholder="Ingredientes, acompañamientos, lo que quieras destacar..."
+    ></textarea>
+  </label>
+</FormModal>
+
+{/* ── 3. Editor del perfil ───────────────────────────────────────────────── */}
+<FormModal id="opf" title="Editar restaurante" maxWidth="420px">
+  <input type="hidden" id="opf-id" />
+
+  <label for="opf-name">
+    <span class="label-text flex-row"
+      >Nombre <span class="required">*</span></span
+    >
+    <input type="text" id="opf-name" required placeholder="Nombre del restaurante" />
+  </label>
+
+  <label for="opf-city">
+    <span class="label-text flex-row"
+      >Ciudad <span class="optional">(opcional)</span></span
+    >
+    <input type="text" id="opf-city" placeholder="Bogotá, Medellín..." />
+  </label>
+
+  <label for="opf-address">
+    <span class="label-text flex-row"
+      >Dirección <span class="optional">(opcional)</span></span
+    >
+    <input type="text" id="opf-address" placeholder="Cra 00 # 00-00" />
+  </label>
+
+  <label for="opf-notes">
+    <span class="label-text flex-row">Descripción</span>
+    <textarea id="opf-notes" rows="2" placeholder="Sobre el restaurante..."></textarea>
+  </label>
+</FormModal>
+
+{/* ── 2. Panel de estadísticas ───────────────────────────────────────────── */}
+<div id="ost-overlay" class="overlay" aria-modal="true" role="dialog">
+  <div class="form-box stats-box flex-column">
+    <div class="form-header flex-row">
+      <h2 id="ost-title">Estadísticas</h2>
+      <button
+        id="ost-close"
+        class="btn-close btn-icon-close boton2"
+        aria-label="Cerrar"
+      >
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <div class="stats-tiles flex-row">
+      <div class="stat-tile flex-column">
+        <span class="stat-num" id="ost-members">—</span>
+        <span class="stat-lbl">En listas</span>
+      </div>
+      <div class="stat-tile flex-column">
+        <span class="stat-num" id="ost-raters">—</span>
+        <span class="stat-lbl">Califican</span>
+      </div>
+      <div class="stat-tile flex-column">
+        <span class="stat-num" id="ost-total">—</span>
+        <span class="stat-lbl">Calif. totales</span>
+      </div>
+    </div>
+
+    <h3 class="stats-subtitle">Por plato</h3>
+    <div id="ost-dishes" class="stats-dishes flex-column"></div>
+  </div>
+</div>
+
+<style>
+  /* Base de form/label/footer/overlay viven en project.css. Aquí solo lo propio. */
+  #odf-name,
+  #odf-type,
+  #odf-price,
+  #odf-notes,
+  #opf-name,
+  #opf-city,
+  #opf-address,
+  #opf-notes {
+    font-size: 0.9rem;
+  }
+
+  #odf-type {
+    text-transform: uppercase;
+  }
+
+  /* ── Panel de estadísticas ────────────────────────────────────────────── */
+  .stats-box {
+    max-width: 480px;
+  }
+
+  .stats-tiles {
+    justify-content: stretch;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .stat-tile {
+    flex: 1;
+    align-items: center;
+    gap: 2px;
+    padding: 14px 6px;
+    border-radius: var(--border-radius);
+    background: var(--clr-white2);
+    border: 1.5px solid var(--clr-border);
+  }
+
+  .stat-num {
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: var(--clr-primary);
+    line-height: 1;
+  }
+
+  .stat-lbl {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--clr-text);
+    opacity: 0.55;
+    text-align: center;
+  }
+
+  .stats-subtitle {
+    margin-top: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--clr-text);
+    opacity: 0.7;
+  }
+
+  .stats-dishes {
+    align-items: stretch;
+    gap: 6px;
+    max-height: 46vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .stat-dish-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: var(--border-radius);
+    background: var(--clr-white2);
+    border: 1px solid var(--clr-border);
+  }
+
+  .stat-dish-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--clr-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .stat-dish-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  /* Color (bg/texto) lo aporta .badge-low/mid/high (global). Aquí solo la forma. */
+  .stat-dish-avg {
+    min-width: 34px;
+    text-align: center;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 800;
+  }
+
+  .stat-dish-avg.is-empty {
+    color: var(--clr-text);
+    opacity: 0.4;
+  }
+
+  .stat-dish-votes {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--clr-text);
+    opacity: 0.5;
+    white-space: nowrap;
+  }
+
+  .stats-empty {
+    padding: 18px;
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--clr-text);
+    opacity: 0.5;
+  }
+</style>
+
+<script>
+  import type { OfficialDish, OfficialRestaurant } from "../lib/data.ts";
+  import {
+    createOfficialDish,
+    updateOfficialDish,
+    updateOfficialRestaurant,
+    getOfficialOwnerStats,
+  } from "../lib/data.ts";
+  import { emit, forceUppercase, createOverlay } from "../scripts/store.ts";
+
+  document.addEventListener("astro:page-load", () => {
+    // Guard: el componente solo existe en /oficial. Sin el overlay del editor de
+    // carta, no estamos en esa página → no cablear nada.
+    const dishApi = createOverlay("odf-overlay");
+    if (!dishApi) return;
+    // Destructurado tras el guard: las funciones internas (closures) conservan la
+    // referencia no-nula sin que TS pierda el narrowing dentro de sus cuerpos.
+    const { open: openDishModal, close: closeDishModal } = dishApi;
+
+    // ── 1. Editor de carta ──────────────────────────────────────────────────
+    const dishForm = document.getElementById("odf") as HTMLFormElement;
+    const dishTitle = document.getElementById("odf-title")!;
+    const dIdEl = document.getElementById("odf-id") as HTMLInputElement;
+    const dRestEl = document.getElementById("odf-restaurant-id") as HTMLInputElement;
+    const dNameEl = document.getElementById("odf-name") as HTMLInputElement;
+    const dTypeEl = document.getElementById("odf-type") as HTMLInputElement;
+    const dPriceEl = document.getElementById("odf-price") as HTMLInputElement;
+    const dNotesEl = document.getElementById("odf-notes") as HTMLTextAreaElement;
+    const dErrEl = document.getElementById("odf-error")!;
+
+    dNameEl.oninput = () => forceUppercase(dNameEl);
+    dTypeEl.oninput = () => forceUppercase(dTypeEl);
+    document.getElementById("odf-close")!.onclick = closeDishModal;
+    document.getElementById("odf-cancel")!.onclick = closeDishModal;
+
+    function openDishCreate(officialRestaurantId: string) {
+      dishForm.reset();
+      dErrEl.textContent = "";
+      dishTitle.textContent = "Nuevo plato";
+      dIdEl.value = "";
+      dRestEl.value = officialRestaurantId;
+      openDishModal();
+      dNameEl.focus();
+    }
+
+    function openDishEdit(od: OfficialDish) {
+      dishForm.reset();
+      dErrEl.textContent = "";
+      dishTitle.textContent = "Editar plato";
+      dIdEl.value = od.id;
+      dRestEl.value = od.officialRestaurantId;
+      dNameEl.value = od.name;
+      dTypeEl.value = od.typeName ?? "";
+      dPriceEl.value = od.price !== null ? String(od.price) : "";
+      dNotesEl.value = od.notes ?? "";
+      openDishModal();
+    }
+
+    dishForm.onsubmit = async (e) => {
+      e.preventDefault();
+      dErrEl.textContent = "";
+      const name = dNameEl.value.trim();
+      if (!name) {
+        dErrEl.textContent = "El nombre del plato es obligatorio.";
+        dNameEl.focus();
+        return;
+      }
+      const typeName = dTypeEl.value.trim() || null;
+      const priceRaw = dPriceEl.value.trim();
+      const price = priceRaw === "" ? null : Number(priceRaw);
+      if (price !== null && (Number.isNaN(price) || price < 0)) {
+        dErrEl.textContent = "El precio debe ser un número válido.";
+        dPriceEl.focus();
+        return;
+      }
+      const notes = dNotesEl.value.trim() || null;
+      const officialRestaurantId = dRestEl.value;
+      const id = dIdEl.value;
+
+      const saved = id
+        ? await updateOfficialDish(id, { name, typeName, price, notes })
+        : await createOfficialDish({ officialRestaurantId, name, typeName, price, notes });
+
+      if (!saved) {
+        dErrEl.textContent = "No se pudo guardar. ¿Sigues siendo dueño de este perfil?";
+        return;
+      }
+      closeDishModal();
+      emit("official:carta-changed", { officialRestaurantId });
+    };
+
+    // ── 3. Editor de perfil ─────────────────────────────────────────────────
+    const profForm = document.getElementById("opf") as HTMLFormElement;
+    const pIdEl = document.getElementById("opf-id") as HTMLInputElement;
+    const pNameEl = document.getElementById("opf-name") as HTMLInputElement;
+    const pCityEl = document.getElementById("opf-city") as HTMLInputElement;
+    const pAddrEl = document.getElementById("opf-address") as HTMLInputElement;
+    const pNotesEl = document.getElementById("opf-notes") as HTMLTextAreaElement;
+    const pErrEl = document.getElementById("opf-error")!;
+    const profApi = createOverlay("opf-overlay")!;
+
+    document.getElementById("opf-close")!.onclick = profApi.close;
+    document.getElementById("opf-cancel")!.onclick = profApi.close;
+
+    function openProfileEdit(official: OfficialRestaurant) {
+      profForm.reset();
+      pErrEl.textContent = "";
+      pIdEl.value = official.id;
+      pNameEl.value = official.name;
+      pCityEl.value = official.city ?? "";
+      pAddrEl.value = official.address ?? "";
+      pNotesEl.value = official.notes ?? "";
+      profApi.open();
+    }
+
+    profForm.onsubmit = async (e) => {
+      e.preventDefault();
+      pErrEl.textContent = "";
+      const name = pNameEl.value.trim();
+      if (!name) {
+        pErrEl.textContent = "El nombre es obligatorio.";
+        pNameEl.focus();
+        return;
+      }
+      const saved = await updateOfficialRestaurant(pIdEl.value, {
+        name,
+        city: pCityEl.value.trim() || null,
+        address: pAddrEl.value.trim() || null,
+        notes: pNotesEl.value.trim() || null,
+      });
+      if (!saved) {
+        pErrEl.textContent = "No se pudo guardar. ¿Sigues siendo dueño de este perfil?";
+        return;
+      }
+      profApi.close();
+      emit("official:profile-changed", { official: saved });
+    };
+
+    // ── 2. Panel de estadísticas ────────────────────────────────────────────
+    const statApi = createOverlay("ost-overlay")!;
+    const stMembers = document.getElementById("ost-members")!;
+    const stRaters = document.getElementById("ost-raters")!;
+    const stTotal = document.getElementById("ost-total")!;
+    const stDishes = document.getElementById("ost-dishes")!;
+    document.getElementById("ost-close")!.onclick = statApi.close;
+
+    function badgeClass(avg: number): string {
+      if (avg <= 4) return "badge-low";
+      if (avg <= 7) return "badge-mid";
+      return "badge-high";
+    }
+
+    async function openStats(officialRestaurantId: string) {
+      stMembers.textContent = "—";
+      stRaters.textContent = "—";
+      stTotal.textContent = "—";
+      stDishes.innerHTML = `<div class="stats-empty">Cargando…</div>`;
+      statApi.open();
+
+      const stats = await getOfficialOwnerStats(officialRestaurantId);
+      if (!stats) {
+        stDishes.innerHTML = `<div class="stats-empty">No se pudieron cargar las estadísticas.</div>`;
+        return;
+      }
+      stMembers.textContent = String(stats.members);
+      stRaters.textContent = String(stats.raters);
+      stTotal.textContent = String(stats.totalRatings);
+
+      if (stats.dishes.length === 0) {
+        stDishes.innerHTML = `<div class="stats-empty">Aún no hay platos en la carta.</div>`;
+        return;
+      }
+      stDishes.innerHTML = "";
+      stats.dishes.forEach((d) => {
+        const row = document.createElement("div");
+        row.className = "stat-dish-row";
+        const avgHtml =
+          d.avgRating !== null
+            ? `<span class="stat-dish-avg ${badgeClass(d.avgRating)}">${d.avgRating.toFixed(1)}</span>`
+            : `<span class="stat-dish-avg is-empty">—</span>`;
+        row.innerHTML =
+          `<span class="stat-dish-name">${d.name}</span>` +
+          `<span class="stat-dish-meta">${avgHtml}` +
+          `<span class="stat-dish-votes">${d.votes} ${d.votes === 1 ? "voto" : "votos"}</span></span>`;
+        stDishes.appendChild(row);
+      });
+    }
+
+    // API global (refrescada con referencias frescas al DOM actual).
+    (window as any).officialManage = {
+      openDishCreate,
+      openDishEdit,
+      openStats,
+      openProfileEdit,
+    };
+  });
+</script>

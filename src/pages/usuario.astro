@@ -554,7 +554,13 @@ const tplDish: Dish = {
     const detail = currentDetailId
       ? restaurants.find((r) => r.id === currentDetailId)
       : null;
-    const loc = detail ? detail.name : "perfil";
+    // En la raíz del perfil, el segundo segmento muestra el @usuario (identidad
+    // pública); dentro de un restaurante, muestra su nombre.
+    const loc = detail
+      ? detail.name
+      : profileUser.username
+        ? `@${profileUser.username}`
+        : "perfil";
 
     crumbEl.innerHTML = `<i class="bi bi-person-fill u-crumb-ic"></i>
       <span class="u-crumb-user">${escapeHtml(who)}</span>

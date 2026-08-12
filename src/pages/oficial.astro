@@ -6,6 +6,8 @@ import SortBar from "../components/SortBar.astro";
 import AuthModal from "../components/AuthModal.astro";
 import DishForm from "../components/DishForm.astro";
 import NoticeDialog from "../components/NoticeDialog.astro";
+import ConfirmDialog from "../components/ConfirmDialog.astro";
+import OfficialManage from "../components/OfficialManage.astro";
 import type { Dish, Restaurant } from "../lib/data";
 
 // Plantillas para clonar en runtime (mismo patrón que restaurante.astro): así la
@@ -35,19 +37,42 @@ const tplRestaurant: Restaurant = {
 
 <Layout1 title="Restaurante · STAURANT" bare>
   <div class="detail-page flex-column">
-    <div class="public-topbar flex-row">
+    {/* Logueado → mismo ← Volver que /restaurante. Anónimo (QR) → topbar pública
+        con logo-marca + Iniciar sesión. Se alternan en astro:page-load. */}
+    <a id="back-link" href="/" class="back-link flex-row" hidden>
+      <i class="bi bi-arrow-left"></i> Volver
+    </a>
+
+    <div id="public-topbar" class="public-topbar flex-row" hidden>
       <a href="/" class="pt-brand flex-row" aria-label="STAURANT">
         <img src="/img/logo2.png" alt="STAURANT" class="pt-logo" />
       </a>
-      <a id="login-link" href="/login" class="pt-action flex-row" hidden>
+      <a id="login-link" href="/login" class="pt-action flex-row">
         <i class="bi bi-box-arrow-in-right"></i> Iniciar sesión
-      </a>
-      <a id="home-link" href="/" class="pt-action flex-row" hidden>
-        <i class="bi bi-house-door"></i> Mi inicio
       </a>
     </div>
 
     <div id="oficial-header" class="restaurant-header"></div>
+
+    {/* Barra de gestión: solo visible si el usuario es DUEÑO de este perfil
+        (fila en official_owners). Da acceso a estadísticas, editar el perfil y
+        agregar platos a la carta. Se muestra en astro:page-load tras verificar. */}
+    <div id="owner-bar" class="owner-bar flex-row" hidden>
+      <span class="owner-badge flex-row">
+        <i class="bi bi-shield-check"></i> Gestionando
+      </span>
+      <div class="owner-actions flex-row">
+        <button id="owner-stats-btn" class="boton2" type="button">
+          <i class="bi bi-bar-chart-line"></i> Estadísticas
+        </button>
+        <button id="owner-edit-btn" class="boton2" type="button">
+          <i class="bi bi-pencil"></i> Editar
+        </button>
+        <button id="owner-add-dish-btn" class="boton" type="button">
+          <i class="bi bi-plus-lg"></i> Plato
+        </button>
+      </div>
+    </div>
 
     <div class="dishes-section flex-column">
       <div class="dishes-top flex-row">
@@ -76,6 +101,17 @@ const tplRestaurant: Restaurant = {
       </div>
 
       <div class="dishes-controls flex-row">
+        {/* Lente maestro: conmuta badge grande, badge por plato, corona 👑 y el
+            orden por "Rating" entre tu nota (Personal) y el promedio del público
+            (Global). Solo visible con sesión; anónimo queda fijo en Global. */}
+        <div id="lens-toggle" class="lens-toggle flex-row" hidden>
+          <button class="lens-opt" data-lens="personal" type="button">
+            <i class="bi bi-star-fill"></i> Personal
+          </button>
+          <button class="lens-opt" data-lens="global" type="button">
+            <i class="bi bi-globe2"></i> Global
+          </button>
+        </div>
         <SortBar
           pills={[
             { field: "rating", label: "Rating" },
@@ -99,6 +135,8 @@ const tplRestaurant: Restaurant = {
   <AuthModal />
   <DishForm />
   <NoticeDialog />
+  <ConfirmDialog />
+  <OfficialManage />
 
   <template id="tpl-dish-card">
     <DishCard dish={tplDish} typeName="..." />
@@ -110,6 +148,23 @@ const tplRestaurant: Restaurant = {
 </Layout1>
 
 <style is:global>
+  /* Pill "⭐ tu nota" (secundario en lente Global). Gemelo de .global-rating-pill
+     pero con acento dorado, para leerse distinto del pill 🌐 de la comunidad. */
+  .my-rating-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: #b8860b;
+    background: var(--clr-white2);
+    border: solid 1px rgba(212, 160, 23, 0.5);
+    border-radius: 20px;
+    padding: 2px 8px;
+    width: fit-content;
+  }
+
   /* Precio del plato en la carta oficial (dentro de la DishCard reusada) */
   .dish-card .od-price {
     display: block;
@@ -121,16 +176,6 @@ const tplRestaurant: Restaurant = {
     color: var(--clr-primary);
   }
 
-  /* Card de la carta pública: toda la tarjeta invita a calificar */
-  .dish-card.is-rateable {
-    cursor: pointer;
-  }
-
-  @media (hover: hover) {
-    .dish-card.is-rateable:hover {
-      border-color: var(--clr-border2);
-    }
-  }
 </style>
 
 <style>
@@ -142,11 +187,73 @@ const tplRestaurant: Restaurant = {
     gap: 24px;
   }
 
+  /* ← Volver: idéntico al de /restaurante (mismo tamaño, color y hover). */
+  .back-link {
+    justify-content: flex-start;
+    gap: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--clr-primary);
+    letter-spacing: 1px;
+    width: fit-content;
+    padding: 6px 0;
+    transition: var(--transition);
+  }
+
+  .back-link[hidden] {
+    display: none;
+  }
+
   .public-topbar {
     justify-content: space-between;
     align-items: center;
     width: 100%;
     gap: 12px;
+  }
+
+  .public-topbar[hidden] {
+    display: none;
+  }
+
+  /* Segmented control Personal | Global (lente maestro). */
+  .lens-toggle {
+    justify-content: flex-start;
+    gap: 0;
+    padding: 2px;
+    border-radius: 20px;
+    border: solid 1.5px var(--clr-border);
+    background: var(--clr-white);
+  }
+
+  .lens-toggle[hidden] {
+    display: none;
+  }
+
+  .lens-opt {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 11px;
+    border: none;
+    background: none;
+    color: var(--clr-text);
+    opacity: 0.55;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    border-radius: 18px;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .lens-opt i {
+    font-size: 0.7rem;
+  }
+
+  .lens-opt.active {
+    background: var(--clr-primary);
+    color: var(--clr-white);
+    opacity: 1;
   }
 
   .pt-brand {
@@ -188,10 +295,103 @@ const tplRestaurant: Restaurant = {
       border-color: var(--clr-primary);
       background: var(--clr-white2);
     }
+
+    .back-link:hover {
+      color: var(--clr-text);
+    }
+
+    .lens-opt:not(.active):hover {
+      opacity: 1;
+    }
   }
 
   .restaurant-header {
     width: 100%;
+  }
+
+  /* ── Barra de gestión del dueño ─────────────────────────────────────────── */
+  .owner-bar {
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: var(--border-radius);
+    background: var(--clr-white2);
+    border: 1.5px solid var(--clr-primary);
+  }
+
+  .owner-bar[hidden] {
+    display: none;
+  }
+
+  .owner-badge {
+    gap: 5px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--clr-primary);
+  }
+
+  .owner-badge i {
+    font-size: 0.9rem;
+  }
+
+  .owner-actions {
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .owner-actions .boton,
+  .owner-actions .boton2 {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    font-size: 0.78rem;
+    width: auto;
+  }
+
+  /* Controles edit/eliminar por plato (modo dueño, inyectados en la DishCard). */
+  .owner-dish-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .owner-dish-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1.5px solid var(--clr-border);
+    background: var(--clr-white);
+    color: var(--clr-text);
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: var(--transition);
+  }
+
+  .owner-dish-btn.is-delete {
+    color: var(--clr-danger);
+    border-color: var(--clr-danger-border);
+    background: var(--clr-danger-bg);
+  }
+
+  @media (hover: hover) {
+    .owner-dish-btn:hover {
+      border-color: var(--clr-primary);
+    }
+
+    .owner-dish-btn.is-delete:hover {
+      border-color: var(--clr-danger);
+    }
   }
 
   .dishes-section {
@@ -371,7 +571,10 @@ const tplRestaurant: Restaurant = {
     addOfficialToMyList,
     getMyOfficialRating,
     getMyOfficialAverage,
+    getMyOfficialStatus,
     fetchOfficialStats,
+    checkOfficialOwnership,
+    deleteOfficialDish,
     type OfficialRestaurant,
     type OfficialDish,
   } from "../lib/data.ts";
@@ -380,6 +583,7 @@ const tplRestaurant: Restaurant = {
     buildGlobalRatingPill,
     fillRestaurantName,
     updateSortPills,
+    makeCrown,
   } from "../scripts/store.ts";
 
   // ─── Estado del módulo ──────────────────────────────────────────────────────
@@ -388,12 +592,72 @@ const tplRestaurant: Restaurant = {
   let officialDishes: OfficialDish[] = [];
   // userId = null → visitante anónimo (puede navegar la carta pero no calificar).
   let userId: string | null = null;
+  // isOwner = true → el usuario es DUEÑO de este perfil (fila en official_owners).
+  // Habilita la barra de gestión y cambia las cards a modo edición (no calificar).
+  let isOwner = false;
 
   type SortField = "rating" | "name";
   let sortField: SortField = "rating";
   let sortDir: "asc" | "desc" = "desc";
   let dishSearch = "";
   let dishTypeFilter = ""; // por typeName (los oficiales no tienen typeId)
+
+  // Lente maestro: gobierna badge grande, badge por plato, corona 👑 y el orden
+  // por "Rating". "personal" = tu nota; "global" = promedio del público. Solo con
+  // sesión se puede alternar; anónimo queda fijo en "global". Persiste en módulo.
+  type RatingLens = "personal" | "global";
+  let ratingLens: RatingLens = "global";
+
+  // IDs del/los mejor(es) plato(s) de la carta según el lente activo. Recalculado
+  // antes de cada render (la corona se mueve al cambiar de lente o de nota).
+  let topOfficialDishIds = new Set<string>();
+
+  /** Mejor(es) plato(s) por rating GLOBAL de la comunidad (≥2 platos con stats). */
+  function computeTopOfficialDishIds(): Set<string> {
+    const rated = officialDishes
+      .map((od) => {
+        const stat = getOfficialDishStat(od.id);
+        return stat && stat.ratingsCount > 0
+          ? { id: od.id, avg: stat.avgRating, count: stat.ratingsCount }
+          : null;
+      })
+      .filter((x): x is { id: string; avg: number; count: number } => x !== null);
+    if (rated.length < 2) return new Set();
+    const max = Math.max(...rated.map((x) => x.avg));
+    const leaders = rated.filter((x) => x.avg === max);
+    // Empate en promedio → desempata por más calificaciones (más respaldo).
+    const maxCount = Math.max(...leaders.map((x) => x.count));
+    return new Set(leaders.filter((x) => x.count === maxCount).map((x) => x.id));
+  }
+
+  /** Mejor(es) plato(s) según TU nota personal (≥2 platos calificados por ti). */
+  function computeTopMyOfficialDishIds(): Set<string> {
+    const rated = officialDishes
+      .map((od) => {
+        const r = getMyRatingFor(od.id);
+        return r !== null ? { id: od.id, rating: r } : null;
+      })
+      .filter((x): x is { id: string; rating: number } => x !== null);
+    if (rated.length < 2) return new Set();
+    const max = Math.max(...rated.map((x) => x.rating));
+    return new Set(rated.filter((x) => x.rating === max).map((x) => x.id));
+  }
+
+  /** Corona del lente activo. */
+  function computeActiveTopDishIds(): Set<string> {
+    return ratingLens === "global"
+      ? computeTopOfficialDishIds()
+      : computeTopMyOfficialDishIds();
+  }
+
+  /** Pill "⭐ tu nota" (dato secundario cuando el lente activo es Global). */
+  function buildMyRatingPill(rating: number): HTMLElement {
+    const pill = document.createElement("span");
+    pill.className = "my-rating-pill";
+    pill.title = "Tu calificación";
+    pill.innerHTML = `<i class="bi bi-star-fill"></i> ${rating}`;
+    return pill;
+  }
 
   // ─── Auth ───────────────────────────────────────────────────────────────────
 
@@ -485,18 +749,26 @@ const tplRestaurant: Restaurant = {
       citiesEl.hidden = false;
     }
 
-    // Badge = TU promedio del lugar (si ya calificaste algún plato); si no,
-    // estrella vacía. La nota de la comunidad va aparte, en el pill global (🌐).
+    // Badge grande + pill secundario según el lente activo:
+    //  · Global   → badge = promedio del público; pill = ⭐ tu promedio.
+    //  · Personal → badge = tu promedio; pill = 🌐 promedio del público.
     const stat = getOfficialRestaurantStat(official!.id);
+    const globalAvg = stat && stat.ratingsCount > 0 ? stat.avgRating : null;
     const myAvg = userId ? getMyOfficialAverage(official!.id) : null;
     const badge = div.querySelector(".rating-badge")!;
-    paintRatingBadge(badge, myAvg);
-    if (stat && stat.ratingsCount > 0) {
-      const pillsRow = div.querySelector<HTMLElement>(".rh-pills");
-      pillsRow?.insertBefore(
-        buildGlobalRatingPill(stat.avgRating, stat.ratingsCount),
-        pillsRow.firstChild,
-      );
+    const pillsRow = div.querySelector<HTMLElement>(".rh-pills");
+
+    if (ratingLens === "global") {
+      paintRatingBadge(badge, globalAvg);
+      if (myAvg !== null)
+        pillsRow?.insertBefore(buildMyRatingPill(myAvg), pillsRow.firstChild);
+    } else {
+      paintRatingBadge(badge, myAvg);
+      if (stat && stat.ratingsCount > 0)
+        pillsRow?.insertBefore(
+          buildGlobalRatingPill(stat.avgRating, stat.ratingsCount),
+          pillsRow.firstChild,
+        );
     }
 
     // Notas
@@ -536,12 +808,16 @@ const tplRestaurant: Restaurant = {
       infoEl.appendChild(price);
     }
 
-    // Pill de rating global del plato
+    // Pill secundario = dato del OTRO lente:
+    //  · Global   → ⭐ tu nota (si ya la diste).
+    //  · Personal → 🌐 nota de la comunidad (si existe).
     const stat = getOfficialDishStat(od.id);
-    if (stat && stat.ratingsCount > 0) {
-      infoEl.appendChild(
-        buildGlobalRatingPill(stat.avgRating, stat.ratingsCount),
-      );
+    const globalAvg = stat && stat.ratingsCount > 0 ? stat.avgRating : null;
+    const myRating = getMyRatingFor(od.id);
+    if (ratingLens === "global") {
+      if (myRating !== null) infoEl.appendChild(buildMyRatingPill(myRating));
+    } else if (stat && stat.ratingsCount > 0) {
+      infoEl.appendChild(buildGlobalRatingPill(stat.avgRating, stat.ratingsCount));
     }
 
     // Notas / descripción de la carta
@@ -552,11 +828,55 @@ const tplRestaurant: Restaurant = {
       notesEl?.remove();
     }
 
-    // Badge = TU nota (si ya calificaste este plato); si no, estrella vacía que
-    // invita a tocar. La nota de la comunidad va en el pill global (🌐).
-    const myRating = getMyRatingFor(od.id);
+    // Badge grande = dato del lente activo (Global → promedio público; Personal
+    // → tu nota). Vacío = estrella que invita a tocar y calificar.
     const badge = article.querySelector(".rating-badge")!;
-    paintRatingBadge(badge, myRating, { button: true });
+    const badgeScore = ratingLens === "global" ? globalAvg : myRating;
+
+    // ── Modo DUEÑO: la card se edita, no se califica ─────────────────────────
+    // El badge muestra el promedio del público (informativo, sin botón) y en su
+    // lugar aparecen controles para editar / eliminar el plato de la carta.
+    if (isOwner) {
+      paintRatingBadge(badge, globalAvg);
+      const actions = article.querySelector<HTMLElement>(".dish-actions");
+      if (actions) {
+        actions.className = "owner-dish-actions";
+        actions.innerHTML = "";
+        const editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.className = "owner-dish-btn";
+        editBtn.setAttribute("aria-label", "Editar plato");
+        editBtn.innerHTML = `<i class="bi bi-pencil"></i>`;
+        editBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          (window as any).officialManage?.openDishEdit(od);
+        });
+        const delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.className = "owner-dish-btn is-delete";
+        delBtn.setAttribute("aria-label", "Eliminar plato");
+        delBtn.innerHTML = `<i class="bi bi-trash"></i>`;
+        delBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          (window as any).confirmDialog?.show(
+            `¿Eliminar "${od.name}" de la carta?`,
+            () => void removeOfficialDish(od),
+          );
+        });
+        actions.append(editBtn, delBtn);
+      }
+      return article;
+    }
+
+    paintRatingBadge(badge, badgeScore, { button: true });
+    if (topOfficialDishIds.has(od.id))
+      badge.appendChild(
+        makeCrown(
+          ratingLens === "global"
+            ? "Mejor valorado por la comunidad"
+            : "Tu plato estrella",
+        ),
+      );
     badge.addEventListener("click", (e) => {
       e.stopPropagation();
       rateFlow(od);
@@ -586,9 +906,11 @@ const tplRestaurant: Restaurant = {
       let cmp = 0;
       if (sortField === "name") cmp = a.name.localeCompare(b.name);
       else {
-        const ra = getOfficialDishStat(a.id)?.avgRating ?? -1;
-        const rb = getOfficialDishStat(b.id)?.avgRating ?? -1;
-        cmp = ra - rb;
+        const score = (id: string): number =>
+          ratingLens === "global"
+            ? (getOfficialDishStat(id)?.avgRating ?? -1)
+            : (getMyRatingFor(id) ?? -1);
+        cmp = score(a.id) - score(b.id);
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
@@ -601,6 +923,7 @@ const tplRestaurant: Restaurant = {
 
     if (sortBarEl) sortBarEl.hidden = officialDishes.length < 2;
 
+    topOfficialDishIds = computeActiveTopDishIds();
     const filtered = getFilteredSortedDishes();
     if (filtered.length === 0) {
       const isFiltering = !!dishSearch || !!dishTypeFilter;
@@ -631,6 +954,26 @@ const tplRestaurant: Restaurant = {
     if (official) headerEl.replaceChildren(buildHeaderElement());
     renderDishes();
     updateTypeFilterUI();
+    updateLensUI();
+  }
+
+  // ─── Lente Personal / Global ────────────────────────────────────────────────
+
+  function updateLensUI(): void {
+    const toggle = document.getElementById("lens-toggle");
+    if (!toggle) return;
+    // Solo con sesión se puede alternar; anónimo queda fijo en Global.
+    toggle.hidden = !userId;
+    toggle.querySelectorAll<HTMLButtonElement>(".lens-opt").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.lens === ratingLens);
+    });
+  }
+
+  function setLens(lens: RatingLens): void {
+    if (lens === ratingLens) return;
+    if (lens === "personal" && !userId) return; // sin sesión no hay nota personal
+    ratingLens = lens;
+    renderAll();
   }
 
   // ─── Filtro por tipo ────────────────────────────────────────────────────────
@@ -714,6 +1057,11 @@ const tplRestaurant: Restaurant = {
   }
 
   function wireControls(): void {
+    // Lente Personal / Global (control maestro)
+    document.querySelectorAll<HTMLButtonElement>(".lens-opt").forEach((btn) => {
+      btn.onclick = () => setLens(btn.dataset.lens as RatingLens);
+    });
+
     // Orden
     document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach((btn) => {
       btn.onclick = () => {
@@ -792,6 +1140,60 @@ const tplRestaurant: Restaurant = {
     void fetchOfficialStats();
   });
 
+  // ─── Gestión del dueño ──────────────────────────────────────────────────────
+
+  /** Re-lee la carta oficial desde Supabase y re-renderiza. */
+  async function refreshCarta(): Promise<void> {
+    if (!official) return;
+    officialDishes = await getOfficialDishes(official.id);
+    renderAll();
+  }
+
+  /** Elimina un plato de la carta (optimista: lo quita y re-pinta). */
+  async function removeOfficialDish(od: OfficialDish): Promise<void> {
+    const ok = await deleteOfficialDish(od.id);
+    if (ok) {
+      officialDishes = officialDishes.filter((d) => d.id !== od.id);
+      renderAll();
+      void fetchOfficialStats();
+    } else {
+      (window as any).noticeDialog?.show("No se pudo eliminar el plato.", {
+        variant: "error",
+      });
+    }
+  }
+
+  /** Muestra la barra de gestión y conecta sus botones (solo si eres dueño). */
+  function wireOwnerBar(): void {
+    const bar = document.getElementById("owner-bar");
+    if (bar) bar.hidden = !isOwner;
+    if (!isOwner || !official) return;
+    const om = () => (window as any).officialManage;
+    const statsBtn = document.getElementById("owner-stats-btn");
+    const editBtn = document.getElementById("owner-edit-btn");
+    const addBtn = document.getElementById("owner-add-dish-btn");
+    if (statsBtn) statsBtn.onclick = () => om()?.openStats(official!.id);
+    if (editBtn) editBtn.onclick = () => om()?.openProfileEdit(official!);
+    if (addBtn) addBtn.onclick = () => om()?.openDishCreate(official!.id);
+  }
+
+  // Tras crear / editar / borrar un plato desde OfficialManage: re-lee la carta.
+  document.addEventListener("official:carta-changed", () => {
+    void refreshCarta();
+    void fetchOfficialStats();
+  });
+
+  // Tras editar el perfil: refresca la cabecera con los nuevos datos.
+  document.addEventListener("official:profile-changed", (e) => {
+    const detail = (e as CustomEvent).detail as {
+      official?: OfficialRestaurant;
+    };
+    if (detail?.official && official && detail.official.id === official.id) {
+      official = detail.official;
+      renderAll();
+    }
+  });
+
   // ─── Init en astro:page-load ────────────────────────────────────────────────
 
   document.addEventListener("astro:page-load", async () => {
@@ -835,13 +1237,40 @@ const tplRestaurant: Restaurant = {
 
     document.title = `${official.name} · STAURANT`;
 
-    // Barra pública: anónimo ve "Iniciar sesión"; con cuenta ve "Mi inicio".
-    const loginLink = document.getElementById("login-link");
-    const homeLink = document.getElementById("home-link");
-    if (loginLink) loginLink.hidden = authed;
-    if (homeLink) homeLink.hidden = !authed;
+    // Header según sesión: logueado → ← Volver (a la pestaña del inicio que
+    // corresponda); anónimo (QR) → topbar pública con logo + Iniciar sesión.
+    const backLink = document.getElementById(
+      "back-link",
+    ) as HTMLAnchorElement | null;
+    const publicTopbar = document.getElementById("public-topbar");
+    if (authed) {
+      const status = getMyOfficialStatus(official.id);
+      if (backLink) {
+        backLink.href =
+          status === "visited"
+            ? "/?tab=visitados"
+            : status === "pending"
+              ? "/?tab=pendientes"
+              : "/explorar";
+        backLink.hidden = false;
+      }
+      if (publicTopbar) publicTopbar.hidden = true;
+    } else {
+      if (backLink) backLink.hidden = true;
+      if (publicTopbar) publicTopbar.hidden = false;
+    }
+
+    // Lente inicial: si ya calificaste algo aquí, arranca en Personal; si no
+    // (o anónimo), en Global (la única nota disponible al entrar).
+    ratingLens =
+      userId && getMyOfficialAverage(official.id) !== null ? "personal" : "global";
+
+    // ¿Soy dueño de este perfil? (fila en official_owners). Debe resolverse ANTES
+    // de renderAll para que las cards salgan en modo edición y no en modo calificar.
+    isOwner = authed ? await checkOfficialOwnership(official.id) : false;
 
     wireControls();
+    wireOwnerBar();
     renderAll();
 
     // Reanudar la calificación pendiente tras volver del login con Google.

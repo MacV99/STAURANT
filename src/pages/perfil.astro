@@ -16,6 +16,7 @@ import Layout1 from "../layouts/Layout1.astro";
 
       <div class="profile-info flex-column">
         <p id="profile-name-display" class="profile-name">—</p>
+        <p id="profile-username-display" class="profile-username" hidden></p>
         <p id="profile-email" class="profile-email">—</p>
       </div>
 
@@ -245,6 +246,17 @@ import Layout1 from "../layouts/Layout1.astro";
     color: var(--clr-text);
   }
 
+  .profile-username {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--clr-primary);
+    letter-spacing: 0.2px;
+  }
+
+  .profile-username[hidden] {
+    display: none;
+  }
+
   .profile-email {
     font-size: 0.88rem;
     color: var(--clr-text);
@@ -356,6 +368,7 @@ import Layout1 from "../layouts/Layout1.astro";
 
   #pw-fields {
     display: none;
+    flex-direction: column;
     gap: 12px;
   }
 
@@ -844,6 +857,15 @@ import Layout1 from "../layouts/Layout1.astro";
           if (nameInput) nameInput.value = profileCached.name;
           if (avatarEl) avatarEl.textContent = profileCached.name.charAt(0).toUpperCase();
         }
+        const unameDisplay = document.getElementById("profile-username-display");
+        if (unameDisplay) {
+          if (profileCached.username) {
+            unameDisplay.textContent = `@${profileCached.username}`;
+            unameDisplay.hidden = false;
+          } else {
+            unameDisplay.hidden = true;
+          }
+        }
       }
       const dataCached = JSON.parse(localStorage.getItem(DATA_CACHE_KEY) ?? "null");
       if (dataCached?.restaurants) renderStats(dataCached.restaurants, dataCached.dishes ?? []);
@@ -884,7 +906,17 @@ import Layout1 from "../layouts/Layout1.astro";
       nameInput.value = profile.name;
       avatarEl.textContent = profile.name.charAt(0).toUpperCase();
     }
+    const usernameDisplay = document.getElementById("profile-username-display")!;
+    const showUsername = (uname: string | null | undefined) => {
+      if (uname) {
+        usernameDisplay.textContent = `@${uname}`;
+        usernameDisplay.hidden = false;
+      } else {
+        usernameDisplay.hidden = true;
+      }
+    };
     if (profile?.username) usernameInput.value = profile.username;
+    showUsername(profile?.username);
 
     // Saneo del username: minúsculas, sin espacios, solo [a-z0-9_].
     usernameInput.oninput = () => {
@@ -896,7 +928,7 @@ import Layout1 from "../layouts/Layout1.astro";
     };
 
     localStorage.setItem(PROFILE_CACHE_KEY,
-      JSON.stringify({ email: user.email ?? "", name: profile?.name ?? "" }));
+      JSON.stringify({ email: user.email ?? "", name: profile?.name ?? "", username: profile?.username ?? "" }));
 
     renderStats(getRestaurants(), getDishes());
 
@@ -945,6 +977,12 @@ import Layout1 from "../layouts/Layout1.astro";
       const newPw = pwNewInput.value;
       const confirmPw = pwConfirmInput.value;
 
+      if (username && username.length < 3) {
+        msgEl.textContent = "El usuario debe tener al menos 3 caracteres.";
+        msgEl.classList.add("error");
+        return;
+      }
+
       if (newPw) {
         if (newPw.length < 6) {
           msgEl.textContent = "La contraseña debe tener al menos 6 caracteres.";
@@ -991,8 +1029,9 @@ import Layout1 from "../layouts/Layout1.astro";
         msgEl.textContent = "¡Guardado correctamente!";
         nameDisplay.textContent = name || "—";
         if (name) avatarEl.textContent = name.charAt(0).toUpperCase();
+        showUsername(username || null);
         localStorage.setItem(PROFILE_CACHE_KEY,
-          JSON.stringify({ email: user.email ?? "", name }));
+          JSON.stringify({ email: user.email ?? "", name, username: username || "" }));
         pwNewInput.value = "";
         pwConfirmInput.value = "";
       }
