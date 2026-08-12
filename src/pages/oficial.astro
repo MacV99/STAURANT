@@ -47,7 +47,7 @@ const tplRestaurant: Restaurant = {
       </a>
     </div>
 
-    <div id="restaurant-header" class="restaurant-header"></div>
+    <div id="oficial-header" class="restaurant-header"></div>
 
     <div class="dishes-section flex-column">
       <div class="dishes-top flex-row">
@@ -622,8 +622,13 @@ const tplRestaurant: Restaurant = {
   }
 
   function renderAll(): void {
-    const headerEl = document.getElementById("restaurant-header");
-    if (headerEl && official) headerEl.replaceChildren(buildHeaderElement());
+    // Guard de página: /oficial y /restaurante comparten estructura (#dishes-list,
+    // .sort-pill…) y este módulo persiste entre navegaciones ViewTransition. Si no
+    // estamos en /oficial (sin #oficial-header) no renderizamos, para no inyectar la
+    // carta oficial dentro de /restaurante al llegar un stats:synced / official:rated.
+    const headerEl = document.getElementById("oficial-header");
+    if (!headerEl) return;
+    if (official) headerEl.replaceChildren(buildHeaderElement());
     renderDishes();
     updateTypeFilterUI();
   }
@@ -790,7 +795,9 @@ const tplRestaurant: Restaurant = {
   // ─── Init en astro:page-load ────────────────────────────────────────────────
 
   document.addEventListener("astro:page-load", async () => {
-    const headerEl = document.getElementById("restaurant-header");
+    // #oficial-header es exclusivo de esta página: evita que este handler se dispare
+    // sobre /restaurante (que comparte #restaurant-header) y rebote a /explorar.
+    const headerEl = document.getElementById("oficial-header");
     if (!headerEl) return;
 
     const id = new URLSearchParams(window.location.search).get("id") ?? "";
