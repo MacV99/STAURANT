@@ -31,6 +31,10 @@ export interface OfficialRestaurant {
   city: string | null;
   address: string | null;
   notes: string | null;
+  phone: string | null; // para pedidos (se muestra como enlace WhatsApp)
+  instagram: string | null; // handle o URL; vacío = sin ícono
+  facebook: string | null;
+  tiktok: string | null;
 }
 
 export interface OfficialDish {
@@ -654,6 +658,10 @@ function toOfficialRestaurant(row: Record<string, unknown>): OfficialRestaurant 
     city: (row.city as string | null) ?? null,
     address: (row.address as string | null) ?? null,
     notes: (row.notes as string | null) ?? null,
+    phone: (row.phone as string | null) ?? null,
+    instagram: (row.instagram as string | null) ?? null,
+    facebook: (row.facebook as string | null) ?? null,
+    tiktok: (row.tiktok as string | null) ?? null,
   };
 }
 
@@ -697,6 +705,22 @@ export async function getAllOfficialRestaurants(): Promise<OfficialRestaurant[]>
   return (data ?? []).map(toOfficialRestaurant);
 }
 
+/** Lista de ciudades ya usadas por algún oficial (para el combobox creable de
+ *  ciudad en el editor de perfil). Distintas, ordenadas, sin nulos. */
+export async function getOfficialCities(): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("official_restaurants")
+    .select("city")
+    .not("city", "is", null);
+  if (error) { console.error("[getOfficialCities]", error); return []; }
+  const set = new Set(
+    (data ?? [])
+      .map((r) => (r as { city: string | null }).city?.trim())
+      .filter((c): c is string => !!c),
+  );
+  return [...set].sort((a, b) => a.localeCompare(b, "es"));
+}
+
 /** Trae un restaurante oficial por id (detalle Explorar). */
 export async function getOfficialRestaurant(id: string): Promise<OfficialRestaurant | null> {
   const { data, error } = await supabase
@@ -738,6 +762,9 @@ export interface OfficialOwnerStats {
   members: number; // usuarios que agregaron el restaurante a su lista (alcance)
   raters: number; // usuarios distintos que han calificado (participación)
   totalRatings: number; // total de calificaciones recibidas
+  avgOverall: number | null; // promedio general ponderado de todas las notas
+  distribution: { bucket: number; count: number }[]; // histograma nota 1-10
+  timeline: { day: string; count: number }[]; // calificaciones/día, últimos 30 días
   dishes: OfficialOwnerDishStat[]; // agregado por plato, mejor → peor
 }
 
@@ -757,6 +784,24 @@ export async function checkOfficialOwnership(
   return !!data;
 }
 
+/** Perfiles oficiales que gestiona el usuario actual (para el acceso desde /perfil).
+ *  RLS solo deja leer las filas propias de official_owners; el embed trae el perfil. */
+export async function getMyOwnedOfficials(): Promise<OfficialRestaurant[]> {
+  if (!_userId) return [];
+  const { data, error } = await supabase
+    .from("official_owners")
+    .select("official_restaurants(*)")
+    .eq("user_id", _userId);
+  if (error) { console.error("[getMyOwnedOfficials]", error); return []; }
+  // El embed puede venir como objeto (to-one) o array según la inferencia de tipos
+  // de supabase-js; normalizamos a lista antes de mapear.
+  return (data ?? []).flatMap((row) => {
+    const embed = (row as { official_restaurants: unknown }).official_restaurants;
+    const arr = Array.isArray(embed) ? embed : embed ? [embed] : [];
+    return (arr as Record<string, unknown>[]).map(toOfficialRestaurant);
+  });
+}
+
 /** Estadísticas agregadas del perfil (solo dueño). El RPC valida propiedad y nunca
  *  devuelve filas crudas ni quién votó — solo números. */
 export async function getOfficialOwnerStats(
@@ -770,12 +815,18 @@ export async function getOfficialOwnerStats(
     members: number;
     raters: number;
     total_ratings: number;
+    avg_overall: number | string | null;
+    distribution: Array<{ bucket: number; count: number }>;
+    timeline: Array<{ day: string; count: number }>;
     dishes: Array<{ dish_id: string; name: string; avg_rating: number | string | null; votes: number }>;
   };
   return {
     members: d.members ?? 0,
     raters: d.raters ?? 0,
     totalRatings: d.total_ratings ?? 0,
+    avgOverall: d.avg_overall === null || d.avg_overall === undefined ? null : Number(d.avg_overall),
+    distribution: (d.distribution ?? []).map((x) => ({ bucket: x.bucket, count: x.count ?? 0 })),
+    timeline: (d.timeline ?? []).map((x) => ({ day: x.day, count: x.count ?? 0 })),
     dishes: (d.dishes ?? []).map((x) => ({
       dishId: x.dish_id,
       name: x.name,
@@ -792,6 +843,7 @@ export async function createOfficialDish(input: {
   typeName?: string | null;
   price?: number | null;
   notes?: string | null;
+  imageUrl?: string | null;
 }): Promise<OfficialDish | null> {
   const { data, error } = await supabase
     .from("official_dishes")
@@ -801,6 +853,7 @@ export async function createOfficialDish(input: {
       type_name: input.typeName ?? null,
       price: input.price ?? null,
       notes: input.notes ?? null,
+      image_url: input.imageUrl ?? null,
     })
     .select()
     .single();
@@ -811,13 +864,14 @@ export async function createOfficialDish(input: {
 /** Edita un plato de la carta oficial (solo dueño). */
 export async function updateOfficialDish(
   id: string,
-  patch: Partial<{ name: string; typeName: string | null; price: number | null; notes: string | null }>,
+  patch: Partial<{ name: string; typeName: string | null; price: number | null; notes: string | null; imageUrl: string | null }>,
 ): Promise<OfficialDish | null> {
   const row: Record<string, unknown> = {};
   if (patch.name !== undefined) row.name = patch.name;
   if (patch.typeName !== undefined) row.type_name = patch.typeName;
   if (patch.price !== undefined) row.price = patch.price;
   if (patch.notes !== undefined) row.notes = patch.notes;
+  if (patch.imageUrl !== undefined) row.image_url = patch.imageUrl;
   const { data, error } = await supabase
     .from("official_dishes")
     .update(row)
@@ -835,10 +889,58 @@ export async function deleteOfficialDish(id: string): Promise<boolean> {
   return true;
 }
 
+const OFFICIAL_DISH_BUCKET = "official-dishes";
+
+/** Sube la foto de un plato oficial al bucket 'official-dishes' y devuelve su URL
+ *  pública. El path SIEMPRE empieza por el officialRestaurantId: la RLS del bucket
+ *  exige que la primera carpeta sea un perfil del que el usuario es dueño. Solo
+ *  imágenes; máx 5 MB. Devuelve null si algo falla. */
+export async function uploadOfficialDishImage(
+  officialRestaurantId: string,
+  file: File,
+): Promise<string | null> {
+  if (!file.type.startsWith("image/")) {
+    console.error("[uploadOfficialDishImage] no es imagen:", file.type);
+    return null;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    console.error("[uploadOfficialDishImage] imagen > 5 MB");
+    return null;
+  }
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+  const path = `${officialRestaurantId}/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage
+    .from(OFFICIAL_DISH_BUCKET)
+    .upload(path, file, { cacheControl: "3600", upsert: false });
+  if (error) { console.error("[uploadOfficialDishImage]", error); return null; }
+  const { data } = supabase.storage.from(OFFICIAL_DISH_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+/** Borra una imagen previa del bucket a partir de su URL pública (best-effort).
+ *  Se usa al reemplazar/quitar la foto de un plato para no dejar huérfanos. */
+export function deleteOfficialDishImage(imageUrl: string | null | undefined): void {
+  if (!imageUrl) return;
+  const marker = `/${OFFICIAL_DISH_BUCKET}/`;
+  const i = imageUrl.indexOf(marker);
+  if (i === -1) return;
+  const path = imageUrl.slice(i + marker.length);
+  bgSync(() => supabase.storage.from(OFFICIAL_DISH_BUCKET).remove([path]));
+}
+
 /** Edita los datos del perfil oficial: nombre / ciudad / dirección / notas (solo dueño). */
 export async function updateOfficialRestaurant(
   id: string,
-  patch: Partial<{ name: string; city: string | null; address: string | null; notes: string | null }>,
+  patch: Partial<{
+    name: string;
+    city: string | null;
+    address: string | null;
+    notes: string | null;
+    phone: string | null;
+    instagram: string | null;
+    facebook: string | null;
+    tiktok: string | null;
+  }>,
 ): Promise<OfficialRestaurant | null> {
   const { data, error } = await supabase
     .from("official_restaurants")

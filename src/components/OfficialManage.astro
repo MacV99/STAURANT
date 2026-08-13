@@ -42,24 +42,29 @@ import FormModal from "./FormModal.astro";
     <input
       type="text"
       id="odf-type"
+      list="odf-type-list"
       placeholder="ENTRADA, POSTRE, BEBIDA..."
       autocomplete="off"
       spellcheck="false"
     />
+    <datalist id="odf-type-list"></datalist>
   </label>
 
   <label for="odf-price">
     <span class="label-text flex-row"
       >Precio <span class="optional">(opcional)</span></span
     >
-    <input
-      type="number"
-      id="odf-price"
-      min="0"
-      step="any"
-      inputmode="numeric"
-      placeholder="18000"
-    />
+    <div class="price-wrap flex-row">
+      <span class="price-prefix">$</span>
+      <input
+        type="number"
+        id="odf-price"
+        min="0"
+        step="any"
+        inputmode="numeric"
+        placeholder="18000"
+      />
+    </div>
   </label>
 
   <label for="odf-notes">
@@ -70,72 +75,137 @@ import FormModal from "./FormModal.astro";
       placeholder="Ingredientes, acompañamientos, lo que quieras destacar..."
     ></textarea>
   </label>
-</FormModal>
 
-{/* ── 3. Editor del perfil ───────────────────────────────────────────────── */}
-<FormModal id="opf" title="Editar restaurante" maxWidth="420px">
-  <input type="hidden" id="opf-id" />
-
-  <label for="opf-name">
+  <div class="odf-image-field">
     <span class="label-text flex-row"
-      >Nombre <span class="required">*</span></span
+      >Imagen <span class="optional">(opcional)</span></span
     >
-    <input type="text" id="opf-name" required placeholder="Nombre del restaurante" />
-  </label>
-
-  <label for="opf-city">
-    <span class="label-text flex-row"
-      >Ciudad <span class="optional">(opcional)</span></span
-    >
-    <input type="text" id="opf-city" placeholder="Bogotá, Medellín..." />
-  </label>
-
-  <label for="opf-address">
-    <span class="label-text flex-row"
-      >Dirección <span class="optional">(opcional)</span></span
-    >
-    <input type="text" id="opf-address" placeholder="Cra 00 # 00-00" />
-  </label>
-
-  <label for="opf-notes">
-    <span class="label-text flex-row">Descripción</span>
-    <textarea id="opf-notes" rows="2" placeholder="Sobre el restaurante..."></textarea>
-  </label>
-</FormModal>
-
-{/* ── 2. Panel de estadísticas ───────────────────────────────────────────── */}
-<div id="ost-overlay" class="overlay" aria-modal="true" role="dialog">
-  <div class="form-box stats-box flex-column">
-    <div class="form-header flex-row">
-      <h2 id="ost-title">Estadísticas</h2>
+    <input type="hidden" id="odf-image-url" />
+    <input
+      type="file"
+      id="odf-image-file"
+      accept="image/*"
+      hidden
+    />
+    <div class="odf-image-drop" id="odf-image-drop">
+      <img id="odf-image-preview" alt="" hidden />
+      <div class="odf-image-empty" id="odf-image-empty">
+        <i class="bi bi-camera"></i>
+        <span>Toca para subir foto</span>
+      </div>
       <button
-        id="ost-close"
-        class="btn-close btn-icon-close boton2"
-        aria-label="Cerrar"
+        type="button"
+        id="odf-image-remove"
+        class="odf-image-remove"
+        aria-label="Quitar imagen"
+        hidden
       >
         <i class="bi bi-x-lg"></i>
       </button>
-    </div>
-
-    <div class="stats-tiles flex-row">
-      <div class="stat-tile flex-column">
-        <span class="stat-num" id="ost-members">—</span>
-        <span class="stat-lbl">En listas</span>
-      </div>
-      <div class="stat-tile flex-column">
-        <span class="stat-num" id="ost-raters">—</span>
-        <span class="stat-lbl">Califican</span>
-      </div>
-      <div class="stat-tile flex-column">
-        <span class="stat-num" id="ost-total">—</span>
-        <span class="stat-lbl">Calif. totales</span>
+      <div class="odf-image-loading" id="odf-image-loading" hidden>
+        <div class="spinner"></div>
       </div>
     </div>
-
-    <h3 class="stats-subtitle">Por plato</h3>
-    <div id="ost-dishes" class="stats-dishes flex-column"></div>
   </div>
-</div>
+</FormModal>
+
+{/* ── 3. Editor del perfil ───────────────────────────────────────────────── */}
+<FormModal id="opf" title="Editar restaurante" maxWidth="620px">
+  <input type="hidden" id="opf-id" />
+
+  {/* Rejilla: 1 columna en móvil, 2 en desktop (ver .form-grid en project.css). */}
+  <div class="form-grid">
+    <label for="opf-name" class="form-col-full">
+      <span class="label-text flex-row"
+        >Nombre <span class="required">*</span></span
+      >
+      <input type="text" id="opf-name" required placeholder="Nombre del restaurante" />
+    </label>
+
+    <label for="opf-city">
+      <span class="label-text flex-row"
+        >Ciudad <span class="optional">(opcional)</span></span
+      >
+      <input
+        type="text"
+        id="opf-city"
+        list="opf-city-list"
+        placeholder="Bogotá, Medellín..."
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <datalist id="opf-city-list"></datalist>
+    </label>
+
+    <label for="opf-phone">
+      <span class="label-text flex-row"
+        >Teléfono <span class="optional">(para pedidos)</span></span
+      >
+      <input
+        type="tel"
+        id="opf-phone"
+        inputmode="tel"
+        placeholder="+57 300 000 0000"
+      />
+    </label>
+
+    <label for="opf-address" class="form-col-full">
+      <span class="label-text flex-row"
+        >Dirección <span class="optional">(opcional)</span></span
+      >
+      <input type="text" id="opf-address" placeholder="Cra 00 # 00-00" />
+    </label>
+
+    <fieldset class="opf-socials form-col-full">
+      <span class="label-text flex-row"
+        >Redes sociales <span class="optional">(solo enlace)</span></span
+      >
+      <div class="opf-social-rows">
+        <div class="opf-social-row flex-row">
+          <i class="bi bi-instagram" aria-hidden="true"></i>
+          <input
+            type="url"
+            inputmode="url"
+            id="opf-instagram"
+            placeholder="https://instagram.com/..."
+            autocomplete="off"
+            spellcheck="false"
+            aria-label="Instagram"
+          />
+        </div>
+        <div class="opf-social-row flex-row">
+          <i class="bi bi-facebook" aria-hidden="true"></i>
+          <input
+            type="url"
+            inputmode="url"
+            id="opf-facebook"
+            placeholder="https://facebook.com/..."
+            autocomplete="off"
+            spellcheck="false"
+            aria-label="Facebook"
+          />
+        </div>
+        <div class="opf-social-row flex-row">
+          <i class="bi bi-tiktok" aria-hidden="true"></i>
+          <input
+            type="url"
+            inputmode="url"
+            id="opf-tiktok"
+            placeholder="https://tiktok.com/@..."
+            autocomplete="off"
+            spellcheck="false"
+            aria-label="TikTok"
+          />
+        </div>
+      </div>
+    </fieldset>
+
+    <label for="opf-notes" class="form-col-full">
+      <span class="label-text flex-row">Descripción</span>
+      <textarea id="opf-notes" rows="2" placeholder="Sobre el restaurante..."></textarea>
+    </label>
+  </div>
+</FormModal>
 
 <style>
   /* Base de form/label/footer/overlay viven en project.css. Aquí solo lo propio. */
@@ -154,119 +224,170 @@ import FormModal from "./FormModal.astro";
     text-transform: uppercase;
   }
 
-  /* ── Panel de estadísticas ────────────────────────────────────────────── */
-  .stats-box {
-    max-width: 480px;
-  }
-
-  .stats-tiles {
-    justify-content: stretch;
-    gap: 8px;
-    width: 100%;
-  }
-
-  .stat-tile {
-    flex: 1;
-    align-items: center;
-    gap: 2px;
-    padding: 14px 6px;
-    border-radius: var(--border-radius);
-    background: var(--clr-white2);
-    border: 1.5px solid var(--clr-border);
-  }
-
-  .stat-num {
-    font-size: 1.6rem;
-    font-weight: 800;
-    letter-spacing: -1px;
-    color: var(--clr-primary);
-    line-height: 1;
-  }
-
-  .stat-lbl {
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.4px;
-    text-transform: uppercase;
-    color: var(--clr-text);
-    opacity: 0.55;
-    text-align: center;
-  }
-
-  .stats-subtitle {
-    margin-top: 6px;
-    font-size: 0.8rem;
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--clr-text);
-    opacity: 0.7;
-  }
-
-  .stats-dishes {
-    align-items: stretch;
+  /* Redes: fieldset sin marco nativo (etiqueta arriba + filas ícono+input). */
+  .opf-socials {
+    border: none;
+    padding: 0;
+    margin: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
     gap: 6px;
-    max-height: 46vh;
-    overflow-y: auto;
-    overscroll-behavior: contain;
   }
 
-  .stat-dish-row {
+  /* Filas apiladas (una debajo de otra) en todos los tamaños: cada enlace ocupa
+     el ancho completo, más cómodo para pegar URLs largas. */
+  .opf-social-rows {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 10px 12px;
-    border-radius: var(--border-radius);
-    background: var(--clr-white2);
-    border: 1px solid var(--clr-border);
+    flex-direction: column;
+    gap: 8px;
   }
 
-  .stat-dish-name {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--clr-text);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .stat-dish-meta {
-    display: flex;
+  .opf-social-row {
     align-items: center;
     gap: 8px;
+    min-width: 0;
+  }
+
+  .opf-social-row i {
+    font-size: 1.1rem;
+    color: var(--clr-primary);
+    width: 20px;
+    text-align: center;
     flex-shrink: 0;
   }
 
-  /* Color (bg/texto) lo aporta .badge-low/mid/high (global). Aquí solo la forma. */
-  .stat-dish-avg {
-    min-width: 34px;
-    text-align: center;
-    padding: 2px 8px;
-    border-radius: 20px;
+  .opf-social-row input {
+    flex: 1;
+    min-width: 0;
     font-size: 0.9rem;
-    font-weight: 800;
   }
 
-  .stat-dish-avg.is-empty {
+  /* Precio con prefijo $ dentro del mismo marco del input. */
+  .price-wrap {
+    align-items: stretch;
+    border: 1.5px solid var(--clr-border);
+    border-radius: var(--border-radius);
+    background: var(--clr-white);
+    overflow: hidden;
+    transition: border-color var(--transition);
+  }
+
+  .price-wrap:focus-within {
+    border-color: var(--clr-border2);
+  }
+
+  .price-prefix {
+    display: flex;
+    align-items: center;
+    padding: 0 4px 0 12px;
+    font-size: 0.95rem;
+    font-weight: 700;
     color: var(--clr-text);
-    opacity: 0.4;
+    opacity: 0.55;
   }
 
-  .stat-dish-votes {
-    font-size: 0.72rem;
+  .price-wrap #odf-price {
+    flex: 1;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding-left: 2px;
+    min-width: 0;
+  }
+
+  /* Campo de imagen: área tocable que muestra preview o placeholder. */
+  .odf-image-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .odf-image-drop {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    border: 1.5px dashed var(--clr-border2);
+    border-radius: var(--border-radius);
+    background: var(--clr-white2);
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color var(--transition);
+  }
+
+  @media (hover: hover) {
+    .odf-image-drop:hover {
+      border-color: var(--clr-primary);
+    }
+  }
+
+  #odf-image-preview {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .odf-image-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    color: var(--clr-text);
+    opacity: 0.5;
+    font-size: 0.82rem;
     font-weight: 600;
-    color: var(--clr-text);
-    opacity: 0.5;
-    white-space: nowrap;
   }
 
-  .stats-empty {
-    padding: 18px;
-    text-align: center;
-    font-size: 0.85rem;
-    color: var(--clr-text);
-    opacity: 0.5;
+  .odf-image-empty i {
+    font-size: 1.6rem;
+  }
+
+  .odf-image-remove {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.8rem;
+    z-index: 2;
+  }
+
+  .odf-image-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 3;
+  }
+
+  .odf-image-loading .spinner {
+    width: 30px;
+    height: 30px;
+    border: 3px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: odf-spin 0.7s linear infinite;
+  }
+
+  @keyframes odf-spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 </style>
 
@@ -276,7 +397,9 @@ import FormModal from "./FormModal.astro";
     createOfficialDish,
     updateOfficialDish,
     updateOfficialRestaurant,
-    getOfficialOwnerStats,
+    uploadOfficialDishImage,
+    deleteOfficialDishImage,
+    getOfficialCities,
   } from "../lib/data.ts";
   import { emit, forceUppercase, createOverlay } from "../scripts/store.ts";
 
@@ -300,22 +423,101 @@ import FormModal from "./FormModal.astro";
     const dNotesEl = document.getElementById("odf-notes") as HTMLTextAreaElement;
     const dErrEl = document.getElementById("odf-error")!;
 
+    const dTypeListEl = document.getElementById("odf-type-list") as HTMLDataListElement;
+
+    // ── Campo de imagen ───────────────────────────────────────────────────────
+    const dImgUrlEl = document.getElementById("odf-image-url") as HTMLInputElement;
+    const dImgFileEl = document.getElementById("odf-image-file") as HTMLInputElement;
+    const dImgDropEl = document.getElementById("odf-image-drop")!;
+    const dImgPreviewEl = document.getElementById("odf-image-preview") as HTMLImageElement;
+    const dImgEmptyEl = document.getElementById("odf-image-empty")!;
+    const dImgRemoveEl = document.getElementById("odf-image-remove")!;
+    const dImgLoadingEl = document.getElementById("odf-image-loading")!;
+
+    /** Pinta el estado del campo imagen según la URL actual (oculto = sin foto). */
+    function renderImageField(url: string | null) {
+      if (url) {
+        dImgPreviewEl.src = url;
+        dImgPreviewEl.hidden = false;
+        dImgEmptyEl.hidden = true;
+        dImgRemoveEl.hidden = false;
+      } else {
+        dImgPreviewEl.removeAttribute("src");
+        dImgPreviewEl.hidden = true;
+        dImgEmptyEl.hidden = false;
+        dImgRemoveEl.hidden = true;
+      }
+    }
+
+    dImgDropEl.onclick = (e) => {
+      if ((e.target as HTMLElement).closest("#odf-image-remove")) return;
+      dImgFileEl.click();
+    };
+
+    dImgRemoveEl.onclick = (e) => {
+      e.stopPropagation();
+      // Quita la imagen recién subida del storage (huérfana) si no es la original.
+      const cur = dImgUrlEl.value || null;
+      if (cur && cur !== originalImageUrl) deleteOfficialDishImage(cur);
+      dImgUrlEl.value = "";
+      dImgFileEl.value = "";
+      renderImageField(null);
+    };
+
+    dImgFileEl.onchange = async () => {
+      const file = dImgFileEl.files?.[0];
+      if (!file) return;
+      dErrEl.textContent = "";
+      dImgLoadingEl.hidden = false;
+      const prev = dImgUrlEl.value || null;
+      const url = await uploadOfficialDishImage(dRestEl.value, file);
+      dImgLoadingEl.hidden = true;
+      dImgFileEl.value = "";
+      if (!url) {
+        dErrEl.textContent = "No se pudo subir la imagen (formato o tamaño ≤ 5 MB).";
+        return;
+      }
+      // Reemplazo: borra la anterior si era una subida nueva (no la original).
+      if (prev && prev !== originalImageUrl) deleteOfficialDishImage(prev);
+      dImgUrlEl.value = url;
+      renderImageField(url);
+    };
+
     dNameEl.oninput = () => forceUppercase(dNameEl);
     dTypeEl.oninput = () => forceUppercase(dTypeEl);
     document.getElementById("odf-close")!.onclick = closeDishModal;
     document.getElementById("odf-cancel")!.onclick = closeDishModal;
 
-    function openDishCreate(officialRestaurantId: string) {
+    /** Sugerencias de tipo (los type_name ya usados en la carta) → evita categorías
+     *  duplicadas por typos. Se llena al abrir el editor. */
+    function fillTypeSuggestions(suggestions: string[]) {
+      dTypeListEl.innerHTML = "";
+      [...new Set(suggestions)].sort().forEach((s) => {
+        const opt = document.createElement("option");
+        opt.value = s;
+        dTypeListEl.appendChild(opt);
+      });
+    }
+
+    // URL de la imagen YA persistida en el plato (null al crear). Sirve para no
+    // borrar del storage la foto original si el usuario sube otra y luego cancela.
+    let originalImageUrl: string | null = null;
+
+    function openDishCreate(officialRestaurantId: string, suggestions: string[] = []) {
       dishForm.reset();
       dErrEl.textContent = "";
       dishTitle.textContent = "Nuevo plato";
       dIdEl.value = "";
       dRestEl.value = officialRestaurantId;
+      originalImageUrl = null;
+      dImgUrlEl.value = "";
+      renderImageField(null);
+      fillTypeSuggestions(suggestions);
       openDishModal();
       dNameEl.focus();
     }
 
-    function openDishEdit(od: OfficialDish) {
+    function openDishEdit(od: OfficialDish, suggestions: string[] = []) {
       dishForm.reset();
       dErrEl.textContent = "";
       dishTitle.textContent = "Editar plato";
@@ -325,6 +527,10 @@ import FormModal from "./FormModal.astro";
       dTypeEl.value = od.typeName ?? "";
       dPriceEl.value = od.price !== null ? String(od.price) : "";
       dNotesEl.value = od.notes ?? "";
+      originalImageUrl = od.imageUrl ?? null;
+      dImgUrlEl.value = originalImageUrl ?? "";
+      renderImageField(originalImageUrl);
+      fillTypeSuggestions(suggestions);
       openDishModal();
     }
 
@@ -346,30 +552,65 @@ import FormModal from "./FormModal.astro";
         return;
       }
       const notes = dNotesEl.value.trim() || null;
+      const imageUrl = dImgUrlEl.value || null;
       const officialRestaurantId = dRestEl.value;
       const id = dIdEl.value;
 
       const saved = id
-        ? await updateOfficialDish(id, { name, typeName, price, notes })
-        : await createOfficialDish({ officialRestaurantId, name, typeName, price, notes });
+        ? await updateOfficialDish(id, { name, typeName, price, notes, imageUrl })
+        : await createOfficialDish({ officialRestaurantId, name, typeName, price, notes, imageUrl });
 
       if (!saved) {
         dErrEl.textContent = "No se pudo guardar. ¿Sigues siendo dueño de este perfil?";
         return;
       }
+      // Al editar: si se reemplazó/quitó la foto original y ya se guardó, borra la
+      // vieja del storage para no dejar huérfanos.
+      if (originalImageUrl && originalImageUrl !== imageUrl) {
+        deleteOfficialDishImage(originalImageUrl);
+      }
+      originalImageUrl = imageUrl;
       closeDishModal();
       emit("official:carta-changed", { officialRestaurantId });
     };
+
+    // Cancelar/cerrar sin guardar: si se subió una foto nueva (distinta de la
+    // original), es huérfana en el storage → bórrala.
+    function discardOrphanImage() {
+      const cur = dImgUrlEl.value || null;
+      if (cur && cur !== originalImageUrl) deleteOfficialDishImage(cur);
+    }
+    const closeDishAndDiscard = () => {
+      discardOrphanImage();
+      closeDishModal();
+    };
+    document.getElementById("odf-close")!.onclick = closeDishAndDiscard;
+    document.getElementById("odf-cancel")!.onclick = closeDishAndDiscard;
 
     // ── 3. Editor de perfil ─────────────────────────────────────────────────
     const profForm = document.getElementById("opf") as HTMLFormElement;
     const pIdEl = document.getElementById("opf-id") as HTMLInputElement;
     const pNameEl = document.getElementById("opf-name") as HTMLInputElement;
     const pCityEl = document.getElementById("opf-city") as HTMLInputElement;
+    const pCityListEl = document.getElementById("opf-city-list") as HTMLDataListElement;
     const pAddrEl = document.getElementById("opf-address") as HTMLInputElement;
+    const pPhoneEl = document.getElementById("opf-phone") as HTMLInputElement;
+    const pIgEl = document.getElementById("opf-instagram") as HTMLInputElement;
+    const pFbEl = document.getElementById("opf-facebook") as HTMLInputElement;
+    const pTtEl = document.getElementById("opf-tiktok") as HTMLInputElement;
     const pNotesEl = document.getElementById("opf-notes") as HTMLTextAreaElement;
     const pErrEl = document.getElementById("opf-error")!;
     const profApi = createOverlay("opf-overlay")!;
+
+    /** Ciudades existentes → opciones del combobox creable (input + datalist). */
+    function fillCitySuggestions(cities: string[]) {
+      pCityListEl.innerHTML = "";
+      cities.forEach((c) => {
+        const opt = document.createElement("option");
+        opt.value = c;
+        pCityListEl.appendChild(opt);
+      });
+    }
 
     document.getElementById("opf-close")!.onclick = profApi.close;
     document.getElementById("opf-cancel")!.onclick = profApi.close;
@@ -381,8 +622,14 @@ import FormModal from "./FormModal.astro";
       pNameEl.value = official.name;
       pCityEl.value = official.city ?? "";
       pAddrEl.value = official.address ?? "";
+      pPhoneEl.value = official.phone ?? "";
+      pIgEl.value = official.instagram ?? "";
+      pFbEl.value = official.facebook ?? "";
+      pTtEl.value = official.tiktok ?? "";
       pNotesEl.value = official.notes ?? "";
       profApi.open();
+      // Ciudades existentes (async, no bloquea): rellena las opciones al vuelo.
+      getOfficialCities().then(fillCitySuggestions);
     }
 
     profForm.onsubmit = async (e) => {
@@ -398,6 +645,10 @@ import FormModal from "./FormModal.astro";
         name,
         city: pCityEl.value.trim() || null,
         address: pAddrEl.value.trim() || null,
+        phone: pPhoneEl.value.trim() || null,
+        instagram: pIgEl.value.trim() || null,
+        facebook: pFbEl.value.trim() || null,
+        tiktok: pTtEl.value.trim() || null,
         notes: pNotesEl.value.trim() || null,
       });
       if (!saved) {
@@ -408,61 +659,12 @@ import FormModal from "./FormModal.astro";
       emit("official:profile-changed", { official: saved });
     };
 
-    // ── 2. Panel de estadísticas ────────────────────────────────────────────
-    const statApi = createOverlay("ost-overlay")!;
-    const stMembers = document.getElementById("ost-members")!;
-    const stRaters = document.getElementById("ost-raters")!;
-    const stTotal = document.getElementById("ost-total")!;
-    const stDishes = document.getElementById("ost-dishes")!;
-    document.getElementById("ost-close")!.onclick = statApi.close;
-
-    function badgeClass(avg: number): string {
-      if (avg <= 4) return "badge-low";
-      if (avg <= 7) return "badge-mid";
-      return "badge-high";
-    }
-
-    async function openStats(officialRestaurantId: string) {
-      stMembers.textContent = "—";
-      stRaters.textContent = "—";
-      stTotal.textContent = "—";
-      stDishes.innerHTML = `<div class="stats-empty">Cargando…</div>`;
-      statApi.open();
-
-      const stats = await getOfficialOwnerStats(officialRestaurantId);
-      if (!stats) {
-        stDishes.innerHTML = `<div class="stats-empty">No se pudieron cargar las estadísticas.</div>`;
-        return;
-      }
-      stMembers.textContent = String(stats.members);
-      stRaters.textContent = String(stats.raters);
-      stTotal.textContent = String(stats.totalRatings);
-
-      if (stats.dishes.length === 0) {
-        stDishes.innerHTML = `<div class="stats-empty">Aún no hay platos en la carta.</div>`;
-        return;
-      }
-      stDishes.innerHTML = "";
-      stats.dishes.forEach((d) => {
-        const row = document.createElement("div");
-        row.className = "stat-dish-row";
-        const avgHtml =
-          d.avgRating !== null
-            ? `<span class="stat-dish-avg ${badgeClass(d.avgRating)}">${d.avgRating.toFixed(1)}</span>`
-            : `<span class="stat-dish-avg is-empty">—</span>`;
-        row.innerHTML =
-          `<span class="stat-dish-name">${d.name}</span>` +
-          `<span class="stat-dish-meta">${avgHtml}` +
-          `<span class="stat-dish-votes">${d.votes} ${d.votes === 1 ? "voto" : "votos"}</span></span>`;
-        stDishes.appendChild(row);
-      });
-    }
+    // Las estadísticas viven en la página /panel?id=… (no en modal).
 
     // API global (refrescada con referencias frescas al DOM actual).
     (window as any).officialManage = {
       openDishCreate,
       openDishEdit,
-      openStats,
       openProfileEdit,
     };
   });

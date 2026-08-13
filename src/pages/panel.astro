@@ -1,0 +1,701 @@
+---
+/**
+ * Panel de gestión del dueño (dashboard de estadísticas). Ruta: /panel?id=…
+ * Solo accesible si el usuario es dueño del perfil oficial (official_owners); si no,
+ * redirige. Los datos vienen del RPC get_official_owner_stats (agregados, sin filas
+ * crudas). Las gráficas son CSS/SVG puro — sin librerías, respeta el bundle PWA.
+ *
+ * NOTA: los elementos de las gráficas se crean con createElement en el <script>, así
+ * que su CSS vive en <style is:global> (prefijado con .panel-page). El CSS scoped de
+ * Astro NO alcanza nodos creados por JS.
+ */
+import Layout1 from "../layouts/Layout1.astro";
+---
+
+<Layout1 title="Panel · STAURANT" bare>
+  <div class="panel-page flex-column">
+    <a id="panel-back" href="/" class="back-link flex-row">
+      <i class="bi bi-arrow-left"></i> Volver al restaurante
+    </a>
+
+    <header class="panel-head flex-column">
+      <span class="panel-eyebrow flex-row">
+        <i class="bi bi-shield-check"></i> Panel de gestión
+      </span>
+      <h1 id="panel-title" class="panel-title">—</h1>
+    </header>
+
+    {/* KPIs */}
+    <section class="kpi-grid">
+      <div class="kpi kpi-hero flex-column">
+        <span class="kpi-num" id="kpi-avg">—</span>
+        <span class="kpi-lbl">Promedio general</span>
+        <span class="kpi-sub" id="kpi-avg-sub"></span>
+      </div>
+      <div class="kpi flex-column">
+        <span class="kpi-num" id="kpi-members">—</span>
+        <span class="kpi-lbl">En listas</span>
+      </div>
+      <div class="kpi flex-column">
+        <span class="kpi-num" id="kpi-raters">—</span>
+        <span class="kpi-lbl">Han calificado</span>
+      </div>
+      <div class="kpi flex-column">
+        <span class="kpi-num" id="kpi-total">—</span>
+        <span class="kpi-lbl">Calificaciones</span>
+      </div>
+      <div class="kpi flex-column">
+        <span class="kpi-num" id="kpi-dishes">—</span>
+        <span class="kpi-lbl">Platos</span>
+      </div>
+    </section>
+
+    {/* Distribución de notas */}
+    <section class="panel-card flex-column">
+      <h2 class="card-title">Distribución de notas</h2>
+      <p class="card-hint">Cómo se reparten las calificaciones recibidas (1 a 10).</p>
+      <div id="hist" class="hist"></div>
+    </section>
+
+    {/* Tendencia temporal */}
+    <section class="panel-card flex-column">
+      <h2 class="card-title">Actividad · últimos 30 días</h2>
+      <p class="card-hint">Calificaciones recibidas por día.</p>
+      <div id="timeline" class="timeline"></div>
+      <div class="timeline-axis flex-row">
+        <span id="tl-start">—</span>
+        <span>Hoy</span>
+      </div>
+    </section>
+
+    {/* Ranking de platos */}
+    <section class="panel-card flex-column">
+      <h2 class="card-title flex-row">
+        Ranking de platos <span id="rank-count" class="card-count"></span>
+      </h2>
+      <div id="rank" class="rank flex-column"></div>
+    </section>
+  </div>
+</Layout1>
+
+<style>
+  .panel-page {
+    width: 100%;
+    max-width: 760px;
+    padding: 20px 16px 80px;
+    align-items: stretch;
+    gap: 18px;
+  }
+
+  .back-link {
+    justify-content: flex-start;
+    gap: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--clr-primary);
+    letter-spacing: 1px;
+    width: fit-content;
+    padding: 6px 0;
+    transition: var(--transition);
+  }
+
+  .panel-head {
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .panel-eyebrow {
+    gap: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--clr-primary);
+    opacity: 0.85;
+  }
+
+  .panel-title {
+    font-size: 1.7rem;
+    font-weight: 800;
+    letter-spacing: -0.6px;
+    line-height: 1.1;
+    color: var(--clr-text);
+  }
+
+  /* ── KPIs ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .kpi {
+    align-items: flex-start;
+    gap: 3px;
+    padding: 16px 16px;
+    border-radius: 14px;
+    background: var(--clr-white);
+    border: 1px solid var(--clr-border);
+  }
+
+  .kpi-hero {
+    grid-column: 1 / -1;
+    background: color-mix(in srgb, var(--clr-primary) 7%, var(--clr-white));
+    border-color: color-mix(in srgb, var(--clr-primary) 22%, transparent);
+  }
+
+  .kpi-num {
+    font-size: 1.7rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    line-height: 1;
+    color: var(--clr-text);
+  }
+
+  .kpi-hero .kpi-num {
+    font-size: 2.8rem;
+    color: var(--clr-primary);
+  }
+
+  .kpi-lbl {
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--clr-text);
+    opacity: 0.5;
+  }
+
+  .kpi-sub {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--clr-text);
+    opacity: 0.55;
+    margin-top: 2px;
+  }
+
+  /* ── Tarjetas de gráfica ── */
+  .panel-card {
+    align-items: stretch;
+    gap: 4px;
+    padding: 20px 18px;
+    border-radius: 16px;
+    background: var(--clr-white);
+    border: 1px solid var(--clr-border);
+  }
+
+  .card-title {
+    justify-content: flex-start;
+    gap: 8px;
+    align-items: baseline;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--clr-text);
+    opacity: 0.75;
+  }
+
+  .card-count {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    opacity: 0.7;
+  }
+
+  .card-hint {
+    font-size: 0.78rem;
+    color: var(--clr-text);
+    opacity: 0.5;
+    margin-bottom: 10px;
+  }
+
+  .timeline-axis {
+    justify-content: space-between;
+    margin-top: 6px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: var(--clr-text);
+    opacity: 0.45;
+  }
+
+  @media (hover: hover) {
+    .back-link:hover {
+      color: var(--clr-text);
+    }
+  }
+
+  @media (min-width: 768px) {
+    .panel-page {
+      padding: 28px 24px 80px;
+    }
+
+    .kpi-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .kpi-hero {
+      grid-column: 1 / -1;
+      flex-direction: row;
+      align-items: baseline;
+      gap: 14px;
+    }
+  }
+</style>
+
+<style is:global>
+  /* ── Elementos creados por JS (gráficas + ranking): CSS global prefijado ── */
+
+  /* Histograma (barras verticales, una por nota 1-10). */
+  .panel-page .hist {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 150px;
+    padding-top: 8px;
+  }
+
+  .panel-page .hist-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    height: 100%;
+    justify-content: flex-end;
+  }
+
+  .panel-page .hist-bar-wrap {
+    width: 100%;
+    flex: 1;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .panel-page .hist-bar {
+    width: 100%;
+    max-width: 34px;
+    border-radius: 6px 6px 0 0;
+    min-height: 3px;
+    background: var(--clr-border);
+    transition: height 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    position: relative;
+  }
+
+  .panel-page .hist-bar.is-low {
+    background: var(--clr-danger);
+  }
+  .panel-page .hist-bar.is-mid {
+    background: #d99a2b;
+  }
+  .panel-page .hist-bar.is-high {
+    background: var(--clr-primary);
+  }
+
+  .panel-page .hist-bar .hist-val {
+    position: absolute;
+    top: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: var(--clr-text);
+  }
+
+  .panel-page .hist-lbl {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--clr-text);
+    opacity: 0.45;
+  }
+
+  /* Tendencia (SVG area). */
+  .panel-page .timeline svg {
+    display: block;
+    width: 100%;
+    height: 90px;
+    overflow: visible;
+  }
+
+  .panel-page .timeline .tl-area {
+    fill: color-mix(in srgb, var(--clr-primary) 14%, transparent);
+  }
+
+  .panel-page .timeline .tl-line {
+    fill: none;
+    stroke: var(--clr-primary);
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+
+  .panel-page .timeline .tl-dot {
+    fill: var(--clr-primary);
+  }
+
+  .panel-page .timeline-empty {
+    height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.82rem;
+    color: var(--clr-text);
+    opacity: 0.45;
+  }
+
+  /* Ranking de platos. */
+  .panel-page .rank {
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .panel-page .rank-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 14px;
+    border-radius: 12px;
+    background: var(--clr-white2);
+    border: 1px solid var(--clr-border);
+  }
+
+  .panel-page .rank-row.is-unrated {
+    opacity: 0.5;
+  }
+
+  .panel-page .rank-row.is-best {
+    border-color: color-mix(in srgb, var(--clr-primary) 45%, var(--clr-border));
+    background: color-mix(in srgb, var(--clr-primary) 9%, var(--clr-white));
+  }
+
+  .panel-page .rank-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .panel-page .rank-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--clr-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .panel-page .rank-medal {
+    margin-right: 5px;
+  }
+
+  /* Barra de progreso (nota/10) bajo el nombre. */
+  .panel-page .rank-track {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--clr-border);
+    overflow: hidden;
+  }
+
+  .panel-page .rank-fill {
+    height: 100%;
+    border-radius: 3px;
+    width: 0;
+    transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .panel-page .rank-fill.is-low {
+    background: var(--clr-danger);
+  }
+  .panel-page .rank-fill.is-mid {
+    background: #d99a2b;
+  }
+  .panel-page .rank-fill.is-high {
+    background: var(--clr-primary);
+  }
+
+  .panel-page .rank-side {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+  }
+
+  .panel-page .rank-avg {
+    min-width: 46px;
+    text-align: center;
+    padding: 5px 10px;
+    border-radius: 10px;
+    font-size: 1.05rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .panel-page .rank-avg.is-empty {
+    background: transparent;
+    border: 1px dashed var(--clr-border);
+    color: var(--clr-text);
+    opacity: 0.4;
+  }
+
+  .panel-page .rank-votes {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--clr-text);
+    opacity: 0.55;
+    white-space: nowrap;
+  }
+
+  .panel-page .panel-empty {
+    padding: 24px;
+    text-align: center;
+    font-size: 0.88rem;
+    color: var(--clr-text);
+    opacity: 0.5;
+  }
+</style>
+
+<script>
+  import { supabase } from "../lib/supabase.ts";
+  import {
+    initCache,
+    checkOfficialOwnership,
+    getOfficialRestaurant,
+    getOfficialOwnerStats,
+    type OfficialOwnerStats,
+  } from "../lib/data.ts";
+
+  /** Banda de color según la nota (mismos cortes que los badges). */
+  function band(avg: number): "low" | "mid" | "high" {
+    if (avg <= 4) return "low";
+    if (avg <= 7) return "mid";
+    return "high";
+  }
+
+  function setText(id: string, value: string): void {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  }
+
+  // ─── KPIs ─────────────────────────────────────────────────────────────────
+  function renderKPIs(s: OfficialOwnerStats): void {
+    const avgEl = document.getElementById("kpi-avg");
+    if (avgEl) {
+      avgEl.textContent = s.avgOverall !== null ? s.avgOverall.toFixed(1) : "—";
+      const c = s.avgOverall !== null
+        ? `var(--clr-${band(s.avgOverall) === "low" ? "danger" : "primary"})`
+        : "var(--clr-text)";
+      (avgEl as HTMLElement).style.color = c;
+    }
+    setText(
+      "kpi-avg-sub",
+      s.totalRatings > 0
+        ? `sobre ${s.totalRatings} ${s.totalRatings === 1 ? "calificación" : "calificaciones"}`
+        : "aún sin calificaciones",
+    );
+    setText("kpi-members", String(s.members));
+    const pct = s.members > 0 ? Math.round((s.raters / s.members) * 100) : 0;
+    const ratersEl = document.getElementById("kpi-raters");
+    if (ratersEl) ratersEl.textContent = s.members > 0 ? `${s.raters} · ${pct}%` : String(s.raters);
+    setText("kpi-total", String(s.totalRatings));
+    setText("kpi-dishes", String(s.dishes.length));
+  }
+
+  // ─── Histograma de distribución ─────────────────────────────────────────────
+  function renderHistogram(s: OfficialOwnerStats): void {
+    const host = document.getElementById("hist");
+    if (!host) return;
+    host.innerHTML = "";
+    const max = Math.max(1, ...s.distribution.map((d) => d.count));
+    s.distribution.forEach((d) => {
+      const col = document.createElement("div");
+      col.className = "hist-col";
+
+      const wrap = document.createElement("div");
+      wrap.className = "hist-bar-wrap";
+      const bar = document.createElement("div");
+      bar.className = `hist-bar is-${band(d.bucket)}`;
+      // Altura relativa al máximo; 0 se queda en la línea base (min-height).
+      requestAnimationFrame(() => {
+        bar.style.height = d.count > 0 ? `${(d.count / max) * 100}%` : "0";
+      });
+      if (d.count > 0) {
+        const val = document.createElement("span");
+        val.className = "hist-val";
+        val.textContent = String(d.count);
+        bar.appendChild(val);
+      }
+      wrap.appendChild(bar);
+
+      const lbl = document.createElement("span");
+      lbl.className = "hist-lbl";
+      lbl.textContent = String(d.bucket);
+
+      col.append(wrap, lbl);
+      host.appendChild(col);
+    });
+  }
+
+  // ─── Tendencia temporal (SVG area, 30 días) ─────────────────────────────────
+  function renderTimeline(s: OfficialOwnerStats): void {
+    const host = document.getElementById("timeline");
+    if (!host) return;
+    host.innerHTML = "";
+
+    // Eje de 30 días terminando hoy; volcamos los conteos del RPC sobre él.
+    const days: string[] = [];
+    const today = new Date();
+    for (let i = 29; i >= 0; i--) {
+      const dt = new Date(today);
+      dt.setDate(today.getDate() - i);
+      days.push(dt.toISOString().slice(0, 10));
+    }
+    const map = new Map(s.timeline.map((t) => [t.day, t.count]));
+    const counts = days.map((d) => map.get(d) ?? 0);
+
+    // Fecha de inicio del eje (etiqueta izquierda).
+    const startEl = document.getElementById("tl-start");
+    if (startEl) {
+      const d0 = new Date(days[0]);
+      startEl.textContent = d0.toLocaleDateString("es-CO", { day: "numeric", month: "short" });
+    }
+
+    if (counts.every((c) => c === 0)) {
+      host.innerHTML = `<div class="timeline-empty">Sin actividad en los últimos 30 días.</div>`;
+      return;
+    }
+
+    const W = 320, H = 80, PAD = 6;
+    const max = Math.max(1, ...counts);
+    const x = (i: number) => (i / (counts.length - 1)) * W;
+    const y = (c: number) => H - PAD - (c / max) * (H - PAD * 2);
+
+    const pts = counts.map((c, i) => `${x(i).toFixed(1)},${y(c).toFixed(1)}`);
+    const areaPath = `M0,${H} L${pts.join(" L")} L${W},${H} Z`;
+    const linePath = `M${pts.join(" L")}`;
+
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.setAttribute("preserveAspectRatio", "none");
+    svg.innerHTML =
+      `<path class="tl-area" d="${areaPath}"></path>` +
+      `<path class="tl-line" d="${linePath}"></path>` +
+      // Punto en el último día con actividad (o el último no-cero).
+      counts
+        .map((c, i) => (c > 0 ? `<circle class="tl-dot" cx="${x(i).toFixed(1)}" cy="${y(c).toFixed(1)}" r="2.5"></circle>` : ""))
+        .join("");
+    host.appendChild(svg);
+  }
+
+  // ─── Ranking de platos ──────────────────────────────────────────────────────
+  function renderRanking(s: OfficialOwnerStats): void {
+    const host = document.getElementById("rank");
+    if (!host) return;
+    const rated = s.dishes.filter((d) => d.avgRating !== null && d.votes > 0);
+    setText("rank-count", `${rated.length} de ${s.dishes.length} calificados`);
+
+    if (s.dishes.length === 0) {
+      host.innerHTML = `<div class="panel-empty">Aún no hay platos en la carta.</div>`;
+      return;
+    }
+    const bestId = s.dishes.find((d) => d.avgRating !== null && d.votes > 0)?.dishId;
+
+    host.innerHTML = "";
+    s.dishes.forEach((d) => {
+      const isRated = d.avgRating !== null && d.votes > 0;
+      const row = document.createElement("div");
+      row.className = "rank-row";
+      if (!isRated) row.classList.add("is-unrated");
+      if (d.dishId === bestId) row.classList.add("is-best");
+
+      const main = document.createElement("div");
+      main.className = "rank-main";
+
+      const name = document.createElement("span");
+      name.className = "rank-name";
+      if (d.dishId === bestId) {
+        const medal = document.createElement("span");
+        medal.className = "rank-medal";
+        medal.textContent = "👑";
+        medal.title = "Mejor valorado";
+        name.appendChild(medal);
+      }
+      name.appendChild(document.createTextNode(d.name));
+
+      const track = document.createElement("div");
+      track.className = "rank-track";
+      const fill = document.createElement("div");
+      if (isRated) {
+        const avg = d.avgRating as number;
+        fill.className = `rank-fill is-${band(avg)}`;
+        requestAnimationFrame(() => { fill.style.width = `${(avg / 10) * 100}%`; });
+      } else {
+        fill.className = "rank-fill";
+      }
+      track.appendChild(fill);
+      main.append(name, track);
+
+      const side = document.createElement("div");
+      side.className = "rank-side";
+      const avgEl = document.createElement("span");
+      if (isRated) {
+        avgEl.className = `rank-avg badge-${band(d.avgRating as number)}`;
+        avgEl.textContent = (d.avgRating as number).toFixed(1);
+      } else {
+        avgEl.className = "rank-avg is-empty";
+        avgEl.textContent = "—";
+      }
+      const votes = document.createElement("span");
+      votes.className = "rank-votes";
+      votes.textContent = isRated
+        ? `${d.votes} ${d.votes === 1 ? "voto" : "votos"}`
+        : "Sin calificar";
+      side.append(avgEl, votes);
+
+      row.append(main, side);
+      host.appendChild(row);
+    });
+  }
+
+  document.addEventListener("astro:page-load", async () => {
+    const page = document.querySelector(".panel-page");
+    if (!page) return; // no es esta página
+
+    const id = new URLSearchParams(window.location.search).get("id") ?? "";
+    if (!id) { window.location.href = "/"; return; }
+
+    const backEl = document.getElementById("panel-back") as HTMLAnchorElement | null;
+    if (backEl) backEl.href = `/oficial?id=${encodeURIComponent(id)}`;
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { window.location.href = "/login"; return; }
+    await initCache(session.user.id);
+
+    // Solo el dueño ve el panel.
+    const owner = await checkOfficialOwnership(id);
+    if (!owner) { window.location.href = `/oficial?id=${encodeURIComponent(id)}`; return; }
+
+    const [official, stats] = await Promise.all([
+      getOfficialRestaurant(id),
+      getOfficialOwnerStats(id),
+    ]);
+
+    if (official) {
+      setText("panel-title", official.name);
+      document.title = `Panel · ${official.name}`;
+    }
+    if (!stats) {
+      const rank = document.getElementById("rank");
+      if (rank) rank.innerHTML = `<div class="panel-empty">No se pudieron cargar las estadísticas.</div>`;
+      return;
+    }
+
+    renderKPIs(stats);
+    renderHistogram(stats);
+    renderTimeline(stats);
+    renderRanking(stats);
+  });
+</script>

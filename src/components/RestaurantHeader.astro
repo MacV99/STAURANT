@@ -53,6 +53,20 @@ const isPending = r.status === "pending";
         <i class="bi bi-geo-alt-fill" />
         <span class="rh-cities-list" />
       </span>
+      <div class="rh-socials flex-row" hidden>
+        <a class="rh-social rh-social-wa" aria-label="Llamar" hidden>
+          <i class="bi bi-telephone-fill" />
+        </a>
+        <a class="rh-social rh-social-ig" target="_blank" rel="noopener" aria-label="Instagram" hidden>
+          <i class="bi bi-instagram" />
+        </a>
+        <a class="rh-social rh-social-fb" target="_blank" rel="noopener" aria-label="Facebook" hidden>
+          <i class="bi bi-facebook" />
+        </a>
+        <a class="rh-social rh-social-tt" target="_blank" rel="noopener" aria-label="TikTok" hidden>
+          <i class="bi bi-tiktok" />
+        </a>
+      </div>
     </div>
     <div class="rh-menu">
       <button class="rh-btn-menu boton2" data-id={r.id}>
@@ -179,6 +193,51 @@ const isPending = r.status === "pending";
     color: var(--clr-primary);
     font-size: 0.78rem;
     flex-shrink: 0;
+  }
+
+  /* Redes: solo se muestran los íconos con valor (los vacíos van hidden). */
+  .rh-socials {
+    justify-content: flex-start;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .rh-socials[hidden] {
+    display: none;
+  }
+
+  .rh-social {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--clr-white2);
+    color: var(--clr-primary);
+    font-size: 1.05rem;
+    flex-shrink: 0;
+    transition: background var(--transition), color var(--transition);
+  }
+
+  .rh-social[hidden] {
+    display: none;
+  }
+
+  .rh-social-wa {
+    background: var(--clr-primary);
+    color: var(--clr-white);
+  }
+
+  @media (hover: hover) {
+    .rh-social:hover {
+      background: var(--clr-primary);
+      color: var(--clr-white);
+    }
+
+    .rh-social-wa:hover {
+      filter: brightness(0.92);
+    }
   }
 
   .rh-name {

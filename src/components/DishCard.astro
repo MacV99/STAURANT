@@ -11,6 +11,7 @@ const { dish: d, typeName } = Astro.props;
 ---
 
 <article class="dish-card flex-row" data-id={d.id}>
+  <img class="dish-thumb" alt="" hidden />
   <RatingBadge score={d.rating} />
   <div class="dish-info">
     <h4>{d.name}</h4>
@@ -45,6 +46,17 @@ const { dish: d, typeName } = Astro.props;
     justify-content: space-between;
     gap: 12px;
     transition: var(--transition);
+  }
+
+  /* Miniatura del plato (solo carta oficial). Se revela en runtime al setear src;
+     oculta por defecto para no afectar las cartas personales que reusan esta card. */
+  .dish-thumb {
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+    object-fit: cover;
+    border-radius: 10px;
+    background: var(--clr-white2);
   }
 
   .dish-info {

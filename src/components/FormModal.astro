@@ -21,7 +21,8 @@ const { id, title, maxWidth = "460px", submitLabel = "Guardar" } = Astro.props;
 ---
 
 <div id={`${id}-overlay`} class="overlay" aria-modal="true" role="dialog">
-  <div class="form-box flex-column" style={`max-width:${maxWidth}`}>
+  <div class="form-box form-box--sheet flex-column" style={`max-width:${maxWidth}`}>
+    {/* Cabecera fija */}
     <div class="form-header flex-row">
       <h2 id={`${id}-title`}>{title}</h2>
       <button
@@ -34,10 +35,13 @@ const { id, title, maxWidth = "460px", submitLabel = "Guardar" } = Astro.props;
     </div>
 
     <form id={id} class="flex-column" novalidate>
-      <slot />
+      {/* Solo esta zona hace scroll (la barra va oculta) */}
+      <div class="form-body">
+        <slot />
+        <p id={`${id}-error`} class="form-error" aria-live="polite"></p>
+      </div>
 
-      <p id={`${id}-error`} class="form-error" aria-live="polite"></p>
-
+      {/* Footer fijo */}
       <div class="form-footer flex-row">
         <button type="button" id={`${id}-cancel`} class="boton2">Cancelar</button>
         <button type="submit" id={`${id}-submit`} class="boton">{submitLabel}</button>

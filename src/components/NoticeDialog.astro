@@ -1,48 +1,18 @@
 <div id="notice-overlay" class="overlay" aria-modal="true" role="dialog">
-  <div class="notice-box flex-column">
-    <div id="notice-icon" class="notice-icon">
+  <div class="dialog-box flex-column">
+    <div id="notice-icon" class="dialog-icon">
       <i class="bi bi-info-circle-fill"></i>
     </div>
-    <p id="notice-message">—</p>
-    <button id="notice-ok" class="boton">Entendido</button>
+    <p id="notice-message" class="dialog-message">—</p>
+    <div class="dialog-actions flex-row">
+      <button id="notice-ok" class="boton">Entendido</button>
+    </div>
   </div>
 </div>
 
 <style>
-  .notice-box {
-    background: var(--clr-white);
-    border: solid 1px var(--clr-border);
-    border-radius: 20px;
-    padding: 32px 24px 28px;
-    width: 90%;
-    max-width: 360px;
-    gap: 14px;
-  }
-
-  .notice-icon {
-    font-size: 2.2rem;
-    color: var(--clr-primary);
-    line-height: 1;
-  }
-
-  .notice-icon.is-error {
-    color: #b02a3a;
-  }
-
-  #notice-message {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--clr-text);
-    text-align: center;
-    line-height: 1.5;
-  }
-
-  #notice-ok {
-    width: 100%;
-    font-size: 0.85rem;
-    letter-spacing: 0.5px;
-    margin-top: 6px;
-  }
+  /* Estructura compartida en project.css (.dialog-box …). Sin acción doble:
+     un único botón que ocupa todo el ancho vía .dialog-actions (flex:1). */
 </style>
 
 <script>

@@ -1,10 +1,10 @@
 <div id="confirm-overlay" class="overlay" aria-modal="true" role="dialog">
-  <div class="confirm-box flex-column">
-    <div class="confirm-icon">
+  <div class="dialog-box flex-column">
+    <div class="dialog-icon is-error">
       <i class="bi bi-exclamation-triangle-fill"></i>
     </div>
-    <p id="confirm-message">¿Estás seguro?</p>
-    <div class="confirm-actions flex-row">
+    <p id="confirm-message" class="dialog-message">¿Estás seguro?</p>
+    <div class="dialog-actions flex-row">
       <button id="confirm-cancel" class="boton2">Cancelar</button>
       <button id="confirm-ok" class="boton btn-danger">Eliminar</button>
     </div>
@@ -12,49 +12,12 @@
 </div>
 
 <style>
-  .confirm-box {
-    background: var(--clr-white);
-    border: solid 1px var(--clr-border);
-    border-radius: 20px;
-    padding: 32px 24px 28px;
-    width: 90%;
-    max-width: 360px;
-    gap: 14px;
-  }
-
-  .confirm-icon {
-    font-size: 2.2rem;
-    color: #b02a3a;
-    line-height: 1;
-  }
-
-  #confirm-message {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--clr-text);
-    text-align: center;
-    line-height: 1.5;
-  }
-
-  .confirm-actions {
-    gap: 10px;
-    width: 100%;
-    margin-top: 6px;
-  }
-
+  /* Estructura y espaciado viven en project.css (.dialog-box …), compartidos
+     con NoticeDialog. Aquí solo el matiz propio: el botón de confirmar. */
   #confirm-cancel {
-    flex: 1;
     background: var(--clr-white2);
     border-color: var(--clr-border);
     color: var(--clr-text);
-    font-size: 0.85rem;
-    letter-spacing: 0.5px;
-  }
-
-  #confirm-ok {
-    flex: 1;
-    font-size: 0.85rem;
-    letter-spacing: 0.5px;
   }
 </style>
 

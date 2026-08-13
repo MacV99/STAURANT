@@ -57,19 +57,19 @@ const tplRestaurant: Restaurant = {
     {/* Barra de gestión: solo visible si el usuario es DUEÑO de este perfil
         (fila en official_owners). Da acceso a estadísticas, editar el perfil y
         agregar platos a la carta. Se muestra en astro:page-load tras verificar. */}
-    <div id="owner-bar" class="owner-bar flex-row" hidden>
-      <span class="owner-badge flex-row">
-        <i class="bi bi-shield-check"></i> Gestionando
+    <div id="owner-bar" class="owner-bar" hidden>
+      <span class="owner-badge">
+        <i class="bi bi-shield-check"></i> Gestionando tu restaurante
       </span>
-      <div class="owner-actions flex-row">
-        <button id="owner-stats-btn" class="boton2" type="button">
-          <i class="bi bi-bar-chart-line"></i> Estadísticas
+      <div class="owner-actions">
+        <button id="owner-stats-btn" class="owner-act" type="button">
+          <i class="bi bi-bar-chart-line"></i> <span>Estadísticas</span>
         </button>
-        <button id="owner-edit-btn" class="boton2" type="button">
-          <i class="bi bi-pencil"></i> Editar
+        <button id="owner-edit-btn" class="owner-act" type="button">
+          <i class="bi bi-pencil"></i> <span>Editar</span>
         </button>
-        <button id="owner-add-dish-btn" class="boton" type="button">
-          <i class="bi bi-plus-lg"></i> Plato
+        <button id="owner-add-dish-btn" class="owner-act is-primary" type="button">
+          <i class="bi bi-plus-lg"></i> <span>Plato</span>
         </button>
       </div>
     </div>
@@ -163,6 +163,50 @@ const tplRestaurant: Restaurant = {
     border-radius: 20px;
     padding: 2px 8px;
     width: fit-content;
+  }
+
+  /* Controles edit/eliminar por plato (modo dueño). Van en :global porque los
+     botones se crean con createElement → el CSS scoped no los alcanza. */
+  .dish-card .owner-dish-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .dish-card .owner-dish-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: 1px solid var(--clr-border);
+    background: var(--clr-white);
+    color: var(--clr-text);
+    opacity: 0.7;
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 0;
+    transition: var(--transition);
+  }
+
+  .dish-card .owner-dish-btn.is-delete {
+    color: var(--clr-danger);
+    opacity: 1;
+  }
+
+  @media (hover: hover) {
+    .dish-card .owner-dish-btn:hover {
+      border-color: var(--clr-primary);
+      opacity: 1;
+    }
+
+    .dish-card .owner-dish-btn.is-delete:hover {
+      border-color: var(--clr-danger);
+    }
   }
 
   /* Precio del plato en la carta oficial (dentro de la DishCard reusada) */
@@ -311,15 +355,17 @@ const tplRestaurant: Restaurant = {
 
   /* ── Barra de gestión del dueño ─────────────────────────────────────────── */
   .owner-bar {
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
     width: 100%;
-    padding: 10px 12px;
+    padding: 14px 16px;
     border-radius: var(--border-radius);
-    background: var(--clr-white2);
-    border: 1.5px solid var(--clr-primary);
+    /* Fondo verde muy tenue en vez de borde grueso: comunica "modo gestión" sin
+       recargar visualmente. */
+    background: color-mix(in srgb, var(--clr-primary) 6%, var(--clr-white));
+    border: 1px solid color-mix(in srgb, var(--clr-primary) 22%, transparent);
   }
 
   .owner-bar[hidden] {
@@ -327,70 +373,102 @@ const tplRestaurant: Restaurant = {
   }
 
   .owner-badge {
-    gap: 5px;
-    font-size: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.7rem;
     font-weight: 700;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.6px;
     text-transform: uppercase;
     color: var(--clr-primary);
+    opacity: 0.85;
   }
 
   .owner-badge i {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
   }
 
+  /* 3 botones que reparten el ancho por igual: predecible en móvil y desktop. */
   .owner-actions {
-    gap: 6px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
-
-  .owner-actions .boton,
-  .owner-actions .boton2 {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 6px 12px;
-    font-size: 0.78rem;
-    width: auto;
-  }
-
-  /* Controles edit/eliminar por plato (modo dueño, inyectados en la DishCard). */
-  .owner-dish-actions {
     display: flex;
-    align-items: center;
-    gap: 4px;
-    flex-shrink: 0;
+    gap: 8px;
   }
 
-  .owner-dish-btn {
+  .owner-act {
+    flex: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: 1.5px solid var(--clr-border);
+    gap: 6px;
+    padding: 8px 10px;
+    border-radius: 9px;
+    border: 1px solid var(--clr-border);
     background: var(--clr-white);
     color: var(--clr-text);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.2px;
     cursor: pointer;
-    font-size: 0.85rem;
+    white-space: nowrap;
     transition: var(--transition);
   }
 
-  .owner-dish-btn.is-delete {
-    color: var(--clr-danger);
-    border-color: var(--clr-danger-border);
-    background: var(--clr-danger-bg);
+  .owner-act i {
+    font-size: 0.8rem;
+    opacity: 0.75;
+  }
+
+  .owner-act.is-primary {
+    background: var(--clr-primary);
+    border-color: var(--clr-primary);
+    color: var(--clr-white);
+  }
+
+  .owner-act.is-primary i {
+    opacity: 1;
   }
 
   @media (hover: hover) {
-    .owner-dish-btn:hover {
+    .owner-act:hover {
       border-color: var(--clr-primary);
+      color: var(--clr-primary);
     }
 
-    .owner-dish-btn.is-delete:hover {
-      border-color: var(--clr-danger);
+    .owner-act:hover i {
+      opacity: 1;
+    }
+
+    .owner-act.is-primary:hover {
+      background: var(--clr-primary-dark);
+      border-color: var(--clr-primary-dark);
+      color: var(--clr-white);
+    }
+  }
+
+  /* CTA de carta vacía (dueño): botón compacto, no full-width. */
+  #dishes-list .empty-state .boton {
+    width: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  @media (min-width: 768px) {
+    /* En desktop: badge a la izquierda, acciones compactas a la derecha. */
+    .owner-bar {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .owner-actions {
+      flex: 0 0 auto;
+    }
+
+    .owner-act {
+      flex: 0 0 auto;
+      padding: 8px 14px;
     }
   }
 
@@ -561,6 +639,7 @@ const tplRestaurant: Restaurant = {
 </style>
 
 <script>
+  import { navigate } from "astro:transitions/client";
   import { supabase } from "../lib/supabase.ts";
   import {
     initCache,
@@ -723,6 +802,47 @@ const tplRestaurant: Restaurant = {
 
   // ─── Render (mismos componentes que /restaurante) ───────────────────────────
 
+  /** Convierte lo que escribió el dueño (handle "@x", "x" o URL completa) en una
+   *  URL navegable de la red. Si ya es http(s), se respeta tal cual. */
+  function socialUrl(base: string, raw: string): string {
+    const v = raw.trim();
+    if (/^https?:\/\//i.test(v)) return v;
+    return base + v.replace(/^@/, "");
+  }
+
+  /** Enlace de llamada directa. Conserva el + inicial y dígitos; quita el resto. */
+  function telUrl(raw: string): string {
+    const v = raw.trim();
+    const digits = v.replace(/[^\d]/g, "");
+    return "tel:" + (v.startsWith("+") ? "+" : "") + digits;
+  }
+
+  /** Rellena la fila de redes del header con solo los íconos que tienen valor. */
+  function fillSocials(div: Element, o: OfficialRestaurant) {
+    const row = div.querySelector<HTMLElement>(".rh-socials");
+    if (!row) return;
+    const links: [string, string | null][] = [
+      [".rh-social-wa", o.phone ? telUrl(o.phone) : null],
+      [".rh-social-ig", o.instagram ? socialUrl("https://instagram.com/", o.instagram) : null],
+      [".rh-social-fb", o.facebook ? socialUrl("https://facebook.com/", o.facebook) : null],
+      [".rh-social-tt", o.tiktok ? socialUrl("https://tiktok.com/@", o.tiktok) : null],
+    ];
+    let any = false;
+    for (const [sel, href] of links) {
+      const a = row.querySelector<HTMLAnchorElement>(sel);
+      if (!a) continue;
+      if (href) {
+        a.href = href;
+        a.hidden = false;
+        any = true;
+      } else {
+        a.remove();
+      }
+    }
+    if (any) row.hidden = false;
+    else row.remove();
+  }
+
   function buildHeaderElement(): Element {
     const tpl = document.getElementById(
       "tpl-restaurant-header",
@@ -779,6 +899,10 @@ const tplRestaurant: Restaurant = {
       notesEl?.remove();
     }
 
+    // Redes + WhatsApp: se muestra SOLO el ícono con valor; los vacíos quedan
+    // ocultos (sin huecos). La fila entera se oculta si no hay ninguno.
+    fillSocials(div, official!);
+
     // Sin menú de editar/eliminar: no es el restaurante del usuario todavía.
     div.querySelector(".rh-menu")?.remove();
 
@@ -792,6 +916,18 @@ const tplRestaurant: Restaurant = {
     ).querySelector("article")!;
     article.setAttribute("data-id", od.id);
     article.querySelector("h4")!.textContent = od.name;
+
+    // Miniatura de la carta oficial (si el plato tiene foto).
+    const thumbEl = article.querySelector<HTMLImageElement>(".dish-thumb");
+    if (thumbEl) {
+      if (od.imageUrl) {
+        thumbEl.src = od.imageUrl;
+        thumbEl.alt = od.name;
+        thumbEl.hidden = false;
+      } else {
+        thumbEl.remove();
+      }
+    }
 
     const infoEl = article.querySelector<HTMLElement>(".dish-info")!;
 
@@ -849,7 +985,7 @@ const tplRestaurant: Restaurant = {
         editBtn.innerHTML = `<i class="bi bi-pencil"></i>`;
         editBtn.addEventListener("click", (e) => {
           e.stopPropagation();
-          (window as any).officialManage?.openDishEdit(od);
+          (window as any).officialManage?.openDishEdit(od, distinctTypeNames());
         });
         const delBtn = document.createElement("button");
         delBtn.type = "button";
@@ -932,10 +1068,28 @@ const tplRestaurant: Restaurant = {
              <i class="bi bi-search"></i>
              <p>Sin resultados para la búsqueda.</p>
            </div>`
-        : `<div class="empty-state flex-column">
-             <i class="bi bi-egg-fried"></i>
-             <p>Este restaurante aún no tiene platos en su carta.</p>
-           </div>`;
+        : isOwner
+          ? `<div class="empty-state flex-column">
+               <i class="bi bi-egg-fried"></i>
+               <p>Tu carta está vacía. Agrega tu primer plato para que la gente pueda verlo y calificarlo.</p>
+               <button id="empty-add-dish" class="boton" type="button">
+                 <i class="bi bi-plus-lg"></i> Agregar primer plato
+               </button>
+             </div>`
+          : `<div class="empty-state flex-column">
+               <i class="bi bi-egg-fried"></i>
+               <p>Este restaurante aún no tiene platos en su carta.</p>
+             </div>`;
+      // CTA del empty state (solo dueño): abre el editor de carta.
+      if (isOwner && official) {
+        const addBtn = document.getElementById("empty-add-dish");
+        if (addBtn)
+          addBtn.onclick = () =>
+            (window as any).officialManage?.openDishCreate(
+              official!.id,
+              distinctTypeNames(),
+            );
+      }
       return;
     }
 
@@ -962,8 +1116,9 @@ const tplRestaurant: Restaurant = {
   function updateLensUI(): void {
     const toggle = document.getElementById("lens-toggle");
     if (!toggle) return;
-    // Solo con sesión se puede alternar; anónimo queda fijo en Global.
-    toggle.hidden = !userId;
+    // Solo con sesión se puede alternar; anónimo queda fijo en Global. El dueño no
+    // califica (gestiona), así que el lente Personal no aplica → se oculta.
+    toggle.hidden = !userId || isOwner;
     toggle.querySelectorAll<HTMLButtonElement>(".lens-opt").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.lens === ratingLens);
     });
@@ -1172,9 +1327,11 @@ const tplRestaurant: Restaurant = {
     const statsBtn = document.getElementById("owner-stats-btn");
     const editBtn = document.getElementById("owner-edit-btn");
     const addBtn = document.getElementById("owner-add-dish-btn");
-    if (statsBtn) statsBtn.onclick = () => om()?.openStats(official!.id);
+    if (statsBtn)
+      statsBtn.onclick = () => navigate(`/panel?id=${encodeURIComponent(official!.id)}`);
     if (editBtn) editBtn.onclick = () => om()?.openProfileEdit(official!);
-    if (addBtn) addBtn.onclick = () => om()?.openDishCreate(official!.id);
+    if (addBtn)
+      addBtn.onclick = () => om()?.openDishCreate(official!.id, distinctTypeNames());
   }
 
   // Tras crear / editar / borrar un plato desde OfficialManage: re-lee la carta.
