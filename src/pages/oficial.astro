@@ -864,8 +864,8 @@ const tplRestaurant: Restaurant = {
     // Ciudad
     const citiesEl = div.querySelector(".rh-cities") as HTMLElement | null;
     const citiesListEl = div.querySelector(".rh-cities-list");
-    if (citiesEl && citiesListEl && official!.city) {
-      citiesListEl.textContent = official!.city;
+    if (citiesEl && citiesListEl && official!.cities.length > 0) {
+      citiesListEl.textContent = official!.cities.join(" · ");
       citiesEl.hidden = false;
     }
 

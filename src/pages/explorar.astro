@@ -241,10 +241,10 @@ import Layout1 from "../layouts/Layout1.astro";
     const meta = document.createElement("div");
     meta.className = "ec-meta flex-row";
 
-    if (o.city) {
+    if (o.cities.length > 0) {
       const city = document.createElement("span");
       city.className = "ec-city";
-      city.innerHTML = `<i class="bi bi-geo-alt"></i> ${escapeHtml(o.city)}`;
+      city.innerHTML = `<i class="bi bi-geo-alt"></i> ${escapeHtml(o.cities.join(" · "))}`;
       meta.appendChild(city);
     }
 
@@ -281,7 +281,7 @@ import Layout1 from "../layouts/Layout1.astro";
       ? officials.filter(
           (o) =>
             o.name.toLowerCase().includes(q) ||
-            (o.city ?? "").toLowerCase().includes(q),
+            o.cities.some((c) => c.toLowerCase().includes(q)),
         )
       : officials;
 

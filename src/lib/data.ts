@@ -28,6 +28,11 @@ export interface Dish {
 export interface OfficialRestaurant {
   id: string;
   name: string;
+  /** Ciudades del oficial (multi, MAYÚSCULAS). Vacío = sin ciudad. */
+  cities: string[];
+  /** Ciudad principal (= `cities[0]`), derivada. Mantiene compatibilidad con los
+   *  displays que muestran una sola ciudad; la columna legacy `city` en la BD se
+   *  sigue escribiendo con este valor. */
   city: string | null;
   address: string | null;
   notes: string | null;
@@ -387,7 +392,7 @@ export function getCities(): string[] {
   }
   // Ciudades de mis oficiales (mismo criterio MAYÚSCULAS que las personales).
   for (const o of cache.officialRestaurants) {
-    if (o.city) set.add(o.city.trim().toUpperCase());
+    for (const c of o.cities) set.add(c.trim().toUpperCase());
   }
   return [...set].sort((a, b) => a.localeCompare(b));
 }
@@ -652,10 +657,18 @@ export function getTopRatedDishIds(restaurantId: string): Set<string> {
 // ─── Official (global) ────────────────────────────────────────────────────────
 
 function toOfficialRestaurant(row: Record<string, unknown>): OfficialRestaurant {
+  // `cities` (array nuevo) es la fuente de verdad; si viniera vacío pero existe la
+  // columna legacy `city`, se usa como fallback para filas aún no migradas.
+  const rawCities = Array.isArray(row.cities) ? (row.cities as string[]) : [];
+  const legacyCity = (row.city as string | null) ?? null;
+  const cities = (rawCities.length ? rawCities : legacyCity ? [legacyCity] : [])
+    .map((c) => c.trim())
+    .filter(Boolean);
   return {
     id: row.id as string,
     name: row.name as string,
-    city: (row.city as string | null) ?? null,
+    cities,
+    city: cities[0] ?? null,
     address: (row.address as string | null) ?? null,
     notes: (row.notes as string | null) ?? null,
     phone: (row.phone as string | null) ?? null,
@@ -710,14 +723,16 @@ export async function getAllOfficialRestaurants(): Promise<OfficialRestaurant[]>
 export async function getOfficialCities(): Promise<string[]> {
   const { data, error } = await supabase
     .from("official_restaurants")
-    .select("city")
-    .not("city", "is", null);
+    .select("cities, city");
   if (error) { console.error("[getOfficialCities]", error); return []; }
-  const set = new Set(
-    (data ?? [])
-      .map((r) => (r as { city: string | null }).city?.trim())
-      .filter((c): c is string => !!c),
-  );
+  const set = new Set<string>();
+  for (const r of (data ?? []) as Array<{ cities: string[] | null; city: string | null }>) {
+    const list = r.cities?.length ? r.cities : r.city ? [r.city] : [];
+    for (const c of list) {
+      const v = c.trim();
+      if (v) set.add(v);
+    }
+  }
   return [...set].sort((a, b) => a.localeCompare(b, "es"));
 }
 
@@ -933,7 +948,7 @@ export async function updateOfficialRestaurant(
   id: string,
   patch: Partial<{
     name: string;
-    city: string | null;
+    cities: string[];
     address: string | null;
     notes: string | null;
     phone: string | null;
@@ -942,9 +957,16 @@ export async function updateOfficialRestaurant(
     tiktok: string | null;
   }>,
 ): Promise<OfficialRestaurant | null> {
+  // `cities` es la fuente de verdad; se sincroniza la columna legacy `city` con la
+  // primera ciudad para no romper lecturas antiguas.
+  const dbPatch: Record<string, unknown> = { ...patch };
+  if (patch.cities !== undefined) {
+    dbPatch.cities = patch.cities;
+    dbPatch.city = patch.cities[0] ?? null;
+  }
   const { data, error } = await supabase
     .from("official_restaurants")
-    .update(patch)
+    .update(dbPatch)
     .eq("id", id)
     .select()
     .single();
@@ -1137,7 +1159,7 @@ export function getHomeEntries(): HomeEntry[] {
         name: off.name,
         status: m.status,
         notes: off.notes ?? "",
-        cities: off.city ? [off.city.trim().toUpperCase()] : [],
+        cities: off.cities.map((c) => c.trim().toUpperCase()),
         createdAt: m.createdAt,
         updatedAt: m.updatedAt,
         isOfficial: true,

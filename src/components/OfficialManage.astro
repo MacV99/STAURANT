@@ -35,20 +35,43 @@ import FormModal from "./FormModal.astro";
     />
   </label>
 
-  <label for="odf-type">
+  <div class="cc-field flex-column">
     <span class="label-text flex-row"
       >Tipo / categoría <span class="optional">(opcional)</span></span
     >
-    <input
-      type="text"
-      id="odf-type"
-      list="odf-type-list"
-      placeholder="ENTRADA, POSTRE, BEBIDA..."
-      autocomplete="off"
-      spellcheck="false"
-    />
-    <datalist id="odf-type-list"></datalist>
-  </label>
+    <div class="cc-combobox" id="odf-type-combobox">
+      <div class="cc-input-wrap flex-row">
+        <input
+          type="text"
+          id="odf-type"
+          class="cc-input"
+          placeholder="ENTRADA, POSTRE, BEBIDA..."
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded="false"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="characters"
+          data-lpignore="true"
+          data-1p-ignore
+          spellcheck="false"
+        />
+        <button
+          type="button"
+          id="odf-type-clear"
+          class="cc-clear"
+          hidden
+          aria-label="Quitar tipo"
+        >
+          <i class="bi bi-x-lg"></i>
+        </button>
+        <span class="cc-chevron" aria-hidden="true"
+          ><i class="bi bi-chevron-down"></i></span
+        >
+      </div>
+      <div id="odf-type-dropdown" class="cc-dropdown" hidden></div>
+    </div>
+  </div>
 
   <label for="odf-price">
     <span class="label-text flex-row"
@@ -57,12 +80,10 @@ import FormModal from "./FormModal.astro";
     <div class="price-wrap flex-row">
       <span class="price-prefix">$</span>
       <input
-        type="number"
+        type="text"
         id="odf-price"
-        min="0"
-        step="any"
         inputmode="numeric"
-        placeholder="18000"
+        placeholder="18.000"
       />
     </div>
   </label>
@@ -122,20 +143,35 @@ import FormModal from "./FormModal.astro";
       <input type="text" id="opf-name" required placeholder="Nombre del restaurante" />
     </label>
 
-    <label for="opf-city">
+    <div class="cc-field flex-column">
       <span class="label-text flex-row"
-        >Ciudad <span class="optional">(opcional)</span></span
+        >Ciudades <span class="optional">(opcional)</span></span
       >
-      <input
-        type="text"
-        id="opf-city"
-        list="opf-city-list"
-        placeholder="Bogotá, Medellín..."
-        autocomplete="off"
-        spellcheck="false"
-      />
-      <datalist id="opf-city-list"></datalist>
-    </label>
+      <div class="cc-combobox" id="opf-city-combobox">
+        <div class="cc-input-wrap flex-row">
+          <input
+            type="text"
+            id="opf-city"
+            class="cc-input"
+            placeholder="Agrega una o varias ciudades..."
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded="false"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="characters"
+            data-lpignore="true"
+            data-1p-ignore
+            spellcheck="false"
+          />
+          <span class="cc-chevron" aria-hidden="true"
+            ><i class="bi bi-chevron-down"></i></span
+          >
+        </div>
+        <div id="opf-city-dropdown" class="cc-dropdown" hidden></div>
+      </div>
+      <div id="opf-city-chips" class="cc-chips flex-row" hidden></div>
+    </div>
 
     <label for="opf-phone">
       <span class="label-text flex-row"
@@ -210,18 +246,106 @@ import FormModal from "./FormModal.astro";
 <style>
   /* Base de form/label/footer/overlay viven en project.css. Aquí solo lo propio. */
   #odf-name,
-  #odf-type,
   #odf-price,
   #odf-notes,
   #opf-name,
-  #opf-city,
   #opf-address,
   #opf-notes {
     font-size: 0.9rem;
   }
 
-  #odf-type {
+  /* ── Combobox creable (tipo / ciudad) — mismo look que DishForm/RestaurantForm ── */
+
+  /* gap:0 → la única separación label/input es el `margin-bottom:5px` de
+     `.label-text`, igual que en los campos <label> (Teléfono/Dirección). Así las
+     dos columnas de la rejilla alinean sus inputs a la misma altura. */
+  .cc-field {
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .cc-combobox {
+    position: relative;
+  }
+
+  .cc-input-wrap {
+    align-items: center;
+    border: 1.5px solid var(--clr-border);
+    border-radius: var(--border-radius);
+    background: var(--clr-white);
+    overflow: hidden;
+    transition: border-color var(--transition);
+  }
+
+  .cc-input-wrap:focus-within {
+    border-color: var(--clr-border2);
+  }
+
+  .cc-input {
+    flex: 1;
+    border: none !important;
+    background: transparent !important;
+    outline: none !important;
+    box-shadow: none !important;
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    letter-spacing: 0;
     text-transform: uppercase;
+    color: var(--clr-text);
+    min-width: 0;
+  }
+
+  .cc-input::placeholder {
+    text-transform: none;
+    color: var(--clr-text);
+    opacity: 0.5;
+  }
+
+  .cc-clear {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 6px;
+    color: var(--clr-text);
+    opacity: 0.5;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+    transition: opacity var(--transition);
+  }
+
+  .cc-chevron {
+    padding: 0 10px 0 4px;
+    color: var(--clr-text);
+    opacity: 0.4;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+    pointer-events: none;
+    transition: transform 0.15s ease;
+  }
+
+  .cc-combobox.is-open .cc-chevron {
+    transform: rotate(180deg);
+  }
+
+  .cc-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--clr-white);
+    border: 1.5px solid var(--clr-border);
+    border-radius: var(--border-radius);
+    z-index: 200;
+    max-height: 220px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  }
+
+  @media (hover: hover) {
+    .cc-clear:hover {
+      opacity: 1;
+    }
   }
 
   /* Redes: fieldset sin marco nativo (etiqueta arriba + filas ícono+input). */
@@ -391,6 +515,143 @@ import FormModal from "./FormModal.astro";
   }
 </style>
 
+<style is:global>
+  /* Opciones del combobox creable — creadas via JS → scope global. */
+
+  #odf-type-dropdown .cc-option,
+  #opf-city-dropdown .cc-option {
+    padding: 11px 14px;
+    font-size: 0.88rem;
+    color: var(--clr-text);
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--clr-border);
+    transition: background 0.1s ease;
+  }
+
+  #odf-type-dropdown .cc-option:last-child,
+  #opf-city-dropdown .cc-option:last-child {
+    border-bottom: none;
+  }
+
+  @media (hover: hover) {
+    #odf-type-dropdown .cc-option:hover,
+    #opf-city-dropdown .cc-option:hover {
+      background: var(--clr-white2);
+    }
+  }
+
+  #odf-type-dropdown .cc-option.is-selected,
+  #opf-city-dropdown .cc-option.is-selected {
+    color: var(--clr-primary);
+    font-weight: 700;
+  }
+
+  #odf-type-dropdown .cc-option.is-create,
+  #opf-city-dropdown .cc-option.is-create {
+    color: var(--clr-primary);
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+    justify-content: flex-start;
+    gap: 6px;
+    border-top: 1px solid var(--clr-border);
+  }
+
+  #odf-type-dropdown .cc-option.is-create i,
+  #opf-city-dropdown .cc-option.is-create i {
+    font-size: 0.7rem;
+    flex-shrink: 0;
+  }
+
+  #odf-type-dropdown .cc-option.is-create .cc-create-name,
+  #opf-city-dropdown .cc-option.is-create .cc-create-name {
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  #odf-type-dropdown .cc-option.is-empty,
+  #opf-city-dropdown .cc-option.is-empty {
+    color: var(--clr-text);
+    opacity: 0.55;
+    font-size: 0.82rem;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+    cursor: default;
+    text-align: center;
+    padding: 14px;
+  }
+
+  /* Chips de ciudades agregadas (multi) — creadas via JS → scope global. */
+
+  #opf-city-chips {
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    margin-top: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  #opf-city-chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  #opf-city-chips[hidden] {
+    display: none;
+  }
+
+  #opf-city-chips .cc-chip-pin {
+    color: var(--clr-primary);
+    font-size: 0.9rem;
+    flex-shrink: 0;
+  }
+
+  #opf-city-chips .cc-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 4px 4px 10px;
+    border-radius: 50px;
+    border: 1.5px solid var(--clr-border);
+    background: var(--clr-white2);
+    color: var(--clr-text);
+    font-size: 0.76rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  #opf-city-chips .cc-chip-x {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--clr-text);
+    opacity: 0.5;
+    font-size: 0.58rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: opacity 0.12s ease;
+  }
+
+  @media (hover: hover) {
+    #opf-city-chips .cc-chip-x:hover {
+      opacity: 1;
+      color: var(--clr-danger);
+    }
+  }
+</style>
+
 <script>
   import type { OfficialDish, OfficialRestaurant } from "../lib/data.ts";
   import {
@@ -400,8 +661,17 @@ import FormModal from "./FormModal.astro";
     uploadOfficialDishImage,
     deleteOfficialDishImage,
     getOfficialCities,
+    getCities,
   } from "../lib/data.ts";
-  import { emit, forceUppercase, createOverlay } from "../scripts/store.ts";
+  import {
+    emit,
+    forceUppercase,
+    createOverlay,
+    wireCreatableCombobox,
+    wireCreatableMultiCombobox,
+    formatThousands,
+    attachThousandsFormat,
+  } from "../scripts/store.ts";
 
   document.addEventListener("astro:page-load", () => {
     // Guard: el componente solo existe en /oficial. Sin el overlay del editor de
@@ -423,7 +693,22 @@ import FormModal from "./FormModal.astro";
     const dNotesEl = document.getElementById("odf-notes") as HTMLTextAreaElement;
     const dErrEl = document.getElementById("odf-error")!;
 
-    const dTypeListEl = document.getElementById("odf-type-list") as HTMLDataListElement;
+    // Combobox creable de tipo/categoría. Las opciones = tipos ya usados en la
+    // carta (se pasan como `suggestions` al abrir); `typeOptions` se lee en vivo.
+    let typeOptions: string[] = [];
+    const typeCombo = wireCreatableCombobox({
+      combobox: document.getElementById("odf-type-combobox") as HTMLElement,
+      input: dTypeEl,
+      dropdown: document.getElementById("odf-type-dropdown") as HTMLElement,
+      clearBtn: document.getElementById("odf-type-clear") as HTMLButtonElement,
+      getOptions: () => typeOptions,
+      createVerb: "Crear",
+      emptyText: "Escribe para crear una categoría",
+    });
+
+    // Precio con separador de miles en tiempo real (el valor real se recupera
+    // quitando los puntos en el submit).
+    attachThousandsFormat(dPriceEl);
 
     // ── Campo de imagen ───────────────────────────────────────────────────────
     const dImgUrlEl = document.getElementById("odf-image-url") as HTMLInputElement;
@@ -484,19 +769,13 @@ import FormModal from "./FormModal.astro";
     };
 
     dNameEl.oninput = () => forceUppercase(dNameEl);
-    dTypeEl.oninput = () => forceUppercase(dTypeEl);
     document.getElementById("odf-close")!.onclick = closeDishModal;
     document.getElementById("odf-cancel")!.onclick = closeDishModal;
 
-    /** Sugerencias de tipo (los type_name ya usados en la carta) → evita categorías
-     *  duplicadas por typos. Se llena al abrir el editor. */
+    /** Sugerencias de tipo (los type_name ya usados en la carta) → alimentan el
+     *  combobox creable para evitar categorías duplicadas por typos. */
     function fillTypeSuggestions(suggestions: string[]) {
-      dTypeListEl.innerHTML = "";
-      [...new Set(suggestions)].sort().forEach((s) => {
-        const opt = document.createElement("option");
-        opt.value = s;
-        dTypeListEl.appendChild(opt);
-      });
+      typeOptions = [...new Set(suggestions)].sort((a, b) => a.localeCompare(b, "es"));
     }
 
     // URL de la imagen YA persistida en el plato (null al crear). Sirve para no
@@ -513,6 +792,7 @@ import FormModal from "./FormModal.astro";
       dImgUrlEl.value = "";
       renderImageField(null);
       fillTypeSuggestions(suggestions);
+      typeCombo.setValue("");
       openDishModal();
       dNameEl.focus();
     }
@@ -524,13 +804,13 @@ import FormModal from "./FormModal.astro";
       dIdEl.value = od.id;
       dRestEl.value = od.officialRestaurantId;
       dNameEl.value = od.name;
-      dTypeEl.value = od.typeName ?? "";
-      dPriceEl.value = od.price !== null ? String(od.price) : "";
+      dPriceEl.value = od.price !== null ? formatThousands(String(od.price)) : "";
       dNotesEl.value = od.notes ?? "";
       originalImageUrl = od.imageUrl ?? null;
       dImgUrlEl.value = originalImageUrl ?? "";
       renderImageField(originalImageUrl);
       fillTypeSuggestions(suggestions);
+      typeCombo.setValue(od.typeName ?? "");
       openDishModal();
     }
 
@@ -543,10 +823,11 @@ import FormModal from "./FormModal.astro";
         dNameEl.focus();
         return;
       }
-      const typeName = dTypeEl.value.trim() || null;
-      const priceRaw = dPriceEl.value.trim();
-      const price = priceRaw === "" ? null : Number(priceRaw);
-      if (price !== null && (Number.isNaN(price) || price < 0)) {
+      const typeName = typeCombo.getValue() || null;
+      // El input muestra el precio con puntos de miles; el valor real son los dígitos.
+      const priceDigits = dPriceEl.value.replace(/\D/g, "");
+      const price = priceDigits === "" ? null : Number(priceDigits);
+      if (price !== null && Number.isNaN(price)) {
         dErrEl.textContent = "El precio debe ser un número válido.";
         dPriceEl.focus();
         return;
@@ -592,7 +873,6 @@ import FormModal from "./FormModal.astro";
     const pIdEl = document.getElementById("opf-id") as HTMLInputElement;
     const pNameEl = document.getElementById("opf-name") as HTMLInputElement;
     const pCityEl = document.getElementById("opf-city") as HTMLInputElement;
-    const pCityListEl = document.getElementById("opf-city-list") as HTMLDataListElement;
     const pAddrEl = document.getElementById("opf-address") as HTMLInputElement;
     const pPhoneEl = document.getElementById("opf-phone") as HTMLInputElement;
     const pIgEl = document.getElementById("opf-instagram") as HTMLInputElement;
@@ -602,14 +882,23 @@ import FormModal from "./FormModal.astro";
     const pErrEl = document.getElementById("opf-error")!;
     const profApi = createOverlay("opf-overlay")!;
 
-    /** Ciudades existentes → opciones del combobox creable (input + datalist). */
+    // Combobox creable MULTI de ciudades (chips). Opciones = mis ciudades
+    // personales + las de cualquier oficial, en MAYÚSCULAS (llegan async).
+    let cityOptions: string[] = [];
+    const cityCombo = wireCreatableMultiCombobox({
+      combobox: document.getElementById("opf-city-combobox") as HTMLElement,
+      input: pCityEl,
+      dropdown: document.getElementById("opf-city-dropdown") as HTMLElement,
+      chips: document.getElementById("opf-city-chips") as HTMLElement,
+      getOptions: () => cityOptions,
+      createVerb: "Agregar",
+    });
+
+    /** Ciudades existentes → opciones del combobox creable (deduplicadas en MAYÚS). */
     function fillCitySuggestions(cities: string[]) {
-      pCityListEl.innerHTML = "";
-      cities.forEach((c) => {
-        const opt = document.createElement("option");
-        opt.value = c;
-        pCityListEl.appendChild(opt);
-      });
+      cityOptions = [...new Set(cities.map((c) => c.trim().toUpperCase()))].sort(
+        (a, b) => a.localeCompare(b, "es"),
+      );
     }
 
     document.getElementById("opf-close")!.onclick = profApi.close;
@@ -620,7 +909,7 @@ import FormModal from "./FormModal.astro";
       pErrEl.textContent = "";
       pIdEl.value = official.id;
       pNameEl.value = official.name;
-      pCityEl.value = official.city ?? "";
+      cityCombo.setValues(official.cities);
       pAddrEl.value = official.address ?? "";
       pPhoneEl.value = official.phone ?? "";
       pIgEl.value = official.instagram ?? "";
@@ -628,8 +917,14 @@ import FormModal from "./FormModal.astro";
       pTtEl.value = official.tiktok ?? "";
       pNotesEl.value = official.notes ?? "";
       profApi.open();
-      // Ciudades existentes (async, no bloquea): rellena las opciones al vuelo.
-      getOfficialCities().then(fillCitySuggestions);
+      // Opciones = mis ciudades personales (cache, inmediatas) + las de TODOS los
+      // oficiales (async). Así aparecen ciudades como NEIVA/RIVERA que solo usé en
+      // restaurantes personales, además de las ya usadas por otros dueños.
+      const personal = getCities();
+      fillCitySuggestions(personal);
+      getOfficialCities().then((official) =>
+        fillCitySuggestions([...personal, ...official]),
+      );
     }
 
     profForm.onsubmit = async (e) => {
@@ -641,9 +936,11 @@ import FormModal from "./FormModal.astro";
         pNameEl.focus();
         return;
       }
+      // Incluye lo que quedó escrito sin confirmar como un chip más.
+      cityCombo.flush();
       const saved = await updateOfficialRestaurant(pIdEl.value, {
         name,
-        city: pCityEl.value.trim() || null,
+        cities: cityCombo.getValues(),
         address: pAddrEl.value.trim() || null,
         phone: pPhoneEl.value.trim() || null,
         instagram: pIgEl.value.trim() || null,

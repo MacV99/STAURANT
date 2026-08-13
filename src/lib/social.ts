@@ -157,7 +157,12 @@ export async function getUserOfficials(
       name: o.name as string,
       status: "visited",
       notes: (o.notes as string | null) ?? "",
-      cities: o.city ? [(o.city as string).trim().toUpperCase()] : [],
+      cities: (Array.isArray(o.cities) && (o.cities as string[]).length
+        ? (o.cities as string[])
+        : o.city
+          ? [o.city as string]
+          : []
+      ).map((c) => c.trim().toUpperCase()),
       createdAt: created,
       updatedAt: (m?.updated_at as string | null) ?? created,
       officialRestaurantId: o.id as string,

@@ -1,8 +1,14 @@
 # Plan — Restaurantes de cadena (NO implementado)
 
+> **Actualización:** `official_restaurants` ya soporta **varias ciudades** por fila
+> (columna `cities text[]`; `city` se conserva como legacy = `cities[0]`). El editor
+> de perfil del dueño las agrega como chips (multi). Esto NO reemplaza el modelo
+> marca+sedes de abajo (una cadena real sigue siendo N sedes con carta/rating por
+> sede); solo permite marcar que un mismo local/perfil aplica a varias ciudades.
+
 Problema: una cadena (Frisby, McDonald's, KFC) es **1 marca con N sedes en N ciudades**.
-El modelo actual `official_restaurants` es **1 fila = 1 local con 1 `city`**. No encaja
-para cadenas.
+El modelo `official_restaurants` es **1 fila = 1 local** (ahora con `cities[]`). No encaja
+para cadenas con carta/rating independiente por sede.
 
 > Prioridad **baja**: las cadenas son los últimos clientes que comprarían el servicio.
 > Esto es solo la idea para cuando haga falta.

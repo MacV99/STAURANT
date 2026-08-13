@@ -173,10 +173,18 @@
   gap: 0;
 }
 
+/* Tipografía propia (no solo heredada de `.form-box label`): así el label luce
+   igual aunque su contenedor sea un <div>/<fieldset> (city-field, cc-field,
+   odf-image-field, redes…) y no un <label>. */
 .form-box .label-text {
   justify-content: flex-start;
   gap: 3px;
   margin-bottom: 5px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: var(--clr-text);
+  text-transform: uppercase;
 }
 
 .form-box label input,
