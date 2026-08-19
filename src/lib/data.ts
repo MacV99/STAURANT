@@ -29,6 +29,9 @@ export interface Dish {
 export interface OfficialRestaurant {
   id: string;
   name: string;
+  /** Slug único para URL personalizada: `/oficial/@handle`. Derivado del nombre
+   *  (minúsculas, sin acentos ni símbolos). null solo en filas legacy sin migrar. */
+  handle: string | null;
   /** Ciudades del oficial (multi, MAYÚSCULAS). Vacío = sin ciudad. */
   cities: string[];
   /** Ciudad principal (= `cities[0]`), derivada. Mantiene compatibilidad con los
@@ -668,6 +671,7 @@ function toOfficialRestaurant(row: Record<string, unknown>): OfficialRestaurant 
   return {
     id: row.id as string,
     name: row.name as string,
+    handle: (row.handle as string | null) ?? null,
     cities,
     city: cities[0] ?? null,
     address: (row.address as string | null) ?? null,
@@ -746,6 +750,26 @@ export async function getOfficialRestaurant(id: string): Promise<OfficialRestaur
     .single();
   if (error || !data) { console.error("[getOfficialRestaurant]", error); return null; }
   return toOfficialRestaurant(data);
+}
+
+/** Trae un restaurante oficial por su handle (URL personalizada `/oficial/@x`).
+ *  Acepta el handle con o sin `@` inicial y sin distinguir mayúsculas. */
+export async function getOfficialByHandle(handle: string): Promise<OfficialRestaurant | null> {
+  const h = handle.trim().replace(/^@/, "").toLowerCase();
+  if (!h) return null;
+  const { data, error } = await supabase
+    .from("official_restaurants")
+    .select("*")
+    .eq("handle", h)
+    .single();
+  if (error || !data) { console.error("[getOfficialByHandle]", error); return null; }
+  return toOfficialRestaurant(data);
+}
+
+/** URL canónica del perfil oficial: `/oficial/@handle` si hay handle; si no, el
+ *  fallback legacy `/oficial?id=…`. Única fuente de verdad para enlaces internos. */
+export function officialUrl(o: { handle: string | null; id: string }): string {
+  return o.handle ? `/oficial/@${o.handle}` : `/oficial?id=${o.id}`;
 }
 
 /** Trae la carta oficial (platos) de un restaurante oficial. */
@@ -1178,6 +1202,8 @@ export function getHomeEntries(): HomeEntry[] {
       return {
         kind: "official",
         id: m.officialRestaurantId,
+        // Enlace interno por ?id= (página real, funciona en dev y sin depender del
+        // rewrite). Al cargar, /oficial canonicaliza la barra a /oficial/@handle.
         href: `/oficial?id=${m.officialRestaurantId}`,
         name: off.name,
         status: m.status,

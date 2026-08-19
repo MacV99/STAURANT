@@ -850,6 +850,8 @@ const tplRestaurant: Restaurant = {
   import {
     initCache,
     getOfficialRestaurant,
+    getOfficialByHandle,
+    officialUrl,
     getOfficialDishes,
     getOfficialRestaurantStat,
     getOfficialDishStat,
@@ -974,7 +976,7 @@ const tplRestaurant: Restaurant = {
 
   function storeIntent(officialDishId?: string): void {
     if (!official) return;
-    localStorage.setItem("staurant_return_to", `/oficial?id=${official.id}`);
+    localStorage.setItem("staurant_return_to", officialUrl(official));
     localStorage.setItem(
       "staurant_pending",
       JSON.stringify({
@@ -1598,8 +1600,17 @@ const tplRestaurant: Restaurant = {
     const headerEl = document.getElementById("oficial-header");
     if (!headerEl) return;
 
-    const id = new URLSearchParams(window.location.search).get("id") ?? "";
-    if (!id) {
+    // Dos formas de llegar:
+    //  · Legacy: /oficial?id=<uuid>
+    //  · URL personalizada: /oficial/@handle  (o /oficial/handle, sin @)
+    // El rewrite de Netlify (_redirects) sirve esta misma página en la ruta bonita;
+    // el segmento se lee de location.pathname y se resuelve en cliente por handle.
+    const idParam = new URLSearchParams(window.location.search).get("id") ?? "";
+    const seg = decodeURIComponent(
+      window.location.pathname.replace(/^\/oficial\/?/, "").replace(/\/+$/, ""),
+    );
+    const handleParam = seg.replace(/^@/, "").toLowerCase();
+    if (!idParam && !handleParam) {
       window.location.href = "/explorar";
       return;
     }
@@ -1619,16 +1630,26 @@ const tplRestaurant: Restaurant = {
     // Anónimo: initCache no corre (no dispara stats), pedimos stats directo.
     if (!authed) void fetchOfficialStats();
 
-    const [off, ds] = await Promise.all([
-      getOfficialRestaurant(id),
-      getOfficialDishes(id),
-    ]);
-    official = off;
-    officialDishes = ds;
+    // Resolver el perfil: por id (legacy) o por handle (URL personalizada). Sin
+    // id no conocemos aún el uuid, así que la carta se pide después con official.id.
+    official = idParam
+      ? await getOfficialRestaurant(idParam)
+      : await getOfficialByHandle(handleParam);
 
     if (!official) {
       window.location.href = "/explorar";
       return;
+    }
+
+    officialDishes = await getOfficialDishes(official.id);
+
+    // Canonicalizar la barra de direcciones a la URL personalizada. Así cualquier
+    // entrada por ?id= se "asciende" a /oficial/@handle, y lo que el usuario copie
+    // o comparta desde la barra ya sale bonito. Sin recargar (mismo documento).
+    if (official.handle) {
+      const pretty = `/oficial/@${official.handle}`;
+      if (window.location.pathname + window.location.search !== pretty)
+        history.replaceState(history.state, "", pretty);
     }
 
     document.title = `${official.name} · STAURANT`;

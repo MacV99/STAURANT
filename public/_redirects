@@ -1,0 +1,4 @@
+# URL personalizada de restaurantes oficiales: /oficial/@handle (o /oficial/handle).
+# Rewrite 200 → sirve la MISMA página /oficial manteniendo la URL bonita en la barra.
+# El handle se resuelve en cliente (getOfficialByHandle) desde location.pathname.
+/oficial/*   /oficial   200
