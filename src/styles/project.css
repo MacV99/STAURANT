@@ -556,6 +556,24 @@
   opacity: 0.6;
 }
 
+/* Botón "Crear …" del empty-state de búsqueda: cápsula compacta al ancho
+   del contenido (no la píldora gigante que hereda de .boton). */
+.empty-state .create-from-search {
+  width: auto;
+  align-self: center;
+  margin-top: 4px;
+  gap: 8px;
+  padding: 9px 18px;
+  font-size: 0.78rem;
+  letter-spacing: 1.2px;
+  text-indent: 0;
+}
+
+.empty-state .create-from-search .bi {
+  font-size: 0.95rem;
+  color: inherit;
+}
+
 /* === CLOSE BUTTON (DishForm, RestaurantForm, perfil modal) === */
 
 .btn-icon-close {

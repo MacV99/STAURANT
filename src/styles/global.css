@@ -177,13 +177,13 @@ button,
 .boton,
 .boton2 {
   padding: 11px 20px;
-  border-radius: 50px;
   font-size: 0.9rem;
   font-weight: 600;
   letter-spacing: 2px;
   text-indent: 2px;
   text-transform: uppercase;
   border: solid 1px var(--clr-border);
+  border-radius: var(--radius-pill);
   background-color: var(--clr-white2);
   color: var(--clr-primary);
   display: flex;

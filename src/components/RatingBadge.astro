@@ -12,6 +12,6 @@ const cls = score === null
 ---
 
 {score === null
-  ? <span class={`rating-badge ${cls}`}><i class="bi bi-star-fill"></i></span>
-  : <span class={`rating-badge ${cls}`}><span class="rating-num">{score}</span></span>
+  ? <span class={`rating-badge ${cls}`} role="img" aria-label="Sin calificar"><i class="bi bi-star-fill"></i></span>
+  : <span class={`rating-badge ${cls}`} role="img" aria-label={`Calificación ${score} de 10`}><span class="rating-num">{score}</span></span>
 }

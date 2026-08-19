@@ -53,14 +53,14 @@ mismo criterio que ya usan `.boton`/`Guardar` y la ✕ del modal (fondo `--clr-w
 neutro), extendido a los estados.
 
 Anatomía de una superficie tintada = **fondo `*-bg`** + **texto/ícono en el color** +
-**borde `*-border(-soft)`**, y en hover el fondo sube al escalón `*-bg-strong` y el borde al
-color pleno.
+**borde `*-border(-soft)`**, y en hover **solo el fondo** sube al escalón `*-bg-strong` — el
+borde no cambia (ver regla de hover en §9).
 
 | Rol | Reposo (fondo · texto · borde) | Hover | Ejemplos |
 | --- | --- | --- | --- |
 | Neutro | `--clr-white2` · `--clr-primary` · `--clr-border` | `--clr-border` | `.boton`, ✕ (`.btn-icon-close`), `.boton2` (transparente) |
 | Marca (zona) | `primary 6%` · `--clr-primary` · `primary 22%` | — | barra de gestión del dueño (`.owner-bar`) |
-| Danger suave | `--clr-danger-bg` · `--clr-danger` · `--clr-danger-border-soft` | `--clr-danger-bg-strong` + borde `--clr-danger` | Quitar (`.is-remove`), borrar plato (`.owner-dish-btn.is-delete`), logout (`.btn-danger-outline`) |
+| Danger suave | `--clr-danger-bg` · `--clr-danger` · `--clr-danger-border-soft` | solo fondo → `--clr-danger-bg-strong` (borde no cambia) | Quitar (`.is-remove`), borrar plato (`.owner-dish-btn.is-delete`), logout (`.btn-danger-outline`) |
 | Danger énfasis | `--clr-danger-bg` · `--clr-danger` · `--clr-danger-border` (pleno) | fondo `--clr-danger-border` | confirmación final destructiva (`.btn-danger` en `ConfirmDialog`) |
 
 > Dos niveles de danger a propósito: **suave** = destructivo *inline* dentro de una tarea de
@@ -110,9 +110,17 @@ Concepto ↔ clase real ↔ tokens. Mantener sincronizado con el código.
 | Skeleton | `.skeleton-card` | `--skeleton-shine` | shimmer de carga |
 
 ## 9. Estados interactivos
+
+**Regla de hover (dura):** el hover **solo cambia el fondo/superficie; jamás toca el borde.**
+El hover neutro sube la superficie un escalón: reposo `--clr-white` → hover `--clr-white2`;
+reposo `--clr-white2` → hover `--clr-border`. El danger sube solo el fondo `*-bg` → `*-bg-strong`
+(§3). Prohibido subir el `border-color` en hover — ni a `--clr-primary` ni a `--clr-danger`
+(se ve demasiado color). El borde queda fijo con su valor de reposo. **Todo hover va dentro de `@media (hover: hover)`** — nunca
+`:hover` suelto: en móvil (touch) el hover no debe existir (se queda "pegado" tras el tap).
+
 | Elemento | Hover / Focus / Press |
 | -------- | --------------------- |
-| Botones | hover `--clr-border` (`@media hover:hover`); press `scale(0.95)` |
+| Botón/control neutro | hover = subir superficie un escalón (white→white2, white2→border), `@media hover:hover`; press `scale(0.95)`. Ej. `.city-chip`, `.owner-dish-btn`, `.cc-option`, `.pt-action` |
 | Card | press `scale(0.98)`; oficial = borde dorado |
 | Badge clicable | `.badge-btn` press `scale(0.92)`, hover `brightness(.92)` |
 | Foco teclado | `:focus-visible` → `--focus-ring` (siempre visible, nunca en click de ratón) |
@@ -149,3 +157,12 @@ Registro fechado de cambios de identidad (fecha absoluta · qué cambió · por 
   (`.owner-dish-btn.is-delete`) y logout (`.btn-danger-outline`); se documentan dos niveles de
   danger (suave inline vs énfasis en confirm). Motivo: evitar cortes duros blanco/rojo y unificar
   el criterio de acción/estado para escalar consistente. Ver §3 "Superficies de acción".
+- `2026-08-19` — **Regla de hover neutro = subir superficie, no borde.** El hover neutro sube
+  la superficie un escalón (white→white2, white2→border), como los pills de ciudad; se prohíbe
+  el hover que solo cambia `border-color` a `--clr-primary` (chillón). Reafirmado que todo hover
+  vive en `@media (hover: hover)` (móvil/touch sin hover). Barrido de los border-only neutros:
+  `.owner-dish-btn`, `.owner-act`, `.owner-exit` (oficial) y `.odf-image-add` (white2→border),
+  `.odf-image-act` (OfficialManage) → todos a fondo-tono. Ampliado: el hover **jamás toca el
+  borde**, tampoco en danger — quitado `border-color` de hover en `.owner-dish-btn.is-delete`,
+  `.odf-image-act.is-remove` y `.pt-action`; el hover solo sube el fondo. Motivo: unificar el
+  efecto de hover y quitar cortes de color. Ver §9.

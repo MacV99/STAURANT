@@ -11,7 +11,7 @@ const { dish: d, typeName } = Astro.props;
 ---
 
 <article class="dish-card flex-row" data-id={d.id}>
-  <img class="dish-thumb" alt="" hidden />
+  <img class="dish-thumb" alt={d.name} hidden />
   <RatingBadge score={d.rating} />
   <div class="dish-info">
     <h4>{d.name}</h4>
@@ -20,7 +20,7 @@ const { dish: d, typeName } = Astro.props;
   </div>
   <div class="dish-actions flex-row">
     <div class="dish-menu">
-      <button class="btn-menu boton2" data-id={d.id}>
+      <button class="btn-menu boton2" data-id={d.id} aria-label="Opciones del plato">
         <i class="bi bi-three-dots-vertical"></i>
       </button>
       <div class="menu-popup">
@@ -80,7 +80,7 @@ const { dish: d, typeName } = Astro.props;
     text-transform: uppercase;
     color: var(--clr-primary);
     background-color: var(--clr-white2);
-    border-radius: 20px;
+    border-radius: var(--radius-lg);
     padding: 2.5px 7px;
     margin-top: 2px;
   }

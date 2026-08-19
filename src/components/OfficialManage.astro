@@ -101,6 +101,9 @@ import FormModal from "./FormModal.astro";
     <span class="label-text flex-row"
       >Imagen <span class="optional">(opcional)</span></span
     >
+    <p class="odf-image-hint">
+      Usa una foto <strong>horizontal</strong> con el plato <strong>centrado</strong>.
+    </p>
     <input type="hidden" id="odf-image-url" />
     {/* NO usar `hidden`/display:none: Safari e iOS no abren el selector nativo al
         disparar .click() sobre un file input con display:none. Se oculta con la
@@ -453,6 +456,19 @@ import FormModal from "./FormModal.astro";
     align-items: stretch;
   }
 
+  /* Guía de encuadre bajo el label: qué foto subir para que no se recorte feo. */
+  .odf-image-hint {
+    margin: -9px 0 0;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    color: var(--clr-text);
+    opacity: 0.7;
+  }
+  .odf-image-hint strong {
+    font-weight: 700;
+    opacity: 1;
+  }
+
   /* Botón "Agregar foto": ancho completo, dashed, contenido centrado. */
   .odf-image-add {
     display: flex;
@@ -469,7 +485,7 @@ import FormModal from "./FormModal.astro";
     font-weight: 600;
     letter-spacing: 0.2px;
     cursor: pointer;
-    transition: border-color var(--transition);
+    transition: var(--transition);
   }
 
   .odf-image-add[hidden] {
@@ -482,7 +498,7 @@ import FormModal from "./FormModal.astro";
 
   @media (hover: hover) {
     .odf-image-add:hover {
-      border-color: var(--clr-primary);
+      background: var(--clr-border);
     }
   }
 
@@ -558,11 +574,10 @@ import FormModal from "./FormModal.astro";
 
   @media (hover: hover) {
     .odf-image-act:hover {
-      border-color: var(--clr-primary);
+      background: var(--clr-white2);
     }
 
     .odf-image-act.is-remove:hover {
-      border-color: var(--clr-danger);
       background: var(--clr-danger-bg-strong);
     }
   }

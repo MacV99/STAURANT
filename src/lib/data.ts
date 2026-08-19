@@ -1,4 +1,5 @@
 import { supabase } from "./supabase.ts";
+import imageCompression from "browser-image-compression";
 
 // ─── Interfaces ────────────────────────────────────────────────────────────────
 
@@ -906,6 +907,24 @@ export async function deleteOfficialDish(id: string): Promise<boolean> {
 
 const OFFICIAL_DISH_BUCKET = "official-dishes";
 
+/** Comprime en el navegador antes de subir: resize a máx 1600px, WebP,
+ *  apunta a ~0.3 MB. Devuelve un File nuevo y ligero. Si algo falla,
+ *  cae al original para no bloquear al usuario. */
+async function optimizeImage(file: File): Promise<File> {
+  try {
+    return await imageCompression(file, {
+      maxSizeMB: 0.3,          // objetivo de peso
+      maxWidthOrHeight: 1600,  // resize si más grande
+      fileType: "image/webp",  // formato eficiente
+      initialQuality: 0.8,     // calidad visual
+      useWebWorker: true,      // no congela UI
+    });
+  } catch (e) {
+    console.error("[optimizeImage] falló, uso original:", e);
+    return file;
+  }
+}
+
 /** Sube la foto de un plato oficial al bucket 'official-dishes' y devuelve su URL
  *  pública. El path SIEMPRE empieza por el officialRestaurantId: la RLS del bucket
  *  exige que la primera carpeta sea un perfil del que el usuario es dueño. Solo
@@ -922,11 +941,15 @@ export async function uploadOfficialDishImage(
     console.error("[uploadOfficialDishImage] imagen > 5 MB");
     return null;
   }
-  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-  const path = `${officialRestaurantId}/${crypto.randomUUID()}.${ext}`;
+  const optimized = await optimizeImage(file); // resize + WebP en el cliente
+  const path = `${officialRestaurantId}/${crypto.randomUUID()}.webp`;
   const { error } = await supabase.storage
     .from(OFFICIAL_DISH_BUCKET)
-    .upload(path, file, { cacheControl: "3600", upsert: false });
+    .upload(path, optimized, {
+      cacheControl: "3600",
+      upsert: false,
+      contentType: "image/webp",
+    });
   if (error) { console.error("[uploadOfficialDishImage]", error); return null; }
   const { data } = supabase.storage.from(OFFICIAL_DISH_BUCKET).getPublicUrl(path);
   return data.publicUrl;
