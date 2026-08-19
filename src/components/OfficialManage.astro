@@ -102,29 +102,37 @@ import FormModal from "./FormModal.astro";
       >Imagen <span class="optional">(opcional)</span></span
     >
     <input type="hidden" id="odf-image-url" />
+    {/* NO usar `hidden`/display:none: Safari e iOS no abren el selector nativo al
+        disparar .click() sobre un file input con display:none. Se oculta con la
+        técnica visually-hidden (fuera de pantalla pero "renderizado"). */}
     <input
       type="file"
       id="odf-image-file"
       accept="image/*"
-      hidden
+      class="odf-visually-hidden"
     />
-    <div class="odf-image-drop" id="odf-image-drop">
-      <img id="odf-image-preview" alt="" hidden />
-      <div class="odf-image-empty" id="odf-image-empty">
-        <i class="bi bi-camera"></i>
-        <span>Toca para subir foto</span>
-      </div>
-      <button
-        type="button"
-        id="odf-image-remove"
-        class="odf-image-remove"
-        aria-label="Quitar imagen"
-        hidden
-      >
-        <i class="bi bi-x-lg"></i>
-      </button>
-      <div class="odf-image-loading" id="odf-image-loading" hidden>
-        <div class="spinner"></div>
+    {/* Dos estados en elementos SEPARADOS (nunca se solapan):
+        · sin imagen → botón "Agregar foto".
+        · con imagen → figure con la foto + acciones de texto Cambiar/Quitar. */}
+    <button type="button" id="odf-image-add" class="odf-image-add">
+      <i class="bi bi-camera"></i> <span>Agregar foto</span>
+    </button>
+
+    {/* Con imagen: foto a ancho completo + dos botones reales debajo. */}
+    <div class="odf-image-view" id="odf-image-view" hidden>
+      <figure class="odf-image-figure">
+        <img id="odf-image-preview" alt="" />
+        <div class="odf-image-loading" id="odf-image-loading" hidden>
+          <span class="spinner"></span>
+        </div>
+      </figure>
+      <div class="odf-image-actions">
+        <button type="button" id="odf-image-change" class="odf-image-act">
+          <i class="bi bi-arrow-repeat"></i> Cambiar
+        </button>
+        <button type="button" id="odf-image-remove" class="odf-image-act is-remove">
+          <i class="bi bi-trash"></i> Quitar
+        </button>
       </div>
     </div>
   </div>
@@ -420,75 +428,146 @@ import FormModal from "./FormModal.astro";
     min-width: 0;
   }
 
-  /* Campo de imagen: área tocable que muestra preview o placeholder. */
+  /* File input oculto pero "renderizado" (visually-hidden). Necesario para que
+     .click() abra el selector en Safari/iOS, donde display:none lo bloquea. */
+  .odf-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* Campo de imagen. Dos estados en elementos SEPARADOS (nunca se solapan),
+     ambos a ANCHO COMPLETO del modal:
+     · #odf-image-add  → botón "Agregar foto" (sin imagen).
+     · #odf-image-view → foto + botones Cambiar/Quitar (con imagen). */
   .odf-image-field {
     display: flex;
     flex-direction: column;
     gap: 6px;
+    align-items: stretch;
   }
 
-  .odf-image-drop {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 16 / 10;
-    border: 1.5px dashed var(--clr-border2);
-    border-radius: var(--border-radius);
-    background: var(--clr-white2);
-    overflow: hidden;
-    cursor: pointer;
+  /* Botón "Agregar foto": ancho completo, dashed, contenido centrado. */
+  .odf-image-add {
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 14px;
+    border: 1.5px dashed var(--clr-border2);
+    border-radius: var(--border-radius);
+    background: var(--clr-white2);
+    color: var(--clr-primary);
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    cursor: pointer;
     transition: border-color var(--transition);
   }
 
+  .odf-image-add[hidden] {
+    display: none;
+  }
+
+  .odf-image-add i {
+    font-size: 1.1rem;
+  }
+
   @media (hover: hover) {
-    .odf-image-drop:hover {
+    .odf-image-add:hover {
       border-color: var(--clr-primary);
     }
   }
 
-  #odf-image-preview {
-    position: absolute;
-    inset: 0;
+  /* Contenedor del estado "con imagen". */
+  .odf-image-view {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     width: 100%;
-    height: 100%;
+  }
+
+  .odf-image-view[hidden] {
+    display: none;
+  }
+
+  /* Foto a ancho completo del modal. */
+  .odf-image-figure {
+    position: relative;
+    width: 100%;
+    margin: 0;
+    border: 1px solid var(--clr-border);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    background: var(--clr-white);
+  }
+
+  #odf-image-preview {
+    display: block;
+    width: 100%;
+    max-height: 240px;
     object-fit: cover;
   }
 
-  .odf-image-empty {
+  /* Cambiar / Quitar: dos botones reales, mitad y mitad. */
+  .odf-image-actions {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    color: var(--clr-text);
-    opacity: 0.5;
-    font-size: 0.82rem;
-    font-weight: 600;
+    gap: 8px;
   }
 
-  .odf-image-empty i {
-    font-size: 1.6rem;
-  }
-
-  .odf-image-remove {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    border: none;
-    background: rgba(0, 0, 0, 0.55);
-    color: var(--clr-white);
-    display: flex;
+  .odf-image-act {
+    flex: 1;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 6px;
+    padding: 10px 8px;
+    border: 1.5px solid var(--clr-border);
+    border-radius: var(--border-radius);
+    background: var(--clr-white);
+    color: var(--clr-text);
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.2px;
     cursor: pointer;
-    font-size: 0.8rem;
-    z-index: 2;
+    transition: var(--transition);
   }
 
+  .odf-image-act i {
+    font-size: 0.9rem;
+    opacity: 0.8;
+  }
+
+  /* Superficie danger suave: tinte rojo tenue en reposo (no corte blanco/rojo). */
+  .odf-image-act.is-remove {
+    background: var(--clr-danger-bg);
+    color: var(--clr-danger);
+    border-color: var(--clr-danger-border-soft);
+  }
+
+  .odf-image-act.is-remove i {
+    opacity: 1;
+  }
+
+  @media (hover: hover) {
+    .odf-image-act:hover {
+      border-color: var(--clr-primary);
+    }
+
+    .odf-image-act.is-remove:hover {
+      border-color: var(--clr-danger);
+      background: var(--clr-danger-bg-strong);
+    }
+  }
+
+  /* Spinner: SOLO durante la subida activa, superpuesto a la foto. */
   .odf-image-loading {
     position: absolute;
     inset: 0;
@@ -496,12 +575,16 @@ import FormModal from "./FormModal.astro";
     align-items: center;
     justify-content: center;
     background: rgba(0, 0, 0, 0.3);
-    z-index: 3;
+    z-index: 2;
+  }
+
+  .odf-image-loading[hidden] {
+    display: none;
   }
 
   .odf-image-loading .spinner {
-    width: 30px;
-    height: 30px;
+    width: 26px;
+    height: 26px;
     border: 3px solid rgba(255, 255, 255, 0.4);
     border-top-color: var(--clr-white);
     border-radius: 50%;
@@ -713,31 +796,34 @@ import FormModal from "./FormModal.astro";
     // ── Campo de imagen ───────────────────────────────────────────────────────
     const dImgUrlEl = document.getElementById("odf-image-url") as HTMLInputElement;
     const dImgFileEl = document.getElementById("odf-image-file") as HTMLInputElement;
-    const dImgDropEl = document.getElementById("odf-image-drop")!;
+    const dImgAddEl = document.getElementById("odf-image-add") as HTMLButtonElement;
+    const dImgViewEl = document.getElementById("odf-image-view")!;
     const dImgPreviewEl = document.getElementById("odf-image-preview") as HTMLImageElement;
-    const dImgEmptyEl = document.getElementById("odf-image-empty")!;
+    const dImgChangeEl = document.getElementById("odf-image-change")!;
     const dImgRemoveEl = document.getElementById("odf-image-remove")!;
     const dImgLoadingEl = document.getElementById("odf-image-loading")!;
 
-    /** Pinta el estado del campo imagen según la URL actual (oculto = sin foto). */
+    /** Pinta el estado del campo imagen según la URL actual. Sin foto → botón
+     *  "Agregar foto"; con foto → figure con la foto + acciones Cambiar/Quitar.
+     *  Los dos estados son elementos separados: nunca se solapan. */
     function renderImageField(url: string | null) {
       if (url) {
+        dImgPreviewEl.onerror = () => renderImageField(null);
         dImgPreviewEl.src = url;
-        dImgPreviewEl.hidden = false;
-        dImgEmptyEl.hidden = true;
-        dImgRemoveEl.hidden = false;
+        dImgViewEl.hidden = false;
+        dImgAddEl.hidden = true;
       } else {
+        dImgPreviewEl.onerror = null;
         dImgPreviewEl.removeAttribute("src");
-        dImgPreviewEl.hidden = true;
-        dImgEmptyEl.hidden = false;
-        dImgRemoveEl.hidden = true;
+        dImgViewEl.hidden = true;
+        dImgAddEl.hidden = false;
       }
+      dImgLoadingEl.hidden = true;
     }
 
-    dImgDropEl.onclick = (e) => {
-      if ((e.target as HTMLElement).closest("#odf-image-remove")) return;
-      dImgFileEl.click();
-    };
+    // "Agregar" y "Cambiar" abren el selector de archivos.
+    dImgAddEl.onclick = () => dImgFileEl.click();
+    dImgChangeEl.onclick = () => dImgFileEl.click();
 
     dImgRemoveEl.onclick = (e) => {
       e.stopPropagation();
@@ -753,13 +839,22 @@ import FormModal from "./FormModal.astro";
       const file = dImgFileEl.files?.[0];
       if (!file) return;
       dErrEl.textContent = "";
-      dImgLoadingEl.hidden = false;
       const prev = dImgUrlEl.value || null;
+      // Preview instantáneo con la foto local: se ve de inmediato, sin caja gris
+      // de "cargando". El spinner solo se superpone mientras sube al servidor.
+      const localUrl = URL.createObjectURL(file);
+      dImgPreviewEl.onerror = null;
+      dImgPreviewEl.src = localUrl;
+      dImgViewEl.hidden = false;
+      dImgAddEl.hidden = true;
+      dImgLoadingEl.hidden = false;
       const url = await uploadOfficialDishImage(dRestEl.value, file);
       dImgLoadingEl.hidden = true;
       dImgFileEl.value = "";
+      URL.revokeObjectURL(localUrl);
       if (!url) {
         dErrEl.textContent = "No se pudo subir la imagen (formato o tamaño ≤ 5 MB).";
+        renderImageField(prev); // revierte al estado anterior (foto previa o vacío)
         return;
       }
       // Reemplazo: borra la anterior si era una subida nueva (no la original).

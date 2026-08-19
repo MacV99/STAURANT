@@ -34,7 +34,9 @@
   --clr-border2: color-mix(in oklch, var(--clr-ink) 20%, white);
 
   --clr-danger-bg: color-mix(in oklch, var(--clr-danger) 10%, white);
-  --clr-danger-border: color-mix(in oklch, var(--clr-danger) 75%, black);
+  --clr-danger-bg-strong: color-mix(in oklch, var(--clr-danger) 18%, white); /* hover de superficie danger suave */
+  --clr-danger-border: color-mix(in oklch, var(--clr-danger) 75%, black);    /* borde fuerte: confirm final (btn-danger) */
+  --clr-danger-border-soft: color-mix(in oklch, var(--clr-danger) 34%, white); /* borde suave: destructivo inline (Quitar, borrar) */
   --clr-danger-strong: color-mix(in oklch, var(--clr-danger) 82%, white); /* texto error/required */
 
   --clr-success-bg: color-mix(in oklch, var(--clr-success) 12%, white);

@@ -298,8 +298,8 @@ import Layout1 from "../layouts/Layout1.astro";
   .btn-danger-outline {
     gap: 8px;
     width: 100%;
-    background: transparent;
-    border: solid 1.5px color-mix(in oklch, var(--clr-danger) 32%, white);
+    background: var(--clr-danger-bg);
+    border: solid 1.5px var(--clr-danger-border-soft);
     color: var(--clr-danger);
     border-radius: 12px;
     padding: 11px;
@@ -610,7 +610,10 @@ import Layout1 from "../layouts/Layout1.astro";
       border-color: var(--clr-primary-dark);
     }
 
-    .btn-danger-outline:hover { background: var(--clr-danger-bg); }
+    .btn-danger-outline:hover {
+      background: var(--clr-danger-bg-strong);
+      border-color: var(--clr-danger);
+    }
 
     .pw-toggle:hover { opacity: 0.85; }
     .install-card-btn:hover {

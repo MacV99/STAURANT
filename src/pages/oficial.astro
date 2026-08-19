@@ -210,8 +210,11 @@ const tplRestaurant: Restaurant = {
     transition: var(--transition);
   }
 
+  /* Superficie danger suave (mismo criterio que el botón Quitar). */
   .dish-card .owner-dish-btn.is-delete {
     color: var(--clr-danger);
+    background: var(--clr-danger-bg);
+    border-color: var(--clr-danger-border-soft);
     opacity: 1;
   }
 
@@ -223,10 +226,102 @@ const tplRestaurant: Restaurant = {
 
     .dish-card .owner-dish-btn.is-delete:hover {
       border-color: var(--clr-danger);
+      background: var(--clr-danger-bg-strong);
     }
   }
 
-  /* Precio del plato en la carta oficial (dentro de la DishCard reusada) */
+  /* ══ Ficha editorial de la carta oficial (.official-dish) ══════════════════
+     Reestiliza la DishCard reusada SOLO para /oficial. Sin foto, el espacio se
+     reparte como una ficha: eyebrow de tipo, nombre fuerte, descripción a 2
+     líneas, fila meta (precio + pill) al pie, y el badge de nota a la derecha
+     como "score". No afecta las cards personales (sin esta clase). */
+  .dish-card.official-dish {
+    align-items: center;
+    gap: 14px;
+    padding: 15px 16px;
+    border-radius: 16px;
+  }
+
+  /* Columna de contenido a la izquierda; badge de nota empujado a la derecha. */
+  .dish-card.official-dish .dish-info {
+    order: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .dish-card.official-dish .rating-badge {
+    order: 2;
+  }
+
+  .dish-card.official-dish .owner-dish-actions,
+  .dish-card.official-dish .dish-actions {
+    order: 3;
+  }
+
+  /* Tipo → eyebrow: etiqueta pequeña en versalitas ARRIBA del nombre (order:-1),
+     sin fondo de pill. Look de ficha, no de chip. */
+  .dish-card.official-dish .dish-type-tag {
+    order: -1;
+    margin: 0 0 1px;
+    padding: 0;
+    background: none;
+    border-radius: 0;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    color: var(--clr-text);
+    opacity: 0.45;
+  }
+
+  .dish-card.official-dish h4 {
+    font-size: 1.02rem;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: 0.1px;
+  }
+
+  /* Descripción: gris, máx 2 líneas (elipsis) para no descuadrar la card. */
+  .dish-card.official-dish .dish-notes {
+    margin-top: 2px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Fila meta al pie: precio + pill secundario alineados. */
+  .dish-card.official-dish .od-meta {
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+
+  .dish-card.official-dish .od-price {
+    margin: 0;
+    font-size: 0.98rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    color: var(--clr-text);
+  }
+
+  /* Badge de nota: score a la derecha. Un pelín más grande = jerarquía clara. */
+  .dish-card.official-dish .rating-badge {
+    flex-shrink: 0;
+    transform: scale(1.06);
+  }
+
+  @media (hover: hover) {
+    /* Realce sutil al pasar el mouse (solo card calificable). */
+    .dish-card.official-dish.is-rateable:hover {
+      border-color: var(--clr-border2);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    }
+  }
+
+  /* Precio del plato — base (por si se reusa fuera de .official-dish). */
   .dish-card .od-price {
     display: block;
     width: fit-content;
@@ -1034,55 +1129,56 @@ const tplRestaurant: Restaurant = {
     const article = (
       tpl.content.cloneNode(true) as DocumentFragment
     ).querySelector("article")!;
+    // Ficha editorial de la carta oficial (estilos scopeados a .official-dish,
+    // sin tocar las cards personales que reusan .dish-card).
+    article.classList.add("official-dish");
     article.setAttribute("data-id", od.id);
     article.querySelector("h4")!.textContent = od.name;
 
-    // Miniatura de la carta oficial (si el plato tiene foto).
-    const thumbEl = article.querySelector<HTMLImageElement>(".dish-thumb");
-    if (thumbEl) {
-      if (od.imageUrl) {
-        thumbEl.src = od.imageUrl;
-        thumbEl.alt = od.name;
-        thumbEl.hidden = false;
-      } else {
-        thumbEl.remove();
-      }
-    }
+    // La foto del plato NO se muestra en la card: solo dentro del modal de
+    // detalles/calificación (DishForm.openOfficial). Se elimina el <img> siempre
+    // → cero espacio reservado, con o sin foto.
+    article.querySelector(".dish-thumb")?.remove();
 
     const infoEl = article.querySelector<HTMLElement>(".dish-info")!;
 
-    // Tipo
+    // Tipo → eyebrow (etiqueta pequeña ARRIBA del nombre vía CSS order).
     const typeTagEl = article.querySelector<HTMLElement>(".dish-type-tag");
     if (od.typeName && typeTagEl) typeTagEl.textContent = od.typeName;
     else typeTagEl?.remove();
 
-    // Precio (dato exclusivo de la carta oficial)
-    if (od.price !== null) {
-      const price = document.createElement("span");
-      price.className = "od-price";
-      price.textContent = `$${od.price.toLocaleString("es-CO")}`;
-      infoEl.appendChild(price);
-    }
-
-    // Pill secundario = dato del OTRO lente:
-    //  · Global   → ⭐ tu nota (si ya la diste).
-    //  · Personal → 🌐 nota de la comunidad (si existe).
-    const stat = getOfficialDishStat(od.id);
-    const globalAvg = stat && stat.ratingsCount > 0 ? stat.avgRating : null;
-    const myRating = getMyRatingFor(od.id);
-    if (ratingLens === "global") {
-      if (myRating !== null) infoEl.appendChild(buildMyRatingPill(myRating));
-    } else if (stat && stat.ratingsCount > 0) {
-      infoEl.appendChild(buildGlobalRatingPill(stat.avgRating, stat.ratingsCount));
-    }
-
-    // Notas / descripción de la carta
+    // Notas / descripción de la carta (antes de la fila meta).
     const notesEl = article.querySelector<HTMLElement>(".dish-notes");
     if (od.notes) {
       if (notesEl) notesEl.textContent = od.notes;
     } else {
       notesEl?.remove();
     }
+
+    // Fila meta al pie: precio + pill secundario juntos y alineados (look de ficha).
+    const stat = getOfficialDishStat(od.id);
+    const globalAvg = stat && stat.ratingsCount > 0 ? stat.avgRating : null;
+    const myRating = getMyRatingFor(od.id);
+    const meta = document.createElement("div");
+    meta.className = "od-meta flex-row";
+
+    if (od.price !== null) {
+      const price = document.createElement("span");
+      price.className = "od-price";
+      price.textContent = `$${od.price.toLocaleString("es-CO")}`;
+      meta.appendChild(price);
+    }
+
+    // Pill secundario = dato del OTRO lente:
+    //  · Global   → ⭐ tu nota (si ya la diste).
+    //  · Personal → 🌐 nota de la comunidad (si existe).
+    if (ratingLens === "global") {
+      if (myRating !== null) meta.appendChild(buildMyRatingPill(myRating));
+    } else if (stat && stat.ratingsCount > 0) {
+      meta.appendChild(buildGlobalRatingPill(stat.avgRating, stat.ratingsCount));
+    }
+
+    if (meta.children.length) infoEl.appendChild(meta);
 
     // Badge grande = dato del lente activo (Global → promedio público; Personal
     // → tu nota). Vacío = estrella que invita a tocar y calificar.

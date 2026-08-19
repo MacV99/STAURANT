@@ -9,6 +9,8 @@ import FormModal from "./FormModal.astro";
   <input type="hidden" id="df-rating" value="5" />
 
   <div class="official-hero flex-column" id="df-official-fields" hidden>
+    {/* Foto del plato (solo si tiene). Sin imagen → no se renderiza: cero hueco. */}
+    <img class="official-photo" id="df-official-image" alt="" hidden />
     <h3 class="official-name" id="df-official-name"></h3>
     <span class="official-type" id="df-official-type"></span>
   </div>
@@ -111,6 +113,21 @@ import FormModal from "./FormModal.astro";
   }
 
   .official-hero[hidden] {
+    display: none;
+  }
+
+  /* Foto del plato dentro del modal de detalles. Ancho completo del modal,
+     esquinas redondeadas. Oculta (sin hueco) si el plato no tiene foto. */
+  .official-photo {
+    display: block;
+    width: 100%;
+    max-height: 220px;
+    object-fit: cover;
+    border-radius: var(--border-radius);
+    margin-bottom: 4px;
+  }
+
+  .official-photo[hidden] {
     display: none;
   }
 
@@ -561,6 +578,9 @@ import FormModal from "./FormModal.astro";
     const officialNameEl = document.getElementById(
       "df-official-name",
     ) as HTMLElement;
+    const officialImageEl = document.getElementById(
+      "df-official-image",
+    ) as HTMLImageElement;
     const typeFieldEl = document.getElementById("df-type-field") as HTMLElement;
     const nameFieldEl = document.getElementById("df-name-field") as HTMLElement;
 
@@ -810,6 +830,19 @@ import FormModal from "./FormModal.astro";
       (document.getElementById("df-notes-field") as HTMLElement).hidden = true;
 
       titleEl.textContent = "Calificar plato";
+      // Foto del plato: se muestra SOLO aquí (no en la card). Sin foto o URL rota
+      // → se oculta, sin dejar espacio reservado.
+      if (od.imageUrl) {
+        officialImageEl.onerror = () => {
+          officialImageEl.hidden = true;
+        };
+        officialImageEl.src = od.imageUrl;
+        officialImageEl.hidden = false;
+      } else {
+        officialImageEl.onerror = null;
+        officialImageEl.removeAttribute("src");
+        officialImageEl.hidden = true;
+      }
       officialNameEl.textContent = od.name;
       officialTypeEl.textContent = od.typeName ?? "";
       officialTypeEl.hidden = !od.typeName;

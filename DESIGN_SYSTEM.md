@@ -41,9 +41,32 @@ que se sienta como app bancaria fría ni como red social recargada de color.
   `--clr-warning`, `--clr-gold`/`--rgb-gold`, `--clr-info`. Se tocan solo al re-marcar.
 - **Nivel 2 · Semántico** — derivados por `color-mix`/`rgba(var(--rgb-*))`: `--clr-primary*`,
   `--clr-text*`, `--clr-border*`, `--clr-*-bg`, `--clr-*-border`, `--clr-danger-strong`,
-  `--focus-ring`. Nunca repiten un hex.
+  `--clr-danger-bg-strong` (hover de superficie danger), `--clr-danger-border-soft` (borde
+  danger suave), `--focus-ring`. Nunca repiten un hex.
 - **Nivel 3 · Componente** — `--dot-texture`, `--skeleton-shine`, `--crown-shadow`,
   `--official-tint`, `--official-border`.
+
+### Superficies de acción (color de botones/estados)
+Regla de identidad para que ningún botón sea un "corte" duro de color sobre blanco: **un botón
+de acción lleva un tinte tenue de su propio color semántico en reposo**, no blanco puro. Es el
+mismo criterio que ya usan `.boton`/`Guardar` y la ✕ del modal (fondo `--clr-white2` = tinte
+neutro), extendido a los estados.
+
+Anatomía de una superficie tintada = **fondo `*-bg`** + **texto/ícono en el color** +
+**borde `*-border(-soft)`**, y en hover el fondo sube al escalón `*-bg-strong` y el borde al
+color pleno.
+
+| Rol | Reposo (fondo · texto · borde) | Hover | Ejemplos |
+| --- | --- | --- | --- |
+| Neutro | `--clr-white2` · `--clr-primary` · `--clr-border` | `--clr-border` | `.boton`, ✕ (`.btn-icon-close`), `.boton2` (transparente) |
+| Marca (zona) | `primary 6%` · `--clr-primary` · `primary 22%` | — | barra de gestión del dueño (`.owner-bar`) |
+| Danger suave | `--clr-danger-bg` · `--clr-danger` · `--clr-danger-border-soft` | `--clr-danger-bg-strong` + borde `--clr-danger` | Quitar (`.is-remove`), borrar plato (`.owner-dish-btn.is-delete`), logout (`.btn-danger-outline`) |
+| Danger énfasis | `--clr-danger-bg` · `--clr-danger` · `--clr-danger-border` (pleno) | fondo `--clr-danger-border` | confirmación final destructiva (`.btn-danger` en `ConfirmDialog`) |
+
+> Dos niveles de danger a propósito: **suave** = destructivo *inline* dentro de una tarea de
+> edición (reversible en contexto); **énfasis** = el "Eliminar" final de un `ConfirmDialog`
+> (punto de no retorno) merece un borde más marcado. Success/warning/gold siguen el mismo molde
+> (`*-bg` + color + `*-border`) cuando necesiten superficie propia.
 
 ## 4. Tipografía
 - Familia única: **Montserrat** (`--font-main`), pesos 100–900 vía un solo `@import`.
@@ -75,7 +98,8 @@ Concepto ↔ clase real ↔ tokens. Mantener sincronizado con el código.
 | ---------- | ----- | ------------ | ----- |
 | Botón sólido | `button`, `.boton` | `--clr-white2`, `--clr-primary`, `--clr-border` | UPPERCASE, radius pill, hover `--clr-border` |
 | Botón fantasma | `.boton2` | `--clr-text`, `--clr-border` | fondo transparente |
-| Botón peligro | `.btn-danger` | `--clr-danger`, `--clr-danger-bg`, `--clr-danger-border` | solo acciones destructivas |
+| Botón peligro (énfasis) | `.btn-danger` | `--clr-danger`, `--clr-danger-bg`, `--clr-danger-border` | confirmación final destructiva (ConfirmDialog) |
+| Botón peligro (suave) | `.is-remove`, `.owner-dish-btn.is-delete`, `.btn-danger-outline`, `.ur-btn-danger` | `--clr-danger-bg`, `--clr-danger`, `--clr-danger-border-soft` | destructivo inline; hover `--clr-danger-bg-strong`. Ver §3 "Superficies de acción" |
 | Card restaurante | `.restaurant-card` | `--clr-white`, `--clr-border`, `--official-tint` | `.is-official` → tinte dorado |
 | Badge rating | `.rating-badge` + `.badge-{empty,low,mid,high}` | `--clr-{danger,warning,success}-*` | color = tramo de nota (≤4 / 5–7 / 8+) |
 | Corona top | `.crown-badge` | `--crown-shadow`, `--transition-bounce` | mejor valorado personal |
@@ -118,3 +142,10 @@ Registro fechado de cambios de identidad (fecha absoluta · qué cambió · por 
   hardcodeados fuera de `:root`.
 - `2026-08-18` — **Acento oficial = gris/negro `#2e2e2e` (`--clr-ink`).** Decisión: el código
   manda sobre el doc viejo. Personalidad fijada: editorial · minimal · foodie.
+- `2026-08-18` — **Superficies de acción tintadas (regla de color de botones).** Ningún botón
+  de acción es blanco puro: lleva un tinte tenue de su color semántico en reposo (igual que
+  `.boton`/✕ con el neutro). Nuevos tokens `--clr-danger-bg-strong` (hover) y
+  `--clr-danger-border-soft` (borde suave). Aplicado a Quitar (`.is-remove`), borrar plato
+  (`.owner-dish-btn.is-delete`) y logout (`.btn-danger-outline`); se documentan dos niveles de
+  danger (suave inline vs énfasis en confirm). Motivo: evitar cortes duros blanco/rojo y unificar
+  el criterio de acción/estado para escalar consistente. Ver §3 "Superficies de acción".
