@@ -73,20 +73,20 @@ Two dynamic rendering patterns coexist — do not mix them up:
 
 **DishForm combobox** (`src/components/DishForm.astro`) — the dish-type input is a searchable autocomplete that also creates new types on the fly. Key gotchas: uses `mousedown + e.preventDefault()` on options to prevent `blur` from closing the dropdown; forces input to UPPERCASE. The same uppercase-forcing pattern exists in `RestaurantForm.astro`. Update both if the behaviour needs to change.
 
-Design tokens in `global.css`:
-```css
---clr-primary: #546b41        /* brand green */
---clr-white: #fff8ec          /* off-white background */
---clr-white2                  /* slightly darker surface */
---clr-text: #363630
---clr-danger                  /* destructive action red */
---clr-danger-bg               /* light red background for delete states */
---clr-danger-border           /* red border for delete states */
---border-radius: 12px
---transition: 0.12s ease
-```
+**Design system** — ver [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) para el porqué (personalidad,
+jerarquía de color, contratos de componente, changelog). Fuente ÚNICA de valores:
+- Color + tokens de componente: `src/styles/project.css` (`:root`), en 3 niveles
+  (1·primitivo → 2·semántico → 3·componente). Acento de marca = `--clr-ink` (`#2e2e2e`, tinta
+  editorial, NO verde). Estados: `--clr-danger/success/warning/gold(oficial)/info(verificado)`.
+- Tipografía / timing / radius: `src/styles/global.css` (`:root`): `--font-main` (Montserrat),
+  `--transition*`, escala `--radius-sm/md/lg/pill`.
 
-Rating badge classes: `.badge-low` (≤4, pink), `.badge-mid` (5–7, yellow), `.badge-high` (8+, green).
+Reglas duras (axiomas del DS): cero hex/px de marca fuera de `:root`; niveles 2/3 se derivan
+del primitivo con `var()`/`color-mix`/`rgba(var(--rgb-*))`, nunca repiten un hex; este archivo
+y el doc NO copian valores (evita drift). Excepciones de hex permitidas: logos externos (Google),
+botón iOS de InstallBanner, y la meta `theme-color` (sincronizar a mano con `--clr-ink`).
+
+Rating badge classes: `.badge-low` (≤4, `--clr-danger`), `.badge-mid` (5–7, `--clr-warning`), `.badge-high` (8+, `--clr-success`).
 
 ### PWA
 

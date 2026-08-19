@@ -299,8 +299,8 @@ import Layout1 from "../layouts/Layout1.astro";
     gap: 8px;
     width: 100%;
     background: transparent;
-    border: solid 1.5px #e8b4b4;
-    color: #c0392b;
+    border: solid 1.5px color-mix(in oklch, var(--clr-danger) 32%, white);
+    color: var(--clr-danger);
     border-radius: 12px;
     padding: 11px;
     font-size: 0.88rem;
@@ -421,7 +421,7 @@ import Layout1 from "../layouts/Layout1.astro";
   }
 
   .profile-msg.error {
-    color: #c0392b;
+    color: var(--clr-danger);
   }
 
   /* ── Buttons ── */
@@ -610,7 +610,7 @@ import Layout1 from "../layouts/Layout1.astro";
       border-color: var(--clr-primary-dark);
     }
 
-    .btn-danger-outline:hover { background: #fce8e8; }
+    .btn-danger-outline:hover { background: var(--clr-danger-bg); }
 
     .pw-toggle:hover { opacity: 0.85; }
     .install-card-btn:hover {

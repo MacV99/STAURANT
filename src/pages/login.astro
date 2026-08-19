@@ -256,7 +256,7 @@ import Layout1 from "../layouts/Layout1.astro";
 
   .auth-error {
     font-size: 0.85rem;
-    color: #c0392b;
+    color: var(--clr-danger);
     min-height: 1.2em;
     text-align: center;
   }
@@ -286,7 +286,7 @@ import Layout1 from "../layouts/Layout1.astro";
   .btn-google {
     gap: 10px;
     width: 100%;
-    background: #fff;
+    background: var(--clr-white);
     border: 1.5px solid var(--clr-border);
     border-radius: 12px;
     padding: 11px 16px;
@@ -325,7 +325,7 @@ import Layout1 from "../layouts/Layout1.astro";
   @media (hover: hover) {
     .btn-google:not(:disabled):hover {
       background: var(--clr-white2);
-      border-color: #bbb;
+      border-color: var(--clr-border2);
     }
 
     .pw-toggle:hover {

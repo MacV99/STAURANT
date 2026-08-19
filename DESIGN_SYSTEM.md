@@ -1,0 +1,120 @@
+# STAURANT — Sistema de Diseño
+
+> Fuente de identidad: app editorial de registro de restaurantes/platos — cuaderno de notas
+> gastronómico, no red social ruidosa.
+> Objetivo: no replicar un menú impreso, sino su versión ordenada y táctil para web/PWA.
+> **Fuente de verdad de valores:** `src/styles/project.css` (`:root`) para color/componente y
+> `src/styles/global.css` (`:root`) para tipografía/timing/radius. Este doc explica el
+> **porqué**; nunca duplica hex ni px que puedan quedar viejos.
+
+---
+
+## 1. Personalidad de marca
+Editorial · minimal · foodie · sobrio · táctil. Sensación objetivo: cuaderno limpio donde
+anotar y calificar comida, con mucho blanco y jerarquía tipográfica. Anti-referencia: nada
+que se sienta como app bancaria fría ni como red social recargada de color.
+
+## 2. Principios de diseño
+1. **Tinta sobre papel.** Neutro por defecto (`--clr-ink` sobre `--clr-white`/`--clr-white2`).
+2. **El color se gana su lugar (70/20/10).** El color solo aparece en semántica (rating,
+   estado, oficial, verificado). La UI base es acromática.
+3. **Fondo punteado = firma.** El `radial-gradient` de puntos (`--dot-texture`) unifica todas
+   las pantallas. Si un solo recurso identifica STAURANT, es ese.
+4. **Tipografía como estructura.** Montserrat, títulos/labels/botones en UPPERCASE con
+   `letter-spacing`; cuerpo en sentence case.
+5. **Aire.** Cards con separación generosa; secciones respiran.
+
+## 3. Color — jerarquía de uso (70/20/10)
+| Peso | Rol | Token |
+| ---- | --- | ----- |
+| 70% | Fondo / superficies | `--clr-white`, `--clr-white2` |
+| 20% | Texto / bordes / estructura | `--clr-ink` (`--clr-text`, `--clr-border`, `--clr-border2`) |
+| 10% | Acento semántico | estados: `--clr-danger` · `--clr-success` · `--clr-warning` · `--clr-gold` (oficial) · `--clr-info` (verificado) |
+
+> Los valores hex viven en `project.css`. Aquí solo roles. El color NUNCA es decorativo:
+> cada tono comunica un estado. Excepciones documentadas de hex externos (no de marca):
+> logos de Google (`#4285F4`…), botón iOS de InstallBanner (`#007aff`), y la meta
+> `theme-color` (`#2e2e2e`, sincronizar a mano con `--clr-ink` — las meta tags no aceptan `var()`).
+
+### Niveles de token (taxonomía)
+- **Nivel 1 · Primitivo** — `--clr-ink`, `--rgb-ink`, `--clr-danger`, `--clr-success`,
+  `--clr-warning`, `--clr-gold`/`--rgb-gold`, `--clr-info`. Se tocan solo al re-marcar.
+- **Nivel 2 · Semántico** — derivados por `color-mix`/`rgba(var(--rgb-*))`: `--clr-primary*`,
+  `--clr-text*`, `--clr-border*`, `--clr-*-bg`, `--clr-*-border`, `--clr-danger-strong`,
+  `--focus-ring`. Nunca repiten un hex.
+- **Nivel 3 · Componente** — `--dot-texture`, `--skeleton-shine`, `--crown-shadow`,
+  `--official-tint`, `--official-border`.
+
+## 4. Tipografía
+- Familia única: **Montserrat** (`--font-main`), pesos 100–900 vía un solo `@import`.
+- Títulos (`h1..h5`): peso 600, `letter-spacing: 2px`.
+- Labels / botones: UPPERCASE, `letter-spacing` 1–2px, peso 600.
+- Cuerpo (`p`): sentence case, `line-height` normal, `0.9–1.05rem` responsive.
+- Números de rating (`.rating-num`): peso 900, `letter-spacing: -0.5px` (compacto, protagonista).
+
+## 5. Espaciado
+Escala objetivo (pasos fijos): `4 · 8 · 12 · 16 · 24 · 32 · 48 · 64 · 96`. Deuda conocida: los
+`px` de gap/padding aún no están tokenizados a `--space-*`; al tocarlos, alinear a la escala.
+
+## 6. Bordes, radius y sombras
+- Bordes derivados del ink: `--clr-border` (10% ink), `--clr-border2` (20% ink).
+- Radius: escala `--radius-sm 8` · `--radius-md 12` (= `--border-radius`) · `--radius-lg 20` ·
+  `--radius-pill 50`. Cards/inputs = md; modales = lg; pills/botones = pill.
+- Sombras: neutras `rgba(0,0,0,α)` (α .08–.22). El FAB usa glow de marca
+  `rgba(var(--rgb-ink), .32)` — nunca un color ajeno a la marca.
+
+## 7. Firma gráfica — fondo punteado
+El `radial-gradient(circle, var(--dot-texture) 1px, transparent 1px)` a `20px 20px`. Vive en
+`body` y en la utilidad `.texture-dotted`. Aparece en todas las pantallas: es lo que hace que
+STAURANT se vea como STAURANT.
+
+## 8. Contratos de componente
+Concepto ↔ clase real ↔ tokens. Mantener sincronizado con el código.
+
+| Componente | Clase | Tokens clave | Regla |
+| ---------- | ----- | ------------ | ----- |
+| Botón sólido | `button`, `.boton` | `--clr-white2`, `--clr-primary`, `--clr-border` | UPPERCASE, radius pill, hover `--clr-border` |
+| Botón fantasma | `.boton2` | `--clr-text`, `--clr-border` | fondo transparente |
+| Botón peligro | `.btn-danger` | `--clr-danger`, `--clr-danger-bg`, `--clr-danger-border` | solo acciones destructivas |
+| Card restaurante | `.restaurant-card` | `--clr-white`, `--clr-border`, `--official-tint` | `.is-official` → tinte dorado |
+| Badge rating | `.rating-badge` + `.badge-{empty,low,mid,high}` | `--clr-{danger,warning,success}-*` | color = tramo de nota (≤4 / 5–7 / 8+) |
+| Corona top | `.crown-badge` | `--crown-shadow`, `--transition-bounce` | mejor valorado personal |
+| Pill conteo | `.dish-count-pill`, `.global-rating-pill` | `--clr-white2`, `--clr-border` | + `.status-dot-*` según estado |
+| Verificado | `.verified-badge` | `--clr-info` | perfil oficial |
+| Modal | `.overlay` + `.form-box`/`.dialog-box` | `--clr-white`, radius lg, `box-pop-in` | scroll interno, no diálogos nativos |
+| Input | `input/textarea/select` | `--clr-border`, `--clr-border2`, `--focus-ring` | foco teclado = anillo |
+| Skeleton | `.skeleton-card` | `--skeleton-shine` | shimmer de carga |
+
+## 9. Estados interactivos
+| Elemento | Hover / Focus / Press |
+| -------- | --------------------- |
+| Botones | hover `--clr-border` (`@media hover:hover`); press `scale(0.95)` |
+| Card | press `scale(0.98)`; oficial = borde dorado |
+| Badge clicable | `.badge-btn` press `scale(0.92)`, hover `brightness(.92)` |
+| Foco teclado | `:focus-visible` → `--focus-ring` (siempre visible, nunca en click de ratón) |
+
+## 10. Accesibilidad (mínimo AA)
+- `:focus-visible` global con `--focus-ring` en todo interactivo (inputs, botones, links).
+- `prefers-reduced-motion: reduce` mata animaciones/transiciones.
+- Sin diálogos nativos (`alert/confirm/prompt`): usar `ConfirmDialog` / `NoticeDialog`.
+- Pendiente de verificar contraste: `--clr-text-soft` (60% ink) sobre `--clr-white2` — validar ≥4.5:1 antes de usarlo en texto de cuerpo.
+
+## 11. Checklist do / don't
+**Hacer:** todo color/tamaño = token; derivar niveles 2/3 del primitivo con `var()`/`color-mix`;
+color solo para semántica; UPPERCASE en títulos/labels/botones.
+**Evitar:** hex/px hardcodeado fuera de `:root`; color decorativo por toda la UI (rompe 70/20/10);
+radius/sombra fuera de escala; copiar valores a este doc.
+
+---
+
+## Changelog
+Registro fechado de cambios de identidad (fecha absoluta · qué cambió · por qué).
+
+- `2026-08-18` — **Fundación del DS.** Reestructurado `:root` en 3 niveles + `--rgb-*`;
+  tokenizados todos los hex de marca dispersos (badges, status-dots, oficial, verificado,
+  skeleton, fondo punteado, sombra FAB); añadido `:focus-visible` global y escala de radius;
+  creado este documento. Motivo: el DS había driftado (CLAUDE.md decía marca verde `#546b41`,
+  el código real era gris/negro; sombra verde vieja sobrevivía en el FAB) y había ~15 hex
+  hardcodeados fuera de `:root`.
+- `2026-08-18` — **Acento oficial = gris/negro `#2e2e2e` (`--clr-ink`).** Decisión: el código
+  manda sobre el doc viejo. Personalidad fijada: editorial · minimal · foodie.

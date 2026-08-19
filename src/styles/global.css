@@ -7,7 +7,13 @@
   /* EFECTOS Y TIMING */
   --transition: 0.12s ease;
   --transition-bounce: 0.34s cubic-bezier(0.34, 1.56, 0.64, 1);
-  --border-radius: 12px;
+
+  /* ESCALA DE RADIUS (pasos fijos, no libres) */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-pill: 50px;
+  --border-radius: var(--radius-md); /* alias histórico = md */
 }
 
 /* === RESET BÁSICO === */
@@ -66,7 +72,7 @@ body {
   align-items: center;
   flex-direction: column;
   background-color: var(--clr-white2);
-  background-image: radial-gradient(circle, #c8c8c8 1px, transparent 1px);
+  background-image: radial-gradient(circle, var(--dot-texture) 1px, transparent 1px);
   background-size: 20px 20px;
   background-attachment: fixed;
 }
@@ -148,7 +154,7 @@ hr {
 /* === UTILIDADES FLEX === */
 .texture-dotted {
   background-color: var(--clr-white2);
-  background-image: radial-gradient(circle, #c8c8c8 1px, transparent 1px);
+  background-image: radial-gradient(circle, var(--dot-texture) 1px, transparent 1px);
   background-size: 20px 20px;
 }
 
@@ -211,6 +217,21 @@ input:focus,
 textarea:focus,
 select:focus {
   border-color: var(--clr-border2);
+}
+
+/* === FOCO VISIBLE (a11y AA) ===
+   Solo teclado (:focus-visible), nunca en click de ratón. Anillo con el
+   token --focus-ring derivado de la marca. */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  border-color: var(--clr-border2);
+  box-shadow: var(--focus-ring);
 }
 
 select {

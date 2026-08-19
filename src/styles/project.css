@@ -2,21 +2,55 @@
   PROJECT.CSS — Estilos globales específicos de STAURANT
    ============================================================ */
 
+/* ============================================================
+   DESIGN TOKENS — STAURANT · fuente ÚNICA de valores.
+   El "porqué" vive en DESIGN_SYSTEM.md (nunca copia estos valores).
+   3 niveles:  1·PRIMITIVO   2·SEMÁNTICO   3·COMPONENTE.
+   Re-marcar = tocar solo NIVEL 1.
+   ============================================================ */
 :root {
-  --clr-primary: #2e2e2e;
-  --clr-primary-dark: color-mix(in oklch, var(--clr-primary) 25%, black);
-  --clr-primary-light: color-mix(in oklch, var(--clr-primary) 80%, white);
+  /* ---- NIVEL 1 · PRIMITIVOS (valor crudo de marca) ------------- */
+  --clr-ink: #2e2e2e;              /* acento/marca: tinta editorial */
+  --rgb-ink: 46, 46, 46;
 
   --clr-white: #ffffff;
   --clr-white2: #f7f7f7;
 
-  --clr-text: var(--clr-primary);
-  --clr-border: color-mix(in oklch, var(--clr-primary) 10%, white);
-  --clr-border2: color-mix(in oklch, var(--clr-primary) 20%, white);
+  /* Semillas de estado — bg/border se DERIVAN por color-mix abajo. */
+  --clr-danger:  #b02a3a;  --rgb-danger: 176, 42, 58;
+  --clr-success: #1a7a38;
+  --clr-warning: #a06010;
+  --clr-gold:    #d4a017;  --rgb-gold: 212, 160, 23;  /* oficial 👑 */
+  --clr-info:    #1d9bf0;                             /* verificado ✔ */
 
-  --clr-danger: #b02a3a;
+  /* ---- NIVEL 2 · SEMÁNTICOS (rol, derivado del primitivo) ------ */
+  --clr-primary: var(--clr-ink);
+  --clr-primary-dark: color-mix(in oklch, var(--clr-ink) 25%, black);
+  --clr-primary-light: color-mix(in oklch, var(--clr-ink) 80%, white);
+
+  --clr-text: var(--clr-ink);
+  --clr-text-soft: color-mix(in oklch, var(--clr-ink) 60%, white);
+  --clr-border: color-mix(in oklch, var(--clr-ink) 10%, white);
+  --clr-border2: color-mix(in oklch, var(--clr-ink) 20%, white);
+
   --clr-danger-bg: color-mix(in oklch, var(--clr-danger) 10%, white);
   --clr-danger-border: color-mix(in oklch, var(--clr-danger) 75%, black);
+  --clr-danger-strong: color-mix(in oklch, var(--clr-danger) 82%, white); /* texto error/required */
+
+  --clr-success-bg: color-mix(in oklch, var(--clr-success) 12%, white);
+  --clr-success-border: color-mix(in oklch, var(--clr-success) 42%, white);
+
+  --clr-warning-bg: color-mix(in oklch, var(--clr-warning) 14%, white);
+  --clr-warning-border: color-mix(in oklch, var(--clr-warning) 45%, white);
+
+  --focus-ring: 0 0 0 3px rgba(var(--rgb-ink), 0.18);
+
+  /* ---- NIVEL 3 · COMPONENTE (específico de una pieza) ---------- */
+  --dot-texture: color-mix(in oklch, var(--clr-ink) 20%, white);        /* fondo punteado body */
+  --skeleton-shine: color-mix(in oklch, var(--clr-ink) 9%, var(--clr-white2));
+  --crown-shadow: rgba(var(--rgb-gold), 0.45);
+  --official-tint: rgba(var(--rgb-gold), 0.14);
+  --official-border: rgba(var(--rgb-gold), 0.5);
 }
 
 /* === OVERLAY (compartido: RestaurantForm, DishForm, ConfirmDialog) === */
@@ -194,7 +228,7 @@
 }
 
 .form-box .required {
-  color: #e05050;
+  color: var(--clr-danger-strong);
   font-weight: 700;
 }
 
@@ -207,7 +241,7 @@
 
 .form-box .form-error {
   font-size: 0.85rem;
-  color: #e05050;
+  color: var(--clr-danger-strong);
   min-height: 1.2em;
 }
 
@@ -335,15 +369,15 @@
 }
 
 .badge-mid {
-  background: #fff3d6;
-  color: #a06010;
-  border: solid 1px #f0c17bad;
+  background: var(--clr-warning-bg);
+  color: var(--clr-warning);
+  border: solid 1px var(--clr-warning-border);
 }
 
 .badge-high {
-  background: #d8f5e2;
-  color: #1a7a38;
-  border: solid 1px #a8e0b8ad;
+  background: var(--clr-success-bg);
+  color: var(--clr-success);
+  border: solid 1px var(--clr-success-border);
 }
 
 /* === BADGE BTN (dish badge clickable → opens edit) === */
@@ -377,9 +411,9 @@
   margin-left: 4px;
 }
 
-.status-dot-ok       { background: #22a06b; }
-.status-dot-pending  { background: #dc2626; }
-.status-dot-official { background: #f59e0b; }
+.status-dot-ok       { background: var(--clr-success); }
+.status-dot-pending  { background: var(--clr-danger); }
+.status-dot-official { background: var(--clr-gold); }
 
 /* === PILL DE RATING GLOBAL (restaurante/plato oficial) === */
 
@@ -410,9 +444,9 @@
 .restaurant-card.is-official,
 .rh-card.is-official {
   background:
-    linear-gradient(315deg, rgba(212, 160, 23, 0.14) 0%, rgba(255, 248, 230, 0) 60%),
+    linear-gradient(315deg, var(--official-tint) 0%, rgba(var(--rgb-gold), 0) 60%),
     var(--clr-white) !important;
-  border-color: rgba(212, 160, 23, 0.5) !important;
+  border-color: var(--official-border) !important;
 }
 
 /* === CORONA 👑 (mejor valorado, según calificación personal) ===
@@ -427,7 +461,7 @@
   font-size: 1.15rem;
   line-height: 1;
   pointer-events: none;
-  filter: drop-shadow(0 1px 1.5px rgba(180, 130, 10, 0.45));
+  filter: drop-shadow(0 1px 1.5px var(--crown-shadow));
   transform: rotate(20deg);
   animation: crown-pop 0.42s var(--transition-bounce);
 }
@@ -441,7 +475,7 @@
 /* === VERIFIED BADGE (perfil oficial) === */
 
 .verified-badge {
-  color: #1d9bf0;
+  color: var(--clr-info);
   display: inline-block;
   font-size: 0.8em;
   margin-left: 2px;
@@ -703,7 +737,7 @@
 
 .skeleton-card {
   border-radius: var(--border-radius);
-  background: linear-gradient(90deg, var(--clr-white2) 25%, #e8e3d8 50%, var(--clr-white2) 75%);
+  background: linear-gradient(90deg, var(--clr-white2) 25%, var(--skeleton-shine) 50%, var(--clr-white2) 75%);
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.4s ease infinite;
   height: 88px;

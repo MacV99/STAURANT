@@ -131,11 +131,11 @@ import Layout1 from "../layouts/Layout1.astro";
     background:
       linear-gradient(
         315deg,
-        rgba(212, 160, 23, 0.14) 0%,
-        rgba(255, 248, 230, 0) 60%
+        var(--official-tint) 0%,
+        rgba(var(--rgb-gold), 0) 60%
       ),
       var(--clr-white);
-    border-color: rgba(212, 160, 23, 0.5);
+    border-color: var(--official-border);
   }
 
   .explore-card:active {
@@ -179,9 +179,9 @@ import Layout1 from "../layouts/Layout1.astro";
     font-size: 0.68rem;
     font-weight: 700;
     letter-spacing: 0.3px;
-    color: #1a7a38;
-    background: #d8f5e2;
-    border: solid 1px #a8e0b8ad;
+    color: var(--clr-success);
+    background: var(--clr-success-bg);
+    border: solid 1px var(--clr-success-border);
     border-radius: 20px;
     padding: 2px 8px;
   }
