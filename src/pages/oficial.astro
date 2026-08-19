@@ -54,13 +54,30 @@ const tplRestaurant: Restaurant = {
 
     <div id="oficial-header" class="restaurant-header"></div>
 
-    {/* Barra de gestión: solo visible si el usuario es DUEÑO de este perfil
-        (fila en official_owners). Da acceso a estadísticas, editar el perfil y
-        agregar platos a la carta. Se muestra en astro:page-load tras verificar. */}
-    <div id="owner-bar" class="owner-bar" hidden>
-      <span class="owner-badge">
-        <i class="bi bi-shield-check"></i> Gestionando tu restaurante
+    {/* Banner de vista visitante: SOLO para el dueño mientras NO está en modo
+        admin. El dueño ve su restaurante EXACTAMENTE como un visitante (puede
+        calificar), y este banner ofrece el interruptor para entrar a gestión. */}
+    <div id="visitor-banner" class="visitor-banner flex-row" hidden>
+      <span class="vb-label">
+        <i class="bi bi-eye"></i> Estás viendo como visitante
       </span>
+      <button id="enter-admin-btn" class="vb-btn" type="button">
+        <i class="bi bi-shield-lock"></i> Modo administrador
+      </button>
+    </div>
+
+    {/* Barra de gestión: visible solo si el usuario es DUEÑO de este perfil
+        (fila en official_owners) Y activó el modo administrador. Da acceso a
+        estadísticas, editar el perfil y agregar platos a la carta. */}
+    <div id="owner-bar" class="owner-bar" hidden>
+      <div class="owner-bar-top flex-row">
+        <span class="owner-badge">
+          <i class="bi bi-shield-check"></i> Modo administrador
+        </span>
+        <button id="exit-admin-btn" class="owner-exit" type="button">
+          <i class="bi bi-eye"></i> <span>Ver como visitante</span>
+        </button>
+      </div>
       <div class="owner-actions">
         <button id="owner-stats-btn" class="owner-act" type="button">
           <i class="bi bi-bar-chart-line"></i> <span>Estadísticas</span>
@@ -353,6 +370,66 @@ const tplRestaurant: Restaurant = {
     width: 100%;
   }
 
+  /* ── Banner de vista visitante (dueño, modo NO admin) ───────────────────── */
+  .visitor-banner {
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: var(--border-radius);
+    background: var(--clr-white2);
+    border: 1px dashed var(--clr-border);
+  }
+
+  .visitor-banner[hidden] {
+    display: none;
+  }
+
+  .vb-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    color: var(--clr-text);
+    opacity: 0.7;
+  }
+
+  .vb-label i {
+    font-size: 0.85rem;
+  }
+
+  .vb-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--clr-primary);
+    background: var(--clr-primary);
+    color: var(--clr-white);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: var(--transition);
+  }
+
+  .vb-btn i {
+    font-size: 0.8rem;
+  }
+
+  @media (hover: hover) {
+    .vb-btn:hover {
+      background: var(--clr-primary-dark);
+      border-color: var(--clr-primary-dark);
+    }
+  }
+
   /* ── Barra de gestión del dueño ─────────────────────────────────────────── */
   .owner-bar {
     display: flex;
@@ -372,6 +449,13 @@ const tplRestaurant: Restaurant = {
     display: none;
   }
 
+  /* Fila superior: badge "modo admin" a la izquierda, salir a la derecha. */
+  .owner-bar-top {
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
   .owner-badge {
     display: inline-flex;
     align-items: center;
@@ -386,6 +470,37 @@ const tplRestaurant: Restaurant = {
 
   .owner-badge i {
     font-size: 0.85rem;
+  }
+
+  /* Salir de admin → volver a vista visitante. Discreto (texto + ícono). */
+  .owner-exit {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--clr-border);
+    background: var(--clr-white);
+    color: var(--clr-text);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: var(--transition);
+  }
+
+  .owner-exit i {
+    font-size: 0.78rem;
+    opacity: 0.75;
+  }
+
+  @media (hover: hover) {
+    .owner-exit:hover {
+      border-color: var(--clr-primary);
+      color: var(--clr-primary);
+    }
   }
 
   /* 3 botones que reparten el ancho por igual: predecible en móvil y desktop. */
@@ -672,8 +787,13 @@ const tplRestaurant: Restaurant = {
   // userId = null → visitante anónimo (puede navegar la carta pero no calificar).
   let userId: string | null = null;
   // isOwner = true → el usuario es DUEÑO de este perfil (fila en official_owners).
-  // Habilita la barra de gestión y cambia las cards a modo edición (no calificar).
+  // Es una CAPACIDAD, no un modo: habilita el interruptor a modo administrador,
+  // pero por sí sola NO cambia la vista (el dueño ve como visitante y puede calificar).
   let isOwner = false;
+  // adminMode = true → el dueño activó el "Modo administrador": barra de gestión
+  // visible y cards en modo edición (editar/eliminar plato). false = vista visitante
+  // idéntica a la de cualquier usuario. Arranca SIEMPRE en false en cada page-load.
+  let adminMode = false;
 
   type SortField = "rating" | "name";
   let sortField: SortField = "rating";
@@ -969,10 +1089,11 @@ const tplRestaurant: Restaurant = {
     const badge = article.querySelector(".rating-badge")!;
     const badgeScore = ratingLens === "global" ? globalAvg : myRating;
 
-    // ── Modo DUEÑO: la card se edita, no se califica ─────────────────────────
+    // ── Modo ADMINISTRADOR: la card se edita, no se califica ─────────────────
     // El badge muestra el promedio del público (informativo, sin botón) y en su
-    // lugar aparecen controles para editar / eliminar el plato de la carta.
-    if (isOwner) {
+    // lugar aparecen controles para editar / eliminar el plato de la carta. En
+    // vista visitante (adminMode=false) el dueño cae al flujo normal y califica.
+    if (adminMode) {
       paintRatingBadge(badge, globalAvg);
       const actions = article.querySelector<HTMLElement>(".dish-actions");
       if (actions) {
@@ -1068,7 +1189,7 @@ const tplRestaurant: Restaurant = {
              <i class="bi bi-search"></i>
              <p>Sin resultados para la búsqueda.</p>
            </div>`
-        : isOwner
+        : adminMode
           ? `<div class="empty-state flex-column">
                <i class="bi bi-egg-fried"></i>
                <p>Tu carta está vacía. Agrega tu primer plato para que la gente pueda verlo y calificarlo.</p>
@@ -1080,8 +1201,8 @@ const tplRestaurant: Restaurant = {
                <i class="bi bi-egg-fried"></i>
                <p>Este restaurante aún no tiene platos en su carta.</p>
              </div>`;
-      // CTA del empty state (solo dueño): abre el editor de carta.
-      if (isOwner && official) {
+      // CTA del empty state (solo en modo admin): abre el editor de carta.
+      if (adminMode && official) {
         const addBtn = document.getElementById("empty-add-dish");
         if (addBtn)
           addBtn.onclick = () =>
@@ -1109,6 +1230,7 @@ const tplRestaurant: Restaurant = {
     renderDishes();
     updateTypeFilterUI();
     updateLensUI();
+    updateModeUI();
   }
 
   // ─── Lente Personal / Global ────────────────────────────────────────────────
@@ -1116,9 +1238,10 @@ const tplRestaurant: Restaurant = {
   function updateLensUI(): void {
     const toggle = document.getElementById("lens-toggle");
     if (!toggle) return;
-    // Solo con sesión se puede alternar; anónimo queda fijo en Global. El dueño no
-    // califica (gestiona), así que el lente Personal no aplica → se oculta.
-    toggle.hidden = !userId || isOwner;
+    // Solo con sesión se puede alternar; anónimo queda fijo en Global. En modo
+    // admin no se califica (se gestiona), así que el lente Personal no aplica →
+    // se oculta; en vista visitante el dueño sí puede usarlo.
+    toggle.hidden = !userId || adminMode;
     toggle.querySelectorAll<HTMLButtonElement>(".lens-opt").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.lens === ratingLens);
     });
@@ -1318,11 +1441,35 @@ const tplRestaurant: Restaurant = {
     }
   }
 
-  /** Muestra la barra de gestión y conecta sus botones (solo si eres dueño). */
-  function wireOwnerBar(): void {
+  /** Muestra u oculta banner-visitante / barra-admin según capacidad y modo.
+   *  - No dueño            → ambos ocultos.
+   *  - Dueño, vista visita → banner visible (interruptor a admin), barra oculta.
+   *  - Dueño, modo admin   → barra visible, banner oculto. */
+  function updateModeUI(): void {
+    const banner = document.getElementById("visitor-banner");
     const bar = document.getElementById("owner-bar");
-    if (bar) bar.hidden = !isOwner;
+    if (banner) banner.hidden = !isOwner || adminMode;
+    if (bar) bar.hidden = !isOwner || !adminMode;
+  }
+
+  /** Cambia entre vista visitante y modo administrador (solo si eres dueño). */
+  function setAdminMode(on: boolean): void {
+    if (!isOwner) return;
+    adminMode = on;
+    updateModeUI();
+    renderAll();
+    // Al entrar/salir de admin, sube al inicio para reencuadrar la vista.
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  /** Conecta el interruptor de modo y los botones de gestión (solo si eres dueño). */
+  function wireOwnerBar(): void {
+    updateModeUI();
     if (!isOwner || !official) return;
+    const enterBtn = document.getElementById("enter-admin-btn");
+    const exitBtn = document.getElementById("exit-admin-btn");
+    if (enterBtn) enterBtn.onclick = () => setAdminMode(true);
+    if (exitBtn) exitBtn.onclick = () => setAdminMode(false);
     const om = () => (window as any).officialManage;
     const statsBtn = document.getElementById("owner-stats-btn");
     const editBtn = document.getElementById("owner-edit-btn");
@@ -1423,8 +1570,11 @@ const tplRestaurant: Restaurant = {
       userId && getMyOfficialAverage(official.id) !== null ? "personal" : "global";
 
     // ¿Soy dueño de este perfil? (fila en official_owners). Debe resolverse ANTES
-    // de renderAll para que las cards salgan en modo edición y no en modo calificar.
+    // de renderAll para saber si mostrar el interruptor de modo administrador.
     isOwner = authed ? await checkOfficialOwnership(official.id) : false;
+    // Cada entrada arranca en vista visitante: el dueño ve su restaurante como los
+    // demás y activa gestión manualmente. (El módulo persiste entre ViewTransitions.)
+    adminMode = false;
 
     wireControls();
     wireOwnerBar();
