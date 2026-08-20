@@ -1013,6 +1013,19 @@ const tplRestaurant: Restaurant = {
     (window as any).dishForm?.openOfficial(od, getMyOfficialRating(od.id));
   }
 
+  /** Abre el modal del plato. Con sesión → flujo de calificación normal. Anónimo
+   *  → modal en modo lectura: ve foto y detalles libremente; al intentar calificar
+   *  se pide login y, tras entrar, se reanuda la calificación de ESE plato. */
+  function openOfficialModal(od: OfficialDish): void {
+    if (userId) {
+      void continueRate(od);
+      return;
+    }
+    (window as any).dishForm?.openOfficial(od, null, {
+      onRequireAuth: () => rateFlow(od),
+    });
+  }
+
   // ─── Render (mismos componentes que /restaurante) ───────────────────────────
 
   /** Convierte lo que escribió el dueño (handle "@x", "x" o URL completa) en una
@@ -1230,13 +1243,13 @@ const tplRestaurant: Restaurant = {
       );
     badge.addEventListener("click", (e) => {
       e.stopPropagation();
-      rateFlow(od);
+      openOfficialModal(od);
     });
 
-    // Sin menú de acciones personales; tocar la card califica.
+    // Sin menú de acciones personales; tocar la card abre el detalle del plato.
     article.querySelector(".dish-actions")?.remove();
     article.classList.add("is-rateable");
-    article.addEventListener("click", () => rateFlow(od));
+    article.addEventListener("click", () => openOfficialModal(od));
 
     return article;
   }

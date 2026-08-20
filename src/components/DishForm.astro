@@ -563,12 +563,18 @@ import FormModal from "./FormModal.astro";
     const errorEl = document.getElementById("dish-form-error")!;
     const closeBtn = document.getElementById("dish-form-close")!;
     const cancelBtn = document.getElementById("dish-form-cancel")!;
+    const submitBtn = document.getElementById(
+      "dish-form-submit",
+    ) as HTMLButtonElement;
     const ratingClearBtn = document.getElementById(
       "df-rating-clear",
     ) as HTMLButtonElement;
     const drumOuterEl = document.getElementById("df-drum-outer") as HTMLElement;
     const drumEl = document.getElementById("df-rating-drum") as HTMLElement;
     const drumTrackEl = document.getElementById("df-drum-track") as HTMLElement;
+    const drumHintTextEl = drumOuterEl.querySelector(
+      ".drum-hint span",
+    ) as HTMLElement;
     const officialFieldsEl = document.getElementById(
       "df-official-fields",
     ) as HTMLElement;
@@ -591,6 +597,10 @@ import FormModal from "./FormModal.astro";
     // existe un Dish personal: la nota se guarda en official_ratings. Este id marca
     // ese modo; el submit escribe vía rateOfficialDish en vez de updateDish.
     let officialRatingDishId: string | null = null;
+    // Vista SOLO-LECTURA de un plato oficial para un visitante anónimo: ve la
+    // foto y los detalles, pero cualquier intento de calificar (tocar la rueda o
+    // enviar) dispara este callback (login). null = sesión activa, sí puede calificar.
+    let officialViewAuth: (() => void) | null = null;
 
     let isRated = false;
 
@@ -769,6 +779,9 @@ import FormModal from "./FormModal.astro";
       form.reset();
       restaurantIdInput.value = restaurantId;
       officialRatingDishId = null;
+      officialViewAuth = null;
+      submitBtn.textContent = "Guardar";
+      drumHintTextEl.textContent = "Toca para calificar";
 
       isOfficial = mode === "edit" && !!data?.officialDishId;
       // Plato oficial: nombre y tipo los administra el restaurante → se muestran
@@ -817,11 +830,18 @@ import FormModal from "./FormModal.astro";
     /** Califica un plato OFICIAL desde la carta compartida (/oficial). No hay Dish
      *  personal: solo se muestra la cabecera del plato + la rueda de calificación.
      *  El submit guarda en official_ratings vía rateOfficialDish. */
-    function openOfficial(od: OfficialDish, currentRating: number | null) {
+    function openOfficial(
+      od: OfficialDish,
+      currentRating: number | null,
+      opts?: { onRequireAuth?: () => void },
+    ) {
       errorEl.textContent = "";
       form.reset();
       isOfficial = true;
       officialRatingDishId = od.id;
+      // Anónimo: modo lectura. Ve foto/detalles; calificar dispara login.
+      officialViewAuth = opts?.onRequireAuth ?? null;
+      const viewOnly = !!officialViewAuth;
 
       // Solo cabecera + rueda: ocultar campos editables (nombre/tipo/notas).
       officialFieldsEl.hidden = false;
@@ -829,7 +849,13 @@ import FormModal from "./FormModal.astro";
       nameFieldEl.hidden = true;
       (document.getElementById("df-notes-field") as HTMLElement).hidden = true;
 
-      titleEl.textContent = "Calificar plato";
+      titleEl.textContent = viewOnly ? "Detalle del plato" : "Calificar plato";
+      submitBtn.textContent = viewOnly
+        ? "Iniciar sesión para calificar"
+        : "Guardar";
+      drumHintTextEl.textContent = viewOnly
+        ? "Inicia sesión para calificar"
+        : "Toca para calificar";
       // Foto del plato: se muestra SOLO aquí (no en la card). Sin foto o URL rota
       // → se oculta, sin dejar espacio reservado.
       if (od.imageUrl) {
@@ -865,6 +891,22 @@ import FormModal from "./FormModal.astro";
     // onClose ejecuta closeDropdown(). .onclick evita acumular listeners.
     closeBtn.onclick = close;
     cancelBtn.onclick = close;
+
+    // Visitante anónimo viendo un plato oficial: tocar la rueda pide login en vez
+    // de dejar calificar. Captura en fase de captura para adelantarse al scroll.
+    drumEl.addEventListener(
+      "pointerdown",
+      (e) => {
+        if (officialViewAuth) {
+          e.preventDefault();
+          e.stopPropagation();
+          const cb = officialViewAuth;
+          close();
+          cb();
+        }
+      },
+      true,
+    );
 
     // ─── Drum picker ──────────────────────────────────────────────────────────
 
@@ -1211,6 +1253,14 @@ import FormModal from "./FormModal.astro";
     form.onsubmit = (e) => {
       e.preventDefault();
       errorEl.textContent = "";
+
+      // ── Anónimo en modo lectura: enviar = pedir login, no guardar nada ───────
+      if (officialViewAuth) {
+        const cb = officialViewAuth;
+        close();
+        cb();
+        return;
+      }
 
       // ── Modo calificación de plato OFICIAL (carta compartida) ────────────────
       // No hay Dish personal: se guarda directo en official_ratings.
