@@ -651,15 +651,6 @@ const tplRestaurant: Restaurant = {
     }
   }
 
-  /* CTA de carta vacía (dueño): botón compacto, no full-width. */
-  #dishes-list .empty-state .boton {
-    width: auto;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 6px;
-  }
-
   @media (min-width: 768px) {
     /* En desktop: badge a la izquierda, acciones compactas a la derecha. */
     .owner-bar {
@@ -1300,7 +1291,7 @@ const tplRestaurant: Restaurant = {
           ? `<div class="empty-state flex-column">
                <i class="bi bi-egg-fried"></i>
                <p>Tu carta está vacía. Agrega tu primer plato para que la gente pueda verlo y calificarlo.</p>
-               <button id="empty-add-dish" class="boton" type="button">
+               <button id="empty-add-dish" class="boton create-from-search" type="button">
                  <i class="bi bi-plus-lg"></i> Agregar primer plato
                </button>
              </div>`

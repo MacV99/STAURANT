@@ -140,30 +140,6 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
       </div>
     </div>
 
-    <!-- Modal: crear mi restaurante oficial (solicitud aprobada) -->
-    <div class="overlay" id="create-overlay" role="dialog" aria-modal="true" aria-labelledby="create-title">
-      <div class="modal-card flex-column">
-        <div class="modal-header flex-row">
-          <h2 class="modal-title" id="create-title">Crear mi restaurante oficial</h2>
-          <button class="modal-close btn-icon-close boton2" id="create-close" aria-label="Cerrar">
-            <i class="bi bi-x-lg"></i>
-          </button>
-        </div>
-        <form id="create-form" class="flex-column" novalidate>
-          <label for="create-name" class="flex-column">
-            <span class="field-label">Nombre</span>
-            <input type="text" id="create-name" placeholder="Nombre del restaurante" autocomplete="off" />
-          </label>
-          <label for="create-city" class="flex-column">
-            <span class="field-label">Ciudad</span>
-            <input type="text" id="create-city" placeholder="Ej: Santa Cruz" autocomplete="off" />
-          </label>
-          <p id="create-msg" class="profile-msg" aria-live="polite"></p>
-          <button type="submit" class="btn-primary">Crear restaurante</button>
-        </form>
-      </div>
-    </div>
-
     <!-- Modal: bandeja de solicitudes pendientes (superadmin) -->
     <div class="overlay" id="inbox-overlay" role="dialog" aria-modal="true" aria-labelledby="inbox-title">
       <div class="modal-card flex-column">
@@ -204,10 +180,6 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
           <label for="assign-name" class="flex-column">
             <span class="field-label">Nombre del restaurante</span>
             <input type="text" id="assign-name" placeholder="Nombre del restaurante" autocomplete="off" />
-          </label>
-          <label for="assign-city" class="flex-column">
-            <span class="field-label">Ciudad</span>
-            <input type="text" id="assign-city" placeholder="Ej: Santa Cruz" autocomplete="off" />
           </label>
           <p id="assign-msg" class="profile-msg" aria-live="polite"></p>
           <button type="submit" class="btn-primary">Crear y asignar</button>
@@ -630,7 +602,6 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     gap: 14px;
     padding: 16px 20px;
     text-decoration: none;
-    border-color: var(--clr-primary);
     cursor: pointer;
     transition: var(--transition);
   }
@@ -1092,7 +1063,6 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     requestOfficial,
     getPendingOfficialRequests,
     resolveOfficialRequest,
-    createOfficialFromRequest,
     adminCreateOfficialFor,
   } from "../lib/data.ts";
   import { searchUsers } from "../lib/social.ts";
@@ -1325,7 +1295,6 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
 
     // ── Solicitud de restaurante oficial + bandeja del superadmin ──────────────
     const reqOverlay = createOverlay("request-overlay")!;
-    const createOverlayApi = createOverlay("create-overlay")!;
     const inboxOverlay = createOverlay("inbox-overlay")!;
 
     /** Pinta la card "solicitar oficial" según el estado del usuario. */
@@ -1347,23 +1316,8 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
         card.hidden = false;
         return;
       }
-      if (req?.status === "approved" && !req.officialRestaurantId) {
-        card.innerHTML = `
-          <div class="req-head flex-column">
-            <span class="req-status approved flex-row"><i class="bi bi-check-circle-fill"></i> <span>¡Solicitud aprobada!</span></span>
-            <p class="req-desc">Ya puedes crear tu restaurante oficial.</p>
-          </div>
-          <button type="button" id="btn-create-official" class="btn-primary">Crear mi restaurante</button>`;
-        card.hidden = false;
-        document.getElementById("btn-create-official")!.onclick = () => {
-          (document.getElementById("create-name") as HTMLInputElement).value = req.proposedName;
-          (document.getElementById("create-city") as HTMLInputElement).value = "";
-          (document.getElementById("create-msg")!).textContent = "";
-          (document.getElementById("create-form") as HTMLFormElement).dataset.requestId = req.id;
-          createOverlayApi.open();
-        };
-        return;
-      }
+      // Aprobada → el restaurante ya se creó al aprobar; lo muestra la card
+      // "Mi restaurante" (owned>0), así que esta card queda oculta.
       // Sin solicitud, o rechazada → puede (re)solicitar.
       card.innerHTML = `
         <div class="req-head flex-column">
@@ -1399,30 +1353,6 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
         void renderRequestCard();
       } else {
         (window as any).noticeDialog?.show("No se pudo enviar la solicitud. Intenta de nuevo.");
-      }
-    };
-
-    // Modal crear oficial → crear
-    document.getElementById("create-close")!.onclick = createOverlayApi.close;
-    const createForm = document.getElementById("create-form") as HTMLFormElement;
-    createForm.onsubmit = async (e) => {
-      e.preventDefault();
-      const msgEl = document.getElementById("create-msg")!;
-      msgEl.classList.remove("error");
-      const name = (document.getElementById("create-name") as HTMLInputElement).value.trim();
-      const city = (document.getElementById("create-city") as HTMLInputElement).value.trim();
-      const requestId = createForm.dataset.requestId;
-      if (name.length < 2 || city.length < 2) { msgEl.textContent = "Completa nombre y ciudad."; msgEl.classList.add("error"); return; }
-      if (!requestId) return;
-      const btn = createForm.querySelector<HTMLButtonElement>("button[type='submit']")!;
-      btn.disabled = true; btn.textContent = "Creando…";
-      const newId = await createOfficialFromRequest(requestId, name, city);
-      btn.disabled = false; btn.textContent = "Crear restaurante";
-      createOverlayApi.close();
-      if (newId) {
-        navigate(`/oficial?id=${encodeURIComponent(newId)}`);
-      } else {
-        (window as any).noticeDialog?.show("No se pudo crear el restaurante. Intenta de nuevo.");
       }
     };
 
@@ -1469,7 +1399,8 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
 
     assignSearch.oninput = () => {
       window.clearTimeout(assignSearchTimer);
-      const q = assignSearch.value.trim();
+      // Permitir escribir con "@" al frente: los usernames se guardan sin él.
+      const q = assignSearch.value.trim().replace(/^@+/, "");
       if (q.length < 2) { assignResults.hidden = true; return; }
       assignSearchTimer = window.setTimeout(async () => {
         const users = await searchUsers(q);
@@ -1504,12 +1435,11 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
       const msgEl = document.getElementById("assign-msg")!;
       msgEl.classList.remove("error");
       const name = (document.getElementById("assign-name") as HTMLInputElement).value.trim();
-      const city = (document.getElementById("assign-city") as HTMLInputElement).value.trim();
       if (!assignUserId) { msgEl.textContent = "Selecciona un usuario."; msgEl.classList.add("error"); return; }
-      if (name.length < 2 || city.length < 2) { msgEl.textContent = "Completa nombre y ciudad."; msgEl.classList.add("error"); return; }
+      if (name.length < 2) { msgEl.textContent = "Escribe el nombre del restaurante."; msgEl.classList.add("error"); return; }
       const btn = assignForm.querySelector<HTMLButtonElement>("button[type='submit']")!;
       btn.disabled = true; btn.textContent = "Creando…";
-      const newId = await adminCreateOfficialFor(assignUserId, name, city);
+      const newId = await adminCreateOfficialFor(assignUserId, name);
       btn.disabled = false; btn.textContent = "Crear y asignar";
       assignOverlay.close();
       if (newId) {

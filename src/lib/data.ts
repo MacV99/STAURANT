@@ -940,24 +940,12 @@ export async function resolveOfficialRequest(id: string, approve: boolean): Prom
 /** El superadmin crea un oficial y lo asigna a un usuario, sin solicitud previa.
  *  Devuelve el id del nuevo oficial o null si falla. */
 export async function adminCreateOfficialFor(
-  userId: string, name: string, city: string,
+  userId: string, name: string,
 ): Promise<string | null> {
   const { data, error } = await supabase.rpc("admin_create_official_for", {
-    p_user_id: userId, p_name: name, p_city: city,
+    p_user_id: userId, p_name: name,
   });
   if (error || !data) { console.error("[adminCreateOfficialFor]", error); return null; }
-  return data as string;
-}
-
-/** El solicitante aprobado crea su perfil oficial (RPC atómico: perfil + owner +
- *  cierre del ticket). Devuelve el id del nuevo oficial o null si falla. */
-export async function createOfficialFromRequest(
-  requestId: string, name: string, city: string,
-): Promise<string | null> {
-  const { data, error } = await supabase.rpc("create_official_from_request", {
-    p_request_id: requestId, p_name: name, p_city: city,
-  });
-  if (error || !data) { console.error("[createOfficialFromRequest]", error); return null; }
   return data as string;
 }
 
@@ -1045,6 +1033,36 @@ export async function updateOfficialDish(
 export async function deleteOfficialDish(id: string): Promise<boolean> {
   const { error } = await supabase.from("official_dishes").delete().eq("id", id);
   if (error) { console.error("[deleteOfficialDish]", error); return false; }
+  return true;
+}
+
+/** Elimina un perfil oficial completo (solo dueño o superadmin; RLS lo verifica).
+ *  Las FK en cascada borran platos, calificaciones, dueños y overlay per-user; pero
+ *  las fotos viven en Storage, no en la DB, así que se limpian aparte para no dejar
+ *  archivos huérfanos. Se recogen ANTES del delete (después ya no hay filas). */
+export async function deleteOfficial(id: string): Promise<boolean> {
+  const { data: dishes } = await supabase
+    .from("official_dishes")
+    .select("image_url")
+    .eq("official_restaurant_id", id);
+
+  const marker = `/${OFFICIAL_DISH_BUCKET}/`;
+  const paths = (dishes ?? [])
+    .map((d) => (d as { image_url: string | null }).image_url)
+    .filter((u): u is string => !!u)
+    .map((u) => {
+      const i = u.indexOf(marker);
+      return i === -1 ? null : u.slice(i + marker.length);
+    })
+    .filter((p): p is string => !!p);
+
+  const { error } = await supabase.from("official_restaurants").delete().eq("id", id);
+  if (error) { console.error("[deleteOfficial]", error); return false; }
+
+  // Delete OK → limpiar Storage en segundo plano (best-effort; no bloquea la UI).
+  if (paths.length > 0) {
+    bgSync(() => supabase.storage.from(OFFICIAL_DISH_BUCKET).remove(paths));
+  }
   return true;
 }
 

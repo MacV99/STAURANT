@@ -61,7 +61,7 @@ borde no cambia (ver regla de hover en §9).
 | Neutro | `--clr-white2` · `--clr-primary` · `--clr-border` | `--clr-border` | `.boton`, ✕ (`.btn-icon-close`), `.boton2` (transparente) |
 | Marca (zona) | `primary 6%` · `--clr-primary` · `primary 22%` | — | barra de gestión del dueño (`.owner-bar`) |
 | Danger suave | `--clr-danger-bg` · `--clr-danger` · `--clr-danger-border-soft` | solo fondo → `--clr-danger-bg-strong` (borde no cambia) | Quitar (`.is-remove`), borrar plato (`.owner-dish-btn.is-delete`), logout (`.btn-danger-outline`) |
-| Danger énfasis | `--clr-danger-bg` · `--clr-danger` · `--clr-danger-border` (pleno) | fondo `--clr-danger-border` | confirmación final destructiva (`.btn-danger` en `ConfirmDialog`) |
+| Danger énfasis | `--clr-danger-bg` · `--clr-danger` · `--clr-danger-border-soft` | fondo `--clr-danger-border` | confirmación final destructiva (`.btn-danger` en `ConfirmDialog`); borde suave, se equilibra con el botón Cancelar (gris `--clr-border`); el énfasis lo da el fondo en hover |
 
 > Dos niveles de danger a propósito: **suave** = destructivo *inline* dentro de una tarea de
 > edición (reversible en contexto); **énfasis** = el "Eliminar" final de un `ConfirmDialog`
@@ -98,7 +98,7 @@ Concepto ↔ clase real ↔ tokens. Mantener sincronizado con el código.
 | ---------- | ----- | ------------ | ----- |
 | Botón sólido | `button`, `.boton` | `--clr-white2`, `--clr-primary`, `--clr-border` | UPPERCASE, radius pill, hover `--clr-border` |
 | Botón fantasma | `.boton2` | `--clr-text`, `--clr-border` | fondo transparente |
-| Botón peligro (énfasis) | `.btn-danger` | `--clr-danger`, `--clr-danger-bg`, `--clr-danger-border` | confirmación final destructiva (ConfirmDialog) |
+| Botón peligro (énfasis) | `.btn-danger` | `--clr-danger`, `--clr-danger-bg`, `--clr-danger-border-soft` | confirmación final destructiva (ConfirmDialog); borde suave para equilibrar con Cancelar, el énfasis lo da el fondo en hover (`--clr-danger-border`) |
 | Botón peligro (suave) | `.is-remove`, `.owner-dish-btn.is-delete`, `.btn-danger-outline`, `.ur-btn-danger` | `--clr-danger-bg`, `--clr-danger`, `--clr-danger-border-soft` | destructivo inline; hover `--clr-danger-bg-strong`. Ver §3 "Superficies de acción" |
 | Card restaurante | `.restaurant-card` | `--clr-white`, `--clr-border`, `--official-tint` | `.is-official` → tinte dorado |
 | Badge rating | `.rating-badge` + `.badge-{empty,low,mid,high}` | `--clr-{danger,warning,success}-*` | color = tramo de nota (≤4 / 5–7 / 8+) |

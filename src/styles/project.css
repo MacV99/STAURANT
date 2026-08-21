@@ -595,7 +595,7 @@
 .btn-danger {
   background: var(--clr-danger-bg);
   color: var(--clr-danger);
-  border-color: var(--clr-danger-border);
+  border-color: var(--clr-danger-border-soft);
 }
 
 /* === DISH MENU POPUP === */

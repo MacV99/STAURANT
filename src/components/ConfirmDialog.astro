@@ -14,6 +14,13 @@
 <style>
   /* Estructura y espaciado viven en project.css (.dialog-box …), compartidos
      con NoticeDialog. Aquí solo el matiz propio: el botón de confirmar. */
+
+  /* El confirm es la última palabra: debe quedar SIEMPRE por encima de cualquier
+     otro modal abierto (p. ej. "Editar restaurante"), que comparten z-index 200. */
+  #confirm-overlay {
+    z-index: 400;
+  }
+
   #confirm-cancel {
     background: var(--clr-white2);
     border-color: var(--clr-border);

@@ -252,6 +252,15 @@ import FormModal from "./FormModal.astro";
       <textarea id="opf-notes" rows="2" placeholder="Sobre el restaurante..."></textarea>
     </label>
   </div>
+
+  {/* Zona de peligro: eliminar el perfil oficial (dueño o superadmin). */}
+  <div class="opf-danger flex-column">
+    <span class="opf-danger-title flex-row"><i class="bi bi-exclamation-triangle"></i> Zona de peligro</span>
+    <p class="opf-danger-desc">Eliminar el restaurante borra su carta, calificaciones y dueños. No se puede deshacer.</p>
+    <button type="button" id="opf-delete" class="opf-delete-btn flex-row">
+      <i class="bi bi-trash3"></i> Eliminar restaurante
+    </button>
+  </div>
 </FormModal>
 
 <style>
@@ -263,6 +272,57 @@ import FormModal from "./FormModal.astro";
   #opf-address,
   #opf-notes {
     font-size: 0.9rem;
+  }
+
+  /* ── Zona de peligro (eliminar restaurante) ── */
+  .opf-danger {
+    margin-top: 20px;
+    padding: 16px;
+    gap: 8px;
+    align-items: stretch;
+    background: var(--clr-danger-bg);
+    border: 1px solid var(--clr-danger-border-soft);
+    border-radius: var(--radius-md);
+  }
+
+  .opf-danger-title {
+    justify-content: flex-start;
+    gap: 6px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--clr-danger);
+  }
+
+  .opf-danger-desc {
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: var(--clr-text);
+    opacity: 0.7;
+  }
+
+  .opf-delete-btn {
+    justify-content: center;
+    gap: 8px;
+    margin-top: 4px;
+    padding: 10px 16px;
+    background: transparent;
+    border: 1.5px solid var(--clr-danger-border-soft);
+    color: var(--clr-danger);
+    border-radius: var(--radius-md);
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  @media (hover: hover) {
+    .opf-delete-btn:hover {
+      background: var(--clr-danger-bg-strong);
+      border-color: var(--clr-danger);
+    }
   }
 
   /* ── Combobox creable (tipo / ciudad) — mismo look que DishForm/RestaurantForm ── */
@@ -752,10 +812,12 @@ import FormModal from "./FormModal.astro";
 
 <script>
   import type { OfficialDish, OfficialRestaurant } from "../lib/data.ts";
+  import { navigate } from "astro:transitions/client";
   import {
     createOfficialDish,
     updateOfficialDish,
     updateOfficialRestaurant,
+    deleteOfficial,
     uploadOfficialDishImage,
     deleteOfficialDishImage,
     getOfficialCities,
@@ -1013,6 +1075,25 @@ import FormModal from "./FormModal.astro";
 
     document.getElementById("opf-close")!.onclick = profApi.close;
     document.getElementById("opf-cancel")!.onclick = profApi.close;
+
+    // Eliminar restaurante (dueño o superadmin; RLS lo verifica). Doble paso:
+    // confirmación explícita antes de un borrado irreversible con cascada.
+    document.getElementById("opf-delete")!.onclick = () => {
+      const id = pIdEl.value;
+      const name = pNameEl.value.trim() || "este restaurante";
+      (window as any).confirmDialog?.show(
+        `¿Eliminar «${name}»? Se borrará su carta, calificaciones y dueños. No se puede deshacer.`,
+        async () => {
+          const ok = await deleteOfficial(id);
+          if (ok) {
+            profApi.close();
+            navigate("/");
+          } else {
+            (window as any).noticeDialog?.show("No se pudo eliminar el restaurante.");
+          }
+        },
+      );
+    };
 
     function openProfileEdit(official: OfficialRestaurant) {
       profForm.reset();
