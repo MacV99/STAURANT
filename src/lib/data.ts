@@ -309,6 +309,7 @@ export function clearCache(): void {
   localStorage.removeItem(CACHE_KEY);
   _userId = null;
   _mem = null;
+  _isSuperAdmin = null;
 }
 
 /** true si initCache() ya fue llamado en esta sesión de módulo.
@@ -809,11 +810,13 @@ export interface OfficialOwnerStats {
 }
 
 /** ¿El usuario actual es dueño de este perfil oficial? RLS permite leer solo las
- *  filas propias de official_owners, así que un select basta para saberlo. */
+ *  filas propias de official_owners, así que un select basta para saberlo.
+ *  El superadmin es dueño de todos (gestiona cualquier oficial para dar soporte). */
 export async function checkOfficialOwnership(
   officialRestaurantId: string,
 ): Promise<boolean> {
   if (!_userId) return false;
+  if (await isSuperAdmin()) return true;
   const { data, error } = await supabase
     .from("official_owners")
     .select("official_restaurant_id")
@@ -840,6 +843,122 @@ export async function getMyOwnedOfficials(): Promise<OfficialRestaurant[]> {
     const arr = Array.isArray(embed) ? embed : embed ? [embed] : [];
     return (arr as Record<string, unknown>[]).map(toOfficialRestaurant);
   });
+}
+
+// ─── Superadmin y solicitudes de restaurante oficial ────────────────────────
+// El superadmin (fila en super_admins) es owner de TODOS los oficiales vía RLS
+// (is_official_owner OR is_super_admin) y gestiona la bandeja de solicitudes.
+
+let _isSuperAdmin: boolean | null = null;
+
+/** ¿El usuario actual es superadmin? RLS deja leer solo la fila propia de
+ *  super_admins, así que un select basta. Cacheado por sesión. */
+export async function isSuperAdmin(): Promise<boolean> {
+  if (!_userId) return false;
+  if (_isSuperAdmin !== null) return _isSuperAdmin;
+  const { data, error } = await supabase
+    .from("super_admins")
+    .select("user_id")
+    .eq("user_id", _userId)
+    .maybeSingle();
+  if (error) { console.error("[isSuperAdmin]", error); return false; }
+  _isSuperAdmin = !!data;
+  return _isSuperAdmin;
+}
+
+/** Estado de la solicitud de oficial del usuario actual (la más reciente).
+ *  null = nunca solicitó. Sirve para decidir qué mostrar en /perfil. */
+export interface OfficialRequest {
+  id: string;
+  status: "pending" | "approved" | "rejected";
+  proposedName: string;
+  officialRestaurantId: string | null;
+}
+
+export async function getMyOfficialRequest(): Promise<OfficialRequest | null> {
+  if (!_userId) return null;
+  const { data, error } = await supabase
+    .from("official_requests")
+    .select("id, status, proposed_name, official_restaurant_id")
+    .eq("user_id", _userId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) { console.error("[getMyOfficialRequest]", error); return null; }
+  if (!data) return null;
+  return {
+    id: data.id as string,
+    status: data.status as OfficialRequest["status"],
+    proposedName: data.proposed_name as string,
+    officialRestaurantId: (data.official_restaurant_id as string | null) ?? null,
+  };
+}
+
+/** El usuario solicita permiso para crear un restaurante oficial. El índice
+ *  parcial en Postgres impide más de una solicitud pendiente por usuario. */
+export async function requestOfficial(proposedName: string): Promise<boolean> {
+  if (!_userId) return false;
+  const { error } = await supabase
+    .from("official_requests")
+    .insert({ user_id: _userId, proposed_name: proposedName });
+  if (error) { console.error("[requestOfficial]", error); return false; }
+  return true;
+}
+
+/** Solicitud pendiente en la bandeja del superadmin (RPC con datos del solicitante). */
+export interface PendingRequest {
+  id: string;
+  userId: string;
+  proposedName: string;
+  createdAt: string;
+  requesterName: string | null;
+  requesterUsername: string | null;
+}
+
+export async function getPendingOfficialRequests(): Promise<PendingRequest[]> {
+  const { data, error } = await supabase.rpc("get_pending_official_requests");
+  if (error || !data) { console.error("[getPendingOfficialRequests]", error); return []; }
+  return (data as Record<string, unknown>[]).map((r) => ({
+    id: r.id as string,
+    userId: r.user_id as string,
+    proposedName: r.proposed_name as string,
+    createdAt: r.created_at as string,
+    requesterName: (r.requester_name as string | null) ?? null,
+    requesterUsername: (r.requester_username as string | null) ?? null,
+  }));
+}
+
+/** Superadmin acepta (true) o rechaza (false) una solicitud pendiente. */
+export async function resolveOfficialRequest(id: string, approve: boolean): Promise<boolean> {
+  const { error } = await supabase.rpc("resolve_official_request", {
+    p_id: id, p_approve: approve,
+  });
+  if (error) { console.error("[resolveOfficialRequest]", error); return false; }
+  return true;
+}
+
+/** El superadmin crea un oficial y lo asigna a un usuario, sin solicitud previa.
+ *  Devuelve el id del nuevo oficial o null si falla. */
+export async function adminCreateOfficialFor(
+  userId: string, name: string, city: string,
+): Promise<string | null> {
+  const { data, error } = await supabase.rpc("admin_create_official_for", {
+    p_user_id: userId, p_name: name, p_city: city,
+  });
+  if (error || !data) { console.error("[adminCreateOfficialFor]", error); return null; }
+  return data as string;
+}
+
+/** El solicitante aprobado crea su perfil oficial (RPC atómico: perfil + owner +
+ *  cierre del ticket). Devuelve el id del nuevo oficial o null si falla. */
+export async function createOfficialFromRequest(
+  requestId: string, name: string, city: string,
+): Promise<string | null> {
+  const { data, error } = await supabase.rpc("create_official_from_request", {
+    p_request_id: requestId, p_name: name, p_city: city,
+  });
+  if (error || !data) { console.error("[createOfficialFromRequest]", error); return null; }
+  return data as string;
 }
 
 /** Estadísticas agregadas del perfil (solo dueño). El RPC valida propiedad y nunca

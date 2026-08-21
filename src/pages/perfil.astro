@@ -1,5 +1,7 @@
 ---
 import Layout1 from "../layouts/Layout1.astro";
+import NoticeDialog from "../components/NoticeDialog.astro";
+import ConfirmDialog from "../components/ConfirmDialog.astro";
 ---
 
 <Layout1 title="Perfil · STAURANT">
@@ -117,6 +119,102 @@ import Layout1 from "../layouts/Layout1.astro";
       </div>
     </div>
 
+    <!-- Modal: solicitar restaurante oficial -->
+    <div class="overlay" id="request-overlay" role="dialog" aria-modal="true" aria-labelledby="req-title">
+      <div class="modal-card flex-column">
+        <div class="modal-header flex-row">
+          <h2 class="modal-title" id="req-title">Solicitar restaurante oficial</h2>
+          <button class="modal-close btn-icon-close boton2" id="req-close" aria-label="Cerrar">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+        <form id="request-form" class="flex-column" novalidate>
+          <label for="req-name" class="flex-column">
+            <span class="field-label">Nombre del restaurante</span>
+            <input type="text" id="req-name" placeholder="Ej: Pizza Napoli" autocomplete="off" />
+            <span class="field-hint">Enviaremos tu solicitud al equipo. Te avisaremos cuando la aprueben.</span>
+          </label>
+          <p id="req-msg" class="profile-msg" aria-live="polite"></p>
+          <button type="submit" class="btn-primary">Enviar solicitud</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal: crear mi restaurante oficial (solicitud aprobada) -->
+    <div class="overlay" id="create-overlay" role="dialog" aria-modal="true" aria-labelledby="create-title">
+      <div class="modal-card flex-column">
+        <div class="modal-header flex-row">
+          <h2 class="modal-title" id="create-title">Crear mi restaurante oficial</h2>
+          <button class="modal-close btn-icon-close boton2" id="create-close" aria-label="Cerrar">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+        <form id="create-form" class="flex-column" novalidate>
+          <label for="create-name" class="flex-column">
+            <span class="field-label">Nombre</span>
+            <input type="text" id="create-name" placeholder="Nombre del restaurante" autocomplete="off" />
+          </label>
+          <label for="create-city" class="flex-column">
+            <span class="field-label">Ciudad</span>
+            <input type="text" id="create-city" placeholder="Ej: Santa Cruz" autocomplete="off" />
+          </label>
+          <p id="create-msg" class="profile-msg" aria-live="polite"></p>
+          <button type="submit" class="btn-primary">Crear restaurante</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal: bandeja de solicitudes pendientes (superadmin) -->
+    <div class="overlay" id="inbox-overlay" role="dialog" aria-modal="true" aria-labelledby="inbox-title">
+      <div class="modal-card flex-column">
+        <div class="modal-header flex-row">
+          <h2 class="modal-title" id="inbox-title">Solicitudes pendientes</h2>
+          <button class="modal-close btn-icon-close boton2" id="inbox-close" aria-label="Cerrar">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+        <div id="inbox-list" class="inbox-list flex-column">
+          <p class="top3-empty">Cargando…</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: crear oficial para un usuario (superadmin) -->
+    <div class="overlay" id="assign-overlay" role="dialog" aria-modal="true" aria-labelledby="assign-title">
+      <div class="modal-card flex-column">
+        <div class="modal-header flex-row">
+          <h2 class="modal-title" id="assign-title">Crear oficial para un usuario</h2>
+          <button class="modal-close btn-icon-close boton2" id="assign-close" aria-label="Cerrar">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+        <form id="assign-form" class="flex-column" novalidate>
+          <label for="assign-search" class="flex-column">
+            <span class="field-label">Usuario</span>
+            <input type="text" id="assign-search" placeholder="Buscar por @usuario o nombre" autocomplete="off" />
+          </label>
+          <div id="assign-results" class="inbox-list" hidden></div>
+          <div id="assign-selected" class="assign-chip flex-row" hidden>
+            <i class="bi bi-person-check-fill"></i>
+            <span id="assign-selected-label"></span>
+            <button type="button" id="assign-clear" class="assign-clear" aria-label="Cambiar">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+          <label for="assign-name" class="flex-column">
+            <span class="field-label">Nombre del restaurante</span>
+            <input type="text" id="assign-name" placeholder="Nombre del restaurante" autocomplete="off" />
+          </label>
+          <label for="assign-city" class="flex-column">
+            <span class="field-label">Ciudad</span>
+            <input type="text" id="assign-city" placeholder="Ej: Santa Cruz" autocomplete="off" />
+          </label>
+          <p id="assign-msg" class="profile-msg" aria-live="polite"></p>
+          <button type="submit" class="btn-primary">Crear y asignar</button>
+        </form>
+      </div>
+    </div>
+
     <!-- Mi restaurante: acceso a gestión (solo si el usuario es dueño de un oficial) -->
     <a id="my-restaurant-card" class="dash-card mgmt-card flex-row" href="#" hidden>
       <div class="mgmt-icon flex-row"><i class="bi bi-shop"></i></div>
@@ -126,6 +224,30 @@ import Layout1 from "../layouts/Layout1.astro";
       </div>
       <i class="bi bi-chevron-right install-card-arrow"></i>
     </a>
+
+    <!-- Solicitar restaurante oficial (usuario normal). Contenido dinámico según
+         el estado de su solicitud: solicitar / en revisión / aprobada→crear. -->
+    <div id="request-official-card" class="dash-card req-card flex-column" hidden></div>
+
+    <!-- Bandeja del superadmin: solicitudes pendientes (solo visible para admin) -->
+    <button id="admin-inbox-card" class="dash-card mgmt-card flex-row" type="button" hidden>
+      <div class="mgmt-icon flex-row"><i class="bi bi-inbox-fill"></i></div>
+      <div class="mgmt-text flex-column">
+        <span class="mgmt-heading">Solicitudes</span>
+        <span class="mgmt-sub" id="admin-inbox-sub">—</span>
+      </div>
+      <i class="bi bi-chevron-right install-card-arrow"></i>
+    </button>
+
+    <!-- Crear oficial para un usuario (solo superadmin) -->
+    <button id="admin-assign-card" class="dash-card mgmt-card flex-row" type="button" hidden>
+      <div class="mgmt-icon flex-row"><i class="bi bi-shop-window"></i></div>
+      <div class="mgmt-text flex-column">
+        <span class="mgmt-heading">Crear oficial</span>
+        <span class="mgmt-sub">Asignar a un usuario</span>
+      </div>
+      <i class="bi bi-chevron-right install-card-arrow"></i>
+    </button>
 
     <!-- Instalar app -->
     <div class="dash-card install-card-btn flex-row" id="install-profile-card" role="button" tabindex="0" aria-label="Instalar STAURANT">
@@ -191,6 +313,9 @@ import Layout1 from "../layouts/Layout1.astro";
       </div>
     </div>
   </div>
+
+  <NoticeDialog />
+  <ConfirmDialog />
 </Layout1>
 
 <style>
@@ -551,6 +676,76 @@ import Layout1 from "../layouts/Layout1.astro";
     max-width: 100%;
   }
 
+  /* ── Solicitar oficial ── */
+
+  .req-card { gap: 14px; }
+  .req-card[hidden] { display: none; }
+
+  .req-head {
+    gap: 4px;
+    align-items: flex-start;
+  }
+
+  .req-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--clr-text);
+  }
+
+  .req-desc {
+    font-size: 0.82rem;
+    color: var(--clr-text);
+    opacity: 0.55;
+    line-height: 1.45;
+  }
+
+  .req-status {
+    gap: 8px;
+    align-items: center;
+    justify-content: flex-start;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .req-status.pending { color: var(--clr-warning); }
+  .req-status.approved { color: var(--clr-success); }
+
+  /* ── Bandeja de solicitudes (superadmin) ── */
+
+  .inbox-list {
+    align-items: stretch;
+    gap: 10px;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  .admin-inbox-card[hidden] { display: none; }
+
+  .assign-chip {
+    gap: 8px;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 10px 12px;
+    background: var(--clr-white2);
+    border-radius: 12px;
+    color: var(--clr-primary);
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  .assign-chip[hidden] { display: none; }
+  #assign-results[hidden] { display: none; }
+
+  .assign-clear {
+    margin-left: auto;
+    background: transparent;
+    border: none;
+    color: var(--clr-text);
+    opacity: 0.5;
+    cursor: pointer;
+    padding: 2px 4px;
+  }
+
   /* ── Install card ── */
 
   .install-card-btn {
@@ -764,6 +959,111 @@ import Layout1 from "../layouts/Layout1.astro";
     flex-shrink: 0;
   }
 
+  /* ── Items de la bandeja de solicitudes (inyectados por JS) ── */
+  .inbox-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    background: var(--clr-white2);
+    border-radius: 12px;
+  }
+
+  .inbox-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .inbox-name {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--clr-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .inbox-user {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--clr-primary);
+  }
+
+  .inbox-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .inbox-btn {
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    font-size: 1rem;
+    cursor: pointer;
+    border: solid 1.5px var(--clr-border);
+    background: var(--clr-white);
+    transition: var(--transition);
+  }
+
+  .inbox-btn.accept { color: var(--clr-success); }
+  .inbox-btn.reject { color: var(--clr-danger); }
+
+  @media (hover: hover) {
+    .inbox-btn.accept:hover {
+      background: var(--clr-success-bg, var(--clr-white2));
+      border-color: var(--clr-success);
+    }
+    .inbox-btn.reject:hover {
+      background: var(--clr-danger-bg);
+      border-color: var(--clr-danger);
+    }
+  }
+
+  .inbox-empty {
+    font-size: 0.85rem;
+    color: var(--clr-text);
+    opacity: 0.45;
+    text-align: center;
+    padding: 12px 0;
+  }
+
+  .assign-result {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 12px;
+    background: var(--clr-white2);
+    border: none;
+    border-radius: 10px;
+    text-align: left;
+    cursor: pointer;
+    width: 100%;
+  }
+
+  .assign-result .r-name {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--clr-text);
+  }
+
+  .assign-result .r-user {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--clr-primary);
+  }
+
+  @media (hover: hover) {
+    .assign-result:hover { background: var(--clr-white); }
+  }
+
   .top3-restaurant {
     font-size: 0.75rem;
     font-weight: 400;
@@ -787,7 +1087,15 @@ import Layout1 from "../layouts/Layout1.astro";
     getDishes,
     getMyOwnedOfficials,
     escapeHtml,
+    isSuperAdmin,
+    getMyOfficialRequest,
+    requestOfficial,
+    getPendingOfficialRequests,
+    resolveOfficialRequest,
+    createOfficialFromRequest,
+    adminCreateOfficialFor,
   } from "../lib/data.ts";
+  import { searchUsers } from "../lib/social.ts";
 
   const PROFILE_CACHE_KEY = "staurant_profile_v1";
   const DATA_CACHE_KEY = "staurant_cache_v4";
@@ -1014,6 +1322,252 @@ import Layout1 from "../layouts/Layout1.astro";
       card.href = `/oficial?id=${encodeURIComponent(mine.id)}`;
       card.hidden = false;
     });
+
+    // ── Solicitud de restaurante oficial + bandeja del superadmin ──────────────
+    const reqOverlay = createOverlay("request-overlay")!;
+    const createOverlayApi = createOverlay("create-overlay")!;
+    const inboxOverlay = createOverlay("inbox-overlay")!;
+
+    /** Pinta la card "solicitar oficial" según el estado del usuario. */
+    async function renderRequestCard(): Promise<void> {
+      const card = document.getElementById("request-official-card")!;
+      const superAdmin = await isSuperAdmin();
+      const owned = await getMyOwnedOfficials();
+      // El superadmin o quien ya es dueño no ve la card de solicitud.
+      if (superAdmin || owned.length > 0) { card.hidden = true; return; }
+
+      const req = await getMyOfficialRequest();
+      if (req?.status === "pending") {
+        card.innerHTML = `
+          <div class="req-status pending flex-row">
+            <i class="bi bi-hourglass-split"></i>
+            <span>Solicitud en revisión</span>
+          </div>
+          <p class="req-desc">Pediste «${escapeHtml(req.proposedName)}». Te avisaremos cuando la aprobemos.</p>`;
+        card.hidden = false;
+        return;
+      }
+      if (req?.status === "approved" && !req.officialRestaurantId) {
+        card.innerHTML = `
+          <div class="req-head flex-column">
+            <span class="req-status approved flex-row"><i class="bi bi-check-circle-fill"></i> <span>¡Solicitud aprobada!</span></span>
+            <p class="req-desc">Ya puedes crear tu restaurante oficial.</p>
+          </div>
+          <button type="button" id="btn-create-official" class="btn-primary">Crear mi restaurante</button>`;
+        card.hidden = false;
+        document.getElementById("btn-create-official")!.onclick = () => {
+          (document.getElementById("create-name") as HTMLInputElement).value = req.proposedName;
+          (document.getElementById("create-city") as HTMLInputElement).value = "";
+          (document.getElementById("create-msg")!).textContent = "";
+          (document.getElementById("create-form") as HTMLFormElement).dataset.requestId = req.id;
+          createOverlayApi.open();
+        };
+        return;
+      }
+      // Sin solicitud, o rechazada → puede (re)solicitar.
+      card.innerHTML = `
+        <div class="req-head flex-column">
+          <span class="req-title">¿Tienes un restaurante?</span>
+          <p class="req-desc">Solicita crear su perfil oficial en STAURANT.</p>
+        </div>
+        <button type="button" id="btn-request-official" class="btn-primary">Solicitar restaurante oficial</button>`;
+      card.hidden = false;
+      document.getElementById("btn-request-official")!.onclick = () => {
+        (document.getElementById("req-name") as HTMLInputElement).value = "";
+        (document.getElementById("req-msg")!).textContent = "";
+        reqOverlay.open();
+      };
+    }
+    void renderRequestCard();
+
+    // Modal solicitar → enviar
+    document.getElementById("req-close")!.onclick = reqOverlay.close;
+    const requestForm = document.getElementById("request-form") as HTMLFormElement;
+    requestForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const nameEl = document.getElementById("req-name") as HTMLInputElement;
+      const msgEl = document.getElementById("req-msg")!;
+      const name = nameEl.value.trim();
+      if (name.length < 2) { msgEl.textContent = "Escribe el nombre del restaurante."; msgEl.classList.add("error"); return; }
+      const btn = requestForm.querySelector<HTMLButtonElement>("button[type='submit']")!;
+      btn.disabled = true; btn.textContent = "Enviando…";
+      const ok = await requestOfficial(name);
+      btn.disabled = false; btn.textContent = "Enviar solicitud";
+      reqOverlay.close();
+      if (ok) {
+        (window as any).noticeDialog?.show("¡Solicitud enviada! Te avisaremos cuando la aprobemos.");
+        void renderRequestCard();
+      } else {
+        (window as any).noticeDialog?.show("No se pudo enviar la solicitud. Intenta de nuevo.");
+      }
+    };
+
+    // Modal crear oficial → crear
+    document.getElementById("create-close")!.onclick = createOverlayApi.close;
+    const createForm = document.getElementById("create-form") as HTMLFormElement;
+    createForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const msgEl = document.getElementById("create-msg")!;
+      msgEl.classList.remove("error");
+      const name = (document.getElementById("create-name") as HTMLInputElement).value.trim();
+      const city = (document.getElementById("create-city") as HTMLInputElement).value.trim();
+      const requestId = createForm.dataset.requestId;
+      if (name.length < 2 || city.length < 2) { msgEl.textContent = "Completa nombre y ciudad."; msgEl.classList.add("error"); return; }
+      if (!requestId) return;
+      const btn = createForm.querySelector<HTMLButtonElement>("button[type='submit']")!;
+      btn.disabled = true; btn.textContent = "Creando…";
+      const newId = await createOfficialFromRequest(requestId, name, city);
+      btn.disabled = false; btn.textContent = "Crear restaurante";
+      createOverlayApi.close();
+      if (newId) {
+        navigate(`/oficial?id=${encodeURIComponent(newId)}`);
+      } else {
+        (window as any).noticeDialog?.show("No se pudo crear el restaurante. Intenta de nuevo.");
+      }
+    };
+
+    // ── Bandeja del superadmin ──
+    async function renderInboxCard(): Promise<void> {
+      const card = document.getElementById("admin-inbox-card")!;
+      const assignCard = document.getElementById("admin-assign-card")!;
+      if (!(await isSuperAdmin())) { card.hidden = true; assignCard.hidden = true; return; }
+      const pending = await getPendingOfficialRequests();
+      const sub = document.getElementById("admin-inbox-sub")!;
+      sub.textContent = pending.length === 0
+        ? "Sin solicitudes pendientes"
+        : `${pending.length} pendiente${pending.length === 1 ? "" : "s"}`;
+      card.hidden = false;
+      assignCard.hidden = false;
+    }
+    void renderInboxCard();
+
+    // ── Superadmin: crear oficial para un usuario (sin solicitud) ──
+    let assignUserId: string | null = null;
+    let assignSearchTimer: number | undefined;
+    const assignOverlay = createOverlay("assign-overlay", {
+      onClose: () => {
+        assignUserId = null;
+        (document.getElementById("assign-form") as HTMLFormElement).reset();
+        document.getElementById("assign-results")!.hidden = true;
+        document.getElementById("assign-selected")!.hidden = true;
+        document.getElementById("assign-msg")!.textContent = "";
+      },
+    })!;
+
+    const assignSearch = document.getElementById("assign-search") as HTMLInputElement;
+    const assignResults = document.getElementById("assign-results")!;
+    const assignSelected = document.getElementById("assign-selected")!;
+    const assignSelectedLabel = document.getElementById("assign-selected-label")!;
+
+    const pickUser = (id: string, label: string) => {
+      assignUserId = id;
+      assignSelectedLabel.textContent = label;
+      assignSelected.hidden = false;
+      assignResults.hidden = true;
+      assignSearch.value = "";
+    };
+
+    assignSearch.oninput = () => {
+      window.clearTimeout(assignSearchTimer);
+      const q = assignSearch.value.trim();
+      if (q.length < 2) { assignResults.hidden = true; return; }
+      assignSearchTimer = window.setTimeout(async () => {
+        const users = await searchUsers(q);
+        if (users.length === 0) {
+          assignResults.innerHTML = '<p class="inbox-empty">Sin resultados.</p>';
+        } else {
+          assignResults.innerHTML = users.map((u) => {
+            const label = u.username ? `@${escapeHtml(u.username)}` : escapeHtml(u.name || "Usuario");
+            return `<button type="button" class="assign-result" data-id="${u.id}" data-label="${label}">
+              <span class="r-name">${escapeHtml(u.name || "—")}</span>
+              ${u.username ? `<span class="r-user">@${escapeHtml(u.username)}</span>` : ""}
+            </button>`;
+          }).join("");
+          assignResults.querySelectorAll<HTMLButtonElement>(".assign-result").forEach((b) => {
+            b.onclick = () => pickUser(b.dataset.id!, b.dataset.label!);
+          });
+        }
+        assignResults.hidden = false;
+      }, 250);
+    };
+
+    document.getElementById("assign-clear")!.onclick = () => {
+      assignUserId = null;
+      assignSelected.hidden = true;
+    };
+    document.getElementById("assign-close")!.onclick = assignOverlay.close;
+    document.getElementById("admin-assign-card")!.onclick = () => assignOverlay.open();
+
+    const assignForm = document.getElementById("assign-form") as HTMLFormElement;
+    assignForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const msgEl = document.getElementById("assign-msg")!;
+      msgEl.classList.remove("error");
+      const name = (document.getElementById("assign-name") as HTMLInputElement).value.trim();
+      const city = (document.getElementById("assign-city") as HTMLInputElement).value.trim();
+      if (!assignUserId) { msgEl.textContent = "Selecciona un usuario."; msgEl.classList.add("error"); return; }
+      if (name.length < 2 || city.length < 2) { msgEl.textContent = "Completa nombre y ciudad."; msgEl.classList.add("error"); return; }
+      const btn = assignForm.querySelector<HTMLButtonElement>("button[type='submit']")!;
+      btn.disabled = true; btn.textContent = "Creando…";
+      const newId = await adminCreateOfficialFor(assignUserId, name, city);
+      btn.disabled = false; btn.textContent = "Crear y asignar";
+      assignOverlay.close();
+      if (newId) {
+        (window as any).noticeDialog?.show("Restaurante oficial creado y asignado.");
+        navigate(`/oficial?id=${encodeURIComponent(newId)}`);
+      } else {
+        (window as any).noticeDialog?.show("No se pudo crear el restaurante. Intenta de nuevo.");
+      }
+    };
+
+    async function renderInboxList(): Promise<void> {
+      const list = document.getElementById("inbox-list")!;
+      const pending = await getPendingOfficialRequests();
+      if (pending.length === 0) {
+        list.innerHTML = '<p class="inbox-empty">No hay solicitudes pendientes.</p>';
+        return;
+      }
+      list.innerHTML = pending.map((r) => {
+        const who = r.requesterUsername
+          ? `@${escapeHtml(r.requesterUsername)}`
+          : escapeHtml(r.requesterName ?? "Usuario");
+        return `<div class="inbox-item" data-id="${r.id}">
+          <div class="inbox-info">
+            <span class="inbox-name">${escapeHtml(r.proposedName)}</span>
+            <span class="inbox-user">${who}</span>
+          </div>
+          <div class="inbox-actions">
+            <button type="button" class="inbox-btn accept" data-act="accept" aria-label="Aceptar"><i class="bi bi-check-lg"></i></button>
+            <button type="button" class="inbox-btn reject" data-act="reject" aria-label="Rechazar"><i class="bi bi-x-lg"></i></button>
+          </div>
+        </div>`;
+      }).join("");
+
+      list.querySelectorAll<HTMLButtonElement>(".inbox-btn").forEach((btn) => {
+        btn.onclick = async () => {
+          const item = btn.closest(".inbox-item") as HTMLElement;
+          const id = item.dataset.id!;
+          const accept = btn.dataset.act === "accept";
+          const doResolve = async () => {
+            const ok = await resolveOfficialRequest(id, accept);
+            if (ok) { await renderInboxList(); await renderInboxCard(); }
+            else (window as any).noticeDialog?.show("No se pudo procesar la solicitud.");
+          };
+          if (accept) { void doResolve(); }
+          else {
+            const label = item.querySelector(".inbox-name")?.textContent ?? "esta solicitud";
+            (window as any).confirmDialog?.show(`¿Rechazar «${label}»?`, () => { void doResolve(); });
+          }
+        };
+      });
+    }
+
+    document.getElementById("inbox-close")!.onclick = inboxOverlay.close;
+    document.getElementById("admin-inbox-card")!.onclick = () => {
+      document.getElementById("inbox-list")!.innerHTML = '<p class="inbox-empty">Cargando…</p>';
+      inboxOverlay.open();
+      void renderInboxList();
+    };
 
     // Mostrar campos de contraseña solo para usuarios email
     const hasEmailIdentity =
