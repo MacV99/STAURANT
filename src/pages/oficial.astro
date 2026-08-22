@@ -118,17 +118,6 @@ const tplRestaurant: Restaurant = {
       </div>
 
       <div class="dishes-controls flex-row">
-        {/* Lente maestro: conmuta badge grande, badge por plato, corona 👑 y el
-            orden por "Rating" entre tu nota (Personal) y el promedio del público
-            (Global). Solo visible con sesión; anónimo queda fijo en Global. */}
-        <div id="lens-toggle" class="lens-toggle flex-row" hidden>
-          <button class="lens-opt" data-lens="personal" type="button">
-            <i class="bi bi-star-fill"></i> Personal
-          </button>
-          <button class="lens-opt" data-lens="global" type="button">
-            <i class="bi bi-globe2"></i> Global
-          </button>
-        </div>
         <SortBar
           pills={[
             { field: "rating", label: "Rating" },
@@ -165,23 +154,6 @@ const tplRestaurant: Restaurant = {
 </Layout1>
 
 <style is:global>
-  /* Pill "⭐ tu nota" (secundario en lente Global). Gemelo de .global-rating-pill
-     pero con acento dorado, para leerse distinto del pill 🌐 de la comunidad. */
-  .my-rating-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.3px;
-    color: color-mix(in oklch, var(--clr-gold) 82%, black);
-    background: var(--clr-white2);
-    border: solid 1px var(--official-border);
-    border-radius: 20px;
-    padding: 2px 8px;
-    width: fit-content;
-  }
-
   /* Controles edit/eliminar por plato (modo dueño). Van en :global porque los
      botones se crean con createElement → el CSS scoped no los alcanza. */
   .dish-card .owner-dish-actions {
@@ -354,47 +326,6 @@ const tplRestaurant: Restaurant = {
     display: none;
   }
 
-  /* Segmented control Personal | Global (lente maestro). */
-  .lens-toggle {
-    justify-content: flex-start;
-    gap: 0;
-    padding: 2px;
-    border-radius: 20px;
-    border: solid 1.5px var(--clr-border);
-    background: var(--clr-white);
-  }
-
-  .lens-toggle[hidden] {
-    display: none;
-  }
-
-  .lens-opt {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 11px;
-    border: none;
-    background: none;
-    color: var(--clr-text);
-    opacity: 0.55;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.4px;
-    border-radius: 18px;
-    cursor: pointer;
-    transition: var(--transition);
-  }
-
-  .lens-opt i {
-    font-size: 0.7rem;
-  }
-
-  .lens-opt.active {
-    background: var(--clr-primary);
-    color: var(--clr-white);
-    opacity: 1;
-  }
-
   .pt-brand {
     justify-content: flex-start;
     text-decoration: none;
@@ -436,10 +367,6 @@ const tplRestaurant: Restaurant = {
 
     .back-link:hover {
       color: var(--clr-text);
-    }
-
-    .lens-opt:not(.active):hover {
-      opacity: 1;
     }
   }
 
@@ -869,33 +796,9 @@ const tplRestaurant: Restaurant = {
   let dishSearch = "";
   let dishTypeFilter = ""; // por typeName (los oficiales no tienen typeId)
 
-  // Lente maestro: gobierna badge grande, badge por plato, corona 👑 y el orden
-  // por "Rating". "personal" = tu nota; "global" = promedio del público. Solo con
-  // sesión se puede alternar; anónimo queda fijo en "global". Persiste en módulo.
-  type RatingLens = "personal" | "global";
-  let ratingLens: RatingLens = "global";
-
-  // IDs del/los mejor(es) plato(s) de la carta según el lente activo. Recalculado
-  // antes de cada render (la corona se mueve al cambiar de lente o de nota).
+  // IDs del/los mejor(es) plato(s) de la carta según TU nota. Recalculado antes de
+  // cada render (la corona 👑 se mueve al cambiar tu nota).
   let topOfficialDishIds = new Set<string>();
-
-  /** Mejor(es) plato(s) por rating GLOBAL de la comunidad (≥2 platos con stats). */
-  function computeTopOfficialDishIds(): Set<string> {
-    const rated = officialDishes
-      .map((od) => {
-        const stat = getOfficialDishStat(od.id);
-        return stat && stat.ratingsCount > 0
-          ? { id: od.id, avg: stat.avgRating, count: stat.ratingsCount }
-          : null;
-      })
-      .filter((x): x is { id: string; avg: number; count: number } => x !== null);
-    if (rated.length < 2) return new Set();
-    const max = Math.max(...rated.map((x) => x.avg));
-    const leaders = rated.filter((x) => x.avg === max);
-    // Empate en promedio → desempata por más calificaciones (más respaldo).
-    const maxCount = Math.max(...leaders.map((x) => x.count));
-    return new Set(leaders.filter((x) => x.count === maxCount).map((x) => x.id));
-  }
 
   /** Mejor(es) plato(s) según TU nota personal (≥2 platos calificados por ti). */
   function computeTopMyOfficialDishIds(): Set<string> {
@@ -908,22 +811,6 @@ const tplRestaurant: Restaurant = {
     if (rated.length < 2) return new Set();
     const max = Math.max(...rated.map((x) => x.rating));
     return new Set(rated.filter((x) => x.rating === max).map((x) => x.id));
-  }
-
-  /** Corona del lente activo. */
-  function computeActiveTopDishIds(): Set<string> {
-    return ratingLens === "global"
-      ? computeTopOfficialDishIds()
-      : computeTopMyOfficialDishIds();
-  }
-
-  /** Pill "⭐ tu nota" (dato secundario cuando el lente activo es Global). */
-  function buildMyRatingPill(rating: number): HTMLElement {
-    const pill = document.createElement("span");
-    pill.className = "my-rating-pill";
-    pill.title = "Tu calificación";
-    pill.innerHTML = `<i class="bi bi-star-fill"></i> ${rating}`;
-    return pill;
   }
 
   // ─── Auth ───────────────────────────────────────────────────────────────────
@@ -1070,27 +957,18 @@ const tplRestaurant: Restaurant = {
       citiesEl.hidden = false;
     }
 
-    // Badge grande + pill secundario según el lente activo:
-    //  · Global   → badge = promedio del público; pill = ⭐ tu promedio.
-    //  · Personal → badge = tu promedio; pill = 🌐 promedio del público.
+    // Badge grande = TU promedio; pill secundario = 🌐 promedio del público.
     const stat = getOfficialRestaurantStat(official!.id);
-    const globalAvg = stat && stat.ratingsCount > 0 ? stat.avgRating : null;
     const myAvg = userId ? getMyOfficialAverage(official!.id) : null;
     const badge = div.querySelector(".rating-badge")!;
     const pillsRow = div.querySelector<HTMLElement>(".rh-pills");
 
-    if (ratingLens === "global") {
-      paintRatingBadge(badge, globalAvg);
-      if (myAvg !== null)
-        pillsRow?.insertBefore(buildMyRatingPill(myAvg), pillsRow.firstChild);
-    } else {
-      paintRatingBadge(badge, myAvg);
-      if (stat && stat.ratingsCount > 0)
-        pillsRow?.insertBefore(
-          buildGlobalRatingPill(stat.avgRating, stat.ratingsCount),
-          pillsRow.firstChild,
-        );
-    }
+    paintRatingBadge(badge, myAvg);
+    if (stat && stat.ratingsCount > 0)
+      pillsRow?.insertBefore(
+        buildGlobalRatingPill(stat.avgRating, stat.ratingsCount),
+        pillsRow.firstChild,
+      );
 
     // Notas
     const notesEl = div.querySelector<HTMLElement>(".rh-notes");
@@ -1149,21 +1027,15 @@ const tplRestaurant: Restaurant = {
     const meta = document.createElement("div");
     meta.className = "od-meta flex-row";
 
-    // Pill secundario = dato del OTRO lente:
-    //  · Global   → ⭐ tu nota (si ya la diste).
-    //  · Personal → 🌐 nota de la comunidad (si existe).
-    if (ratingLens === "global") {
-      if (myRating !== null) meta.appendChild(buildMyRatingPill(myRating));
-    } else if (stat && stat.ratingsCount > 0) {
+    // Pill secundario = 🌐 nota de la comunidad (si existe).
+    if (stat && stat.ratingsCount > 0)
       meta.appendChild(buildGlobalRatingPill(stat.avgRating, stat.ratingsCount));
-    }
 
     if (meta.children.length) infoEl.appendChild(meta);
 
-    // Badge grande = dato del lente activo (Global → promedio público; Personal
-    // → tu nota). Vacío = estrella que invita a tocar y calificar.
+    // Badge grande = TU nota. Vacío = estrella que invita a tocar y calificar.
     const badge = article.querySelector(".rating-badge")!;
-    const badgeScore = ratingLens === "global" ? globalAvg : myRating;
+    const badgeScore = myRating;
 
     // ── Modo ADMINISTRADOR: la card se edita, no se califica ─────────────────
     // El badge muestra el promedio del público (informativo, sin botón) y en su
@@ -1203,13 +1075,7 @@ const tplRestaurant: Restaurant = {
 
     paintRatingBadge(badge, badgeScore, { button: true });
     if (topOfficialDishIds.has(od.id))
-      badge.appendChild(
-        makeCrown(
-          ratingLens === "global"
-            ? "Mejor valorado por la comunidad"
-            : "Tu plato estrella",
-        ),
-      );
+      badge.appendChild(makeCrown("Tu plato estrella"));
     badge.addEventListener("click", (e) => {
       e.stopPropagation();
       openOfficialModal(od);
@@ -1239,10 +1105,7 @@ const tplRestaurant: Restaurant = {
       let cmp = 0;
       if (sortField === "name") cmp = a.name.localeCompare(b.name);
       else {
-        const score = (id: string): number =>
-          ratingLens === "global"
-            ? (getOfficialDishStat(id)?.avgRating ?? -1)
-            : (getMyRatingFor(id) ?? -1);
+        const score = (id: string): number => getMyRatingFor(id) ?? -1;
         cmp = score(a.id) - score(b.id);
       }
       return sortDir === "asc" ? cmp : -cmp;
@@ -1256,7 +1119,7 @@ const tplRestaurant: Restaurant = {
 
     if (sortBarEl) sortBarEl.hidden = officialDishes.length < 2;
 
-    topOfficialDishIds = computeActiveTopDishIds();
+    topOfficialDishIds = computeTopMyOfficialDishIds();
     const filtered = getFilteredSortedDishes();
     if (filtered.length === 0) {
       const isFiltering = !!dishSearch || !!dishTypeFilter;
@@ -1305,29 +1168,7 @@ const tplRestaurant: Restaurant = {
     if (official) headerEl.replaceChildren(buildHeaderElement());
     renderDishes();
     updateTypeFilterUI();
-    updateLensUI();
     updateModeUI();
-  }
-
-  // ─── Lente Personal / Global ────────────────────────────────────────────────
-
-  function updateLensUI(): void {
-    const toggle = document.getElementById("lens-toggle");
-    if (!toggle) return;
-    // Solo con sesión se puede alternar; anónimo queda fijo en Global. En modo
-    // admin no se califica (se gestiona), así que el lente Personal no aplica →
-    // se oculta; en vista visitante el dueño sí puede usarlo.
-    toggle.hidden = !userId || adminMode;
-    toggle.querySelectorAll<HTMLButtonElement>(".lens-opt").forEach((btn) => {
-      btn.classList.toggle("active", btn.dataset.lens === ratingLens);
-    });
-  }
-
-  function setLens(lens: RatingLens): void {
-    if (lens === ratingLens) return;
-    if (lens === "personal" && !userId) return; // sin sesión no hay nota personal
-    ratingLens = lens;
-    renderAll();
   }
 
   // ─── Filtro por tipo ────────────────────────────────────────────────────────
@@ -1411,11 +1252,6 @@ const tplRestaurant: Restaurant = {
   }
 
   function wireControls(): void {
-    // Lente Personal / Global (control maestro)
-    document.querySelectorAll<HTMLButtonElement>(".lens-opt").forEach((btn) => {
-      btn.onclick = () => setLens(btn.dataset.lens as RatingLens);
-    });
-
     // Orden
     document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach((btn) => {
       btn.onclick = () => {
@@ -1658,11 +1494,6 @@ const tplRestaurant: Restaurant = {
       if (backLink) backLink.hidden = true;
       if (publicTopbar) publicTopbar.hidden = false;
     }
-
-    // Lente inicial: si ya calificaste algo aquí, arranca en Personal; si no
-    // (o anónimo), en Global (la única nota disponible al entrar).
-    ratingLens =
-      userId && getMyOfficialAverage(official.id) !== null ? "personal" : "global";
 
     // ¿Soy dueño de este perfil? (fila en official_owners). Debe resolverse ANTES
     // de renderAll para saber si mostrar el interruptor de modo administrador.

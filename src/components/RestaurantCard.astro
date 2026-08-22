@@ -48,11 +48,13 @@ const isPending = r.status === "pending";
 </article>
 
 <style>
+  /* Misma estructura de contenido que .dish-card: padding 14/16, gap 12 y el
+     bloque de texto (nombre + pill) alineado igual que .dish-info. */
   .restaurant-card {
     background: var(--clr-white);
     border: 1px solid var(--clr-border);
     border-radius: 18px;
-    padding: 16px;
+    padding: 14px 16px;
     justify-content: space-between;
     gap: 12px;
     transition: var(--transition);
@@ -62,7 +64,9 @@ const isPending = r.status === "pending";
     cursor: pointer;
   }
 
+  /* Gemelo de .dish-info: ocupa el espacio disponible y apila nombre + pill. */
   .card-body {
+    flex: 1;
     align-items: flex-start;
     min-width: 0;
   }
@@ -70,10 +74,15 @@ const isPending = r.status === "pending";
   .card-body h3 {
     font-size: 1rem;
     font-weight: 700;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.5px;
     color: var(--clr-text);
     word-break: break-word;
     line-height: 1.25;
+  }
+
+  /* Mismo respiro nombre→pill que en las cards de platos (margin-top ~3px). */
+  .card-body .dish-count-pill {
+    margin-top: 3px;
   }
 
   .restaurant-card.card-clickable:active {
@@ -83,12 +92,6 @@ const isPending = r.status === "pending";
   @media (hover: hover) {
     .restaurant-card.card-clickable:hover {
       border-color: var(--clr-border2);
-    }
-  }
-
-  @media (min-width: 768px) {
-    .restaurant-card {
-      padding: 18px 20px;
     }
   }
 

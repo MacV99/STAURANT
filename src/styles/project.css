@@ -364,22 +364,45 @@
   font-size: 1.1rem;
 }
 
+/* Badges en escala de grises: fondo/tinta neutros y el color de la calificación
+   como una barra inferior (3px) que ocupa TODO el ancho pero se recorta con la
+   curva del badge en las esquinas (efecto "líquido dentro del vaso"): la barra
+   hereda el mismo radius inferior. Rangos: ≤4 rojo · 5-7 ámbar · ≥8 verde. */
+.badge-low,
+.badge-mid,
+.badge-high {
+  background: var(--clr-white2);
+  color: var(--clr-text);
+  border: solid 1px var(--clr-border);
+}
+
 .badge-low {
-  background: var(--clr-danger-bg);
-  color: var(--clr-danger);
-  border: solid 1px color-mix(in srgb, var(--clr-danger-border) 68%, transparent);
+  --badge-accent: var(--clr-danger);
 }
 
 .badge-mid {
-  background: var(--clr-warning-bg);
-  color: var(--clr-warning);
-  border: solid 1px var(--clr-warning-border);
+  --badge-accent: var(--clr-warning);
 }
 
 .badge-high {
-  background: var(--clr-success-bg);
-  color: var(--clr-success);
-  border: solid 1px var(--clr-success-border);
+  --badge-accent: var(--clr-success);
+}
+
+.badge-low::after,
+.badge-mid::after,
+.badge-high::after {
+  content: "";
+  position: absolute;
+  inset: -1px; /* cubre hasta el canto exterior (sobre el borde de 1px) */
+  border-radius: inherit; /* misma forma del badge → recorta el color en las curvas */
+  /* solo los 3px de abajo llevan color; el resto transparente. El radius del
+     propio pseudo-elemento recorta la franja como líquido dentro del vaso. */
+  background: linear-gradient(
+    to top,
+    var(--badge-accent) 3px,
+    transparent 3px
+  );
+  pointer-events: none;
 }
 
 /* === BADGE BTN (dish badge clickable → opens edit) === */
@@ -435,8 +458,16 @@
 }
 
 .global-rating-pill .grp-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   font-weight: 500;
   opacity: 0.6;
+}
+
+/* Ícono de persona: aclara que el número = cantidad de personas que votaron. */
+.global-rating-pill .grp-count i {
+  font-size: 0.85em;
 }
 
 /* === CARD OFICIAL — SOLO el borde de oro metalizado giratorio ===============
@@ -541,6 +572,12 @@
 .rh-card.is-official .rating-num,
 .rh-card.is-official .rating-badge i {
   color: #3a2b06;
+}
+
+/* En el badge dorado (oficiales) NO va la franja de color de la nota. */
+.restaurant-card.is-official .rating-badge::after,
+.rh-card.is-official .rating-badge::after {
+  content: none;
 }
 
 @keyframes holo-spin {
@@ -809,10 +846,11 @@
   }
 }
 
-/* === DISH TYPE DROPDOWN (filtro por tipo — restaurante.astro + oficial.astro) ===
-   Options creadas por JS → scope global. Compartido por ambas páginas de detalle. */
+/* === TYPE DROPDOWN OPTIONS (filtros pill — restaurante / oficial / explorar) ===
+   Options creadas por JS → scope global. Keyed al contenedor compartido
+   .type-dropdown para servir a los 3 filtros (tipo de plato y ciudad). */
 
-#dish-type-dropdown .type-option {
+.type-dropdown .type-option {
   padding: 8px 12px;
   font-size: 0.72rem;
   font-weight: 500;
@@ -823,16 +861,16 @@
   border-bottom: 1px solid var(--clr-border);
 }
 
-#dish-type-dropdown .type-option:last-child {
+.type-dropdown .type-option:last-child {
   border-bottom: none;
 }
 
-#dish-type-dropdown .type-option.is-selected {
+.type-dropdown .type-option.is-selected {
   color: var(--clr-primary);
   font-weight: 700;
 }
 
-#dish-type-dropdown .type-option.is-none {
+.type-dropdown .type-option.is-none {
   color: var(--clr-text);
   opacity: 0.55;
   text-transform: none;
@@ -840,7 +878,7 @@
   border-bottom: 1px solid var(--clr-border);
 }
 
-#dish-type-dropdown .type-option.is-empty {
+.type-dropdown .type-option.is-empty {
   color: var(--clr-text);
   opacity: 0.5;
   text-transform: none;
@@ -852,8 +890,8 @@
 }
 
 @media (hover: hover) {
-  #dish-type-dropdown .type-option:hover,
-  #dish-type-dropdown .type-option:focus {
+  .type-dropdown .type-option:hover,
+  .type-dropdown .type-option:focus {
     background: var(--clr-white2);
   }
 }

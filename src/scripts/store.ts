@@ -45,7 +45,7 @@ export function buildGlobalRatingPill(avg: number, count: number): HTMLElement {
   const pill = document.createElement("span");
   pill.className = "global-rating-pill";
   pill.title = `Promedio global basado en ${count} ${count === 1 ? "calificación" : "calificaciones"}`;
-  pill.innerHTML = `<i class="bi bi-globe2"></i> ${avg} <span class="grp-count">· ${count}</span>`;
+  pill.innerHTML = `<i class="bi bi-globe2"></i> ${avg} <span class="grp-count">· <i class="bi bi-person-fill"></i> ${count}</span>`;
   return pill;
 }
 

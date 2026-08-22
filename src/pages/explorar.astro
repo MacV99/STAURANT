@@ -24,6 +24,17 @@ import Layout1 from "../layouts/Layout1.astro";
       />
     </div>
 
+    <div class="explore-controls flex-row">
+      <div class="type-filter-wrap">
+        <button id="explore-city-btn" class="type-pill" type="button" hidden>
+          <span class="type-pill-label">Ciudad</span>
+          <span id="explore-city-value" class="type-pill-value">Todas</span>
+          <i class="bi bi-chevron-down"></i>
+        </button>
+        <div id="explore-city-dropdown" class="type-dropdown" hidden></div>
+      </div>
+    </div>
+
     <div id="explore-list" class="flex-column"></div>
   </div>
 </Layout1>
@@ -97,9 +108,77 @@ import Layout1 from "../layouts/Layout1.astro";
     -webkit-appearance: none;
   }
 
+  .explore-controls {
+    justify-content: flex-start;
+  }
+
+  /* Filtro pill de ciudad — gemelo del filtro de tipo (restaurante/oficial).
+     Las opciones del dropdown se estilan en project.css (.type-dropdown). */
+  .type-filter-wrap {
+    position: relative;
+  }
+
+  .type-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: solid 1.5px var(--clr-border);
+    background: var(--clr-white);
+    color: var(--clr-text);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .type-pill[hidden] {
+    display: none;
+  }
+
+  .type-pill.active {
+    background: var(--clr-primary);
+    border-color: var(--clr-primary);
+    color: var(--clr-white);
+  }
+
+  .type-pill-label {
+    opacity: 0.5;
+  }
+
+  .type-pill-value {
+    font-weight: 700;
+  }
+
+  .type-pill i {
+    font-size: 0.65rem;
+  }
+
+  .type-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    min-width: max-content;
+    background: var(--clr-white);
+    border: 1.5px solid var(--clr-border);
+    border-radius: var(--border-radius);
+    z-index: 200;
+    max-height: 260px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
   #explore-list {
     align-items: stretch;
     gap: 7px;
+  }
+
+  @media (hover: hover) {
+    .type-pill:hover {
+      border-color: var(--clr-border2);
+    }
   }
 
   @media (min-width: 768px) {
@@ -155,15 +234,6 @@ import Layout1 from "../layouts/Layout1.astro";
     flex-wrap: wrap;
   }
 
-  .explore-card .ec-city {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.78rem;
-    color: var(--clr-text);
-    opacity: 0.6;
-  }
-
   .explore-card .ec-adopted {
     display: inline-flex;
     align-items: center;
@@ -201,7 +271,6 @@ import Layout1 from "../layouts/Layout1.astro";
     isOfficialInMyList,
     getAllOfficialRestaurants,
     getOfficialRestaurantStat,
-    escapeHtml,
     type OfficialRestaurant,
   } from "../lib/data.ts";
   import { buildGlobalRatingPill } from "../scripts/store.ts";
@@ -209,6 +278,14 @@ import Layout1 from "../layouts/Layout1.astro";
   // Estado a nivel de módulo (persiste entre navegaciones ViewTransition).
   let officials: OfficialRestaurant[] = [];
   let exploreSearch = "";
+  let cityFilter = ""; // "" = todas las ciudades
+
+  /** Ciudades distintas de todos los oficiales, ordenadas alfabéticamente. */
+  function distinctCities(): string[] {
+    const set = new Set<string>();
+    for (const o of officials) for (const c of o.cities) if (c) set.add(c);
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }
 
   function buildCard(o: OfficialRestaurant): HTMLElement {
     // ¿El usuario ya tiene este oficial en su lista? (membresía, sin clon)
@@ -239,13 +316,7 @@ import Layout1 from "../layouts/Layout1.astro";
     const meta = document.createElement("div");
     meta.className = "ec-meta flex-row";
 
-    if (o.cities.length > 0) {
-      const city = document.createElement("span");
-      city.className = "ec-city";
-      city.innerHTML = `<i class="bi bi-geo-alt"></i> ${escapeHtml(o.cities.join(" · "))}`;
-      meta.appendChild(city);
-    }
-
+    // La ciudad NO se muestra en la card: solo alimenta el filtro de arriba.
     if (stat && stat.ratingsCount > 0) {
       meta.appendChild(buildGlobalRatingPill(stat.avgRating, stat.ratingsCount));
     }
@@ -275,18 +346,20 @@ import Layout1 from "../layouts/Layout1.astro";
     if (!listEl) return;
 
     const q = exploreSearch.toLowerCase().trim();
-    const filtered = q
-      ? officials.filter(
-          (o) =>
-            o.name.toLowerCase().includes(q) ||
-            o.cities.some((c) => c.toLowerCase().includes(q)),
-        )
-      : officials;
+    let filtered = officials;
+    if (cityFilter) filtered = filtered.filter((o) => o.cities.includes(cityFilter));
+    if (q)
+      filtered = filtered.filter(
+        (o) =>
+          o.name.toLowerCase().includes(q) ||
+          o.cities.some((c) => c.toLowerCase().includes(q)),
+      );
 
+    const hasFilter = !!q || !!cityFilter;
     if (filtered.length === 0) {
       listEl.innerHTML = `<div class="empty-state flex-column">
-           <i class="bi bi-${q ? "search" : "shop"}"></i>
-           <p>${q ? "Sin resultados para tu búsqueda." : "Aún no hay restaurantes oficiales."}</p>
+           <i class="bi bi-${hasFilter ? "search" : "shop"}"></i>
+           <p>${hasFilter ? "Sin resultados para tu filtro." : "Aún no hay restaurantes oficiales."}</p>
          </div>`;
       return;
     }
@@ -297,9 +370,99 @@ import Layout1 from "../layouts/Layout1.astro";
     listEl.appendChild(frag);
   }
 
+  // ─── Filtro por ciudad ──────────────────────────────────────────────────────
+
+  function updateCityFilterUI(): void {
+    const btn = document.getElementById(
+      "explore-city-btn",
+    ) as HTMLButtonElement | null;
+    const valueEl = document.getElementById("explore-city-value");
+    if (!btn || !valueEl) return;
+    const cities = distinctCities();
+    // Sin ciudades no hay nada que filtrar → se oculta el pill.
+    if (cities.length === 0) {
+      cityFilter = "";
+      btn.hidden = true;
+      return;
+    }
+    btn.hidden = false;
+    // Si la ciudad activa ya no existe (cache cambió), se resetea a "todas".
+    if (cityFilter && !cities.includes(cityFilter)) cityFilter = "";
+    valueEl.textContent = cityFilter || "Todas";
+    btn.classList.toggle("active", !!cityFilter);
+  }
+
+  function renderCityDropdown(): void {
+    const dropdownEl = document.getElementById("explore-city-dropdown");
+    if (!dropdownEl) return;
+    dropdownEl.innerHTML = "";
+
+    const noneOpt = document.createElement("div");
+    noneOpt.className = "type-option is-none";
+    noneOpt.textContent = "Todas las ciudades";
+    noneOpt.addEventListener("mousedown", (e) => e.preventDefault());
+    noneOpt.addEventListener("click", () => selectCity(""));
+    dropdownEl.appendChild(noneOpt);
+
+    distinctCities().forEach((name) => {
+      const opt = document.createElement("div");
+      opt.className = "type-option" + (name === cityFilter ? " is-selected" : "");
+      opt.textContent = name;
+      opt.addEventListener("mousedown", (e) => e.preventDefault());
+      opt.addEventListener("click", () => selectCity(name));
+      dropdownEl.appendChild(opt);
+    });
+  }
+
+  function selectCity(name: string): void {
+    cityFilter = name;
+    updateCityFilterUI();
+    closeCityDropdown();
+    render();
+  }
+
+  function openCityDropdown(): void {
+    const dropdownEl = document.getElementById("explore-city-dropdown");
+    const btn = document.getElementById("explore-city-btn");
+    if (!dropdownEl || !btn) return;
+    renderCityDropdown();
+    dropdownEl.hidden = false;
+    btn.classList.add("is-open");
+  }
+
+  function closeCityDropdown(): void {
+    const dropdownEl = document.getElementById("explore-city-dropdown");
+    const btn = document.getElementById("explore-city-btn");
+    dropdownEl?.setAttribute("hidden", "");
+    btn?.classList.remove("is-open");
+  }
+
+  function wireCityFilter(): void {
+    const btn = document.getElementById("explore-city-btn");
+    if (!btn) return;
+    // .onclick (no addEventListener) → se reasigna en cada page-load sin acumular.
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const dropdownEl = document.getElementById("explore-city-dropdown");
+      if (dropdownEl?.hidden) openCityDropdown();
+      else closeCityDropdown();
+    };
+  }
+
   // Re-render cuando lleguen stats globales o cambie el cache (adopción).
   document.addEventListener("stats:synced", render);
   document.addEventListener("cache:synced", render);
+
+  // Clic fuera → cierra el dropdown de ciudad. A nivel módulo (una sola vez) para
+  // no acumular listeners en cada astro:page-load.
+  document.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement;
+    if (
+      !target.closest("#explore-city-dropdown") &&
+      !target.closest("#explore-city-btn")
+    )
+      closeCityDropdown();
+  });
 
   document.addEventListener("astro:page-load", async () => {
     const listEl = document.getElementById("explore-list");
@@ -337,7 +500,10 @@ import Layout1 from "../layouts/Layout1.astro";
       };
     }
 
+    wireCityFilter();
+
     officials = await getAllOfficialRestaurants();
+    updateCityFilterUI();
     render();
   });
 </script>
