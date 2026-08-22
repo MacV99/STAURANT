@@ -17,6 +17,7 @@ const isPending = r.status === "pending";
   data-href={`/restaurante?id=${r.id}`}
   style={`view-transition-name: restaurant-${r.id}`}
 >
+  <div class="holo-sheet" aria-hidden="true"></div>
   <div class="card-body flex-column">
     <h3>
       {r.officialRestaurantId ? (() => {
@@ -90,4 +91,8 @@ const isPending = r.status === "pending";
       padding: 18px 20px;
     }
   }
+
+  /* La card oficial (borde de oro giratorio + núcleo oscuro) es un estilo
+     COMPARTIDO por 3 cards → vive en project.css (.restaurant-card /
+     .explore-card / .rh-card).is-official. Aquí solo se inyecta la .holo-sheet. */
 </style>

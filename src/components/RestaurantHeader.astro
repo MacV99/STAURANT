@@ -16,6 +16,7 @@ const isPending = r.status === "pending";
   class:list={["rh-card flex-column", { "is-official": r.officialRestaurantId }]}
   style={`view-transition-name: restaurant-${r.id}`}
 >
+  {r.officialRestaurantId && <div class="holo-sheet" aria-hidden="true" />}
   <div class="rh-top flex-row">
     <RatingBadge score={avg} />
     <div class="rh-headline flex-column">

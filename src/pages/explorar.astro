@@ -127,16 +127,8 @@ import Layout1 from "../layouts/Layout1.astro";
     transition: var(--transition);
   }
 
-  .explore-card.is-official {
-    background:
-      linear-gradient(
-        315deg,
-        var(--official-tint) 0%,
-        rgba(var(--rgb-gold), 0) 60%
-      ),
-      var(--clr-white);
-    border-color: var(--official-border);
-  }
+  /* .explore-card.is-official (borde de oro giratorio) → estilo compartido en
+     project.css junto a .restaurant-card / .rh-card. */
 
   .explore-card:active {
     transform: scale(0.98);
@@ -226,6 +218,12 @@ import Layout1 from "../layouts/Layout1.astro";
     const card = document.createElement("article");
     card.className = "explore-card card-clickable flex-row is-official";
     card.setAttribute("data-id", o.id);
+
+    // Marco de oro giratorio (estilo compartido en project.css)
+    const sheet = document.createElement("div");
+    sheet.className = "holo-sheet";
+    sheet.setAttribute("aria-hidden", "true");
+    card.appendChild(sheet);
 
     const body = document.createElement("div");
     body.className = "ec-body flex-column";

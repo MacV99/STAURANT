@@ -439,16 +439,138 @@
   opacity: 0.6;
 }
 
-/* === RESTAURANTE OFICIAL — gradiente dorado sutil ===================
-   Selectores con clase doble para ganarle a los estilos scoped de
-   .restaurant-card (RestaurantCard.astro) y .rh-card (RestaurantHeader.astro). */
+/* === CARD OFICIAL — SOLO el borde de oro metalizado giratorio ===============
+   (adapt. uiverse.io/ElSombrero2, SIN el flip 3D). La card conserva su
+   apariencia normal (fondo claro, contenido igual que las no-oficiales); lo
+   único distintivo es el marco dorado que gira alrededor.
+   COMPARTIDO por .restaurant-card / .explore-card / .rh-card: cada card oficial
+   lleva un hijo <div class="holo-sheet"> como primer nodo.
+   Excepción DS: los hex dorados son decorativos, no marca. */
+
+.holo-sheet {
+  display: none;
+}
 
 .restaurant-card.is-official,
+.explore-card.is-official,
 .rh-card.is-official {
-  background:
-    linear-gradient(315deg, var(--official-tint) 0%, rgba(var(--rgb-gold), 0) 60%),
-    var(--clr-white) !important;
-  border-color: var(--official-border) !important;
+  /* Paleta local del dorado (metalizado medio) */
+  --gold-deep: #a7761b;
+  --gold: #bd923a;
+  --gold-mid: #cba249;
+  --gold-shine: #f4e7a0;
+
+  position: relative;
+  background: transparent !important;
+  border-color: transparent !important;
+  overflow: visible;
+  isolation: isolate;
+}
+
+/* El marco vive en .holo-sheet (detrás del contenido, z-index:-1) para que su
+   overflow:hidden NO recorte la corona 👑 (hermana, por encima). */
+.restaurant-card.is-official .holo-sheet,
+.explore-card.is-official .holo-sheet,
+.rh-card.is-official .holo-sheet {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  overflow: hidden;
+  box-shadow:
+    0 0 14px rgba(230, 179, 48, 0.5),
+    0 6px 18px rgba(0, 0, 0, 0.28);
+}
+
+/* Anillo de oro metalizado que gira. Capa CUADRADA (aspect-ratio:1) y centrada:
+   si fuera rectangular, el conic se deforma al rotar (se "estira"). */
+.restaurant-card.is-official .holo-sheet::before,
+.explore-card.is-official .holo-sheet::before,
+.rh-card.is-official .holo-sheet::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 140%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+  background: conic-gradient(
+    from 0deg,
+    var(--gold-deep), var(--gold-shine), var(--gold-mid), var(--gold),
+    var(--gold-deep), var(--gold-shine), var(--gold-mid), var(--gold),
+    var(--gold-deep)
+  );
+  animation: holo-spin 5s linear infinite;
+  will-change: transform;
+}
+
+.rh-card.is-official .holo-sheet::before {
+  width: 150%;
+}
+
+/* Núcleo del color de la card (claro): deja ver solo ~2px de oro en el borde */
+.restaurant-card.is-official .holo-sheet::after,
+.explore-card.is-official .holo-sheet::after,
+.rh-card.is-official .holo-sheet::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: inherit;
+  background: var(--clr-white);
+}
+
+/* Badge de calificación en oro metalizado (mismos tonos que el marco) */
+.restaurant-card.is-official .rating-badge,
+.rh-card.is-official .rating-badge {
+  background: linear-gradient(
+    135deg,
+    #f2e39a 0%, #c1953c 30%, #ecdd90 52%, #bd8f34 74%, #f2e39a 100%
+  );
+  border: 1px solid #9c6f18;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.32),
+    inset 0 1px 1px rgba(255, 255, 255, 0.48);
+}
+
+.restaurant-card.is-official .rating-badge,
+.restaurant-card.is-official .rating-num,
+.restaurant-card.is-official .rating-badge i,
+.rh-card.is-official .rating-badge,
+.rh-card.is-official .rating-num,
+.rh-card.is-official .rating-badge i {
+  color: #3a2b06;
+}
+
+@keyframes holo-spin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .restaurant-card.is-official .holo-sheet::before,
+  .explore-card.is-official .holo-sheet::before,
+  .rh-card.is-official .holo-sheet::before {
+    animation: none;
+  }
+}
+
+@media (hover: hover) {
+  .restaurant-card.is-official.card-clickable:hover,
+  .explore-card.is-official.card-clickable:hover {
+    border-color: transparent !important;
+  }
+  .restaurant-card.is-official.card-clickable:hover .holo-sheet,
+  .explore-card.is-official.card-clickable:hover .holo-sheet {
+    box-shadow:
+      0 0 20px rgba(230, 179, 48, 0.7),
+      0 8px 22px rgba(0, 0, 0, 0.32);
+  }
 }
 
 /* === CORONA 👑 (mejor valorado, según calificación personal) ===
