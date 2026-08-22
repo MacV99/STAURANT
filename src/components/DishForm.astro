@@ -13,6 +13,7 @@ import FormModal from "./FormModal.astro";
     <img class="official-photo" id="df-official-image" alt="" hidden />
     <h3 class="official-name" id="df-official-name"></h3>
     <span class="official-type" id="df-official-type"></span>
+    <span class="official-price" id="df-official-price" hidden></span>
   </div>
 
   <div class="type-field flex-column" id="df-type-field">
@@ -151,6 +152,18 @@ import FormModal from "./FormModal.astro";
   }
 
   .official-type[hidden] {
+    display: none;
+  }
+
+  .official-price {
+    margin-top: 6px;
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    color: var(--clr-text);
+  }
+
+  .official-price[hidden] {
     display: none;
   }
 
@@ -584,6 +597,9 @@ import FormModal from "./FormModal.astro";
     const officialNameEl = document.getElementById(
       "df-official-name",
     ) as HTMLElement;
+    const officialPriceEl = document.getElementById(
+      "df-official-price",
+    ) as HTMLElement;
     const officialImageEl = document.getElementById(
       "df-official-image",
     ) as HTMLImageElement;
@@ -872,6 +888,14 @@ import FormModal from "./FormModal.astro";
       officialNameEl.textContent = od.name;
       officialTypeEl.textContent = od.typeName ?? "";
       officialTypeEl.hidden = !od.typeName;
+
+      // Precio: se muestra SOLO aquí (no en la card). Sin precio → oculto.
+      if (od.price !== null) {
+        officialPriceEl.textContent = `$${od.price.toLocaleString("es-CO")}`;
+        officialPriceEl.hidden = false;
+      } else {
+        officialPriceEl.hidden = true;
+      }
 
       if (currentRating !== null) {
         setRated(true, currentRating);

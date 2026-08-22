@@ -278,6 +278,9 @@ const tplRestaurant: Restaurant = {
     font-weight: 800;
     line-height: 1.15;
     letter-spacing: 0.1px;
+    /* Look de ficha uniforme: nombre en mayúsculas sin importar cómo se guardó
+       el dato (igual que el modal .official-name). */
+    text-transform: uppercase;
   }
 
   /* Descripción: gris, máx 2 líneas (elipsis) para no descuadrar la card. */
@@ -289,21 +292,13 @@ const tplRestaurant: Restaurant = {
     overflow: hidden;
   }
 
-  /* Fila meta al pie: precio + pill secundario alineados. */
+  /* Fila meta al pie: pill secundario del otro lente (el precio vive en el modal). */
   .dish-card.official-dish .od-meta {
     align-items: center;
     justify-content: flex-start;
     gap: 8px;
     margin-top: 8px;
     flex-wrap: wrap;
-  }
-
-  .dish-card.official-dish .od-price {
-    margin: 0;
-    font-size: 0.98rem;
-    font-weight: 800;
-    letter-spacing: 0.3px;
-    color: var(--clr-text);
   }
 
   /* Badge de nota: score a la derecha. Un pelín más grande = jerarquía clara. */
@@ -318,17 +313,6 @@ const tplRestaurant: Restaurant = {
       border-color: var(--clr-border2);
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
     }
-  }
-
-  /* Precio del plato — base (por si se reusa fuera de .official-dish). */
-  .dish-card .od-price {
-    display: block;
-    width: fit-content;
-    margin-top: 5px;
-    font-size: 0.92rem;
-    font-weight: 800;
-    letter-spacing: 0.3px;
-    color: var(--clr-primary);
   }
 
 </style>
@@ -1157,19 +1141,13 @@ const tplRestaurant: Restaurant = {
       notesEl?.remove();
     }
 
-    // Fila meta al pie: precio + pill secundario juntos y alineados (look de ficha).
+    // Fila meta al pie: pill secundario del otro lente. El precio NO va en la
+    // card — se muestra solo dentro del modal de detalle (DishForm.openOfficial).
     const stat = getOfficialDishStat(od.id);
     const globalAvg = stat && stat.ratingsCount > 0 ? stat.avgRating : null;
     const myRating = getMyRatingFor(od.id);
     const meta = document.createElement("div");
     meta.className = "od-meta flex-row";
-
-    if (od.price !== null) {
-      const price = document.createElement("span");
-      price.className = "od-price";
-      price.textContent = `$${od.price.toLocaleString("es-CO")}`;
-      meta.appendChild(price);
-    }
 
     // Pill secundario = dato del OTRO lente:
     //  · Global   → ⭐ tu nota (si ya la diste).
