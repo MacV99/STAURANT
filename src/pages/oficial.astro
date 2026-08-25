@@ -793,19 +793,35 @@ const tplRestaurant: Restaurant = {
   type SortField = "rating" | "name";
   let sortField: SortField = "rating";
   let sortDir: "asc" | "desc" = "desc";
+  // Lente del ranking por rating en oficiales. El orden es SIEMPRE de mayor a
+  // menor; el pill "Rating" no invierte la dirección, solo alterna la fuente de
+  // la nota: "global" (comunidad) ↔ "me" (mi calificación personal).
+  type RatingLens = "global" | "me";
+  let ratingLens: RatingLens = "global";
   let dishSearch = "";
+
+  /** Nota de un plato oficial según la lente activa (global vs mía). -1 = sin
+   *  nota, para que caiga al fondo del ranking descendente. */
+  function dishRatingScore(officialDishId: string): number {
+    if (ratingLens === "global") {
+      const stat = getOfficialDishStat(officialDishId);
+      return stat && stat.ratingsCount > 0 ? stat.avgRating : -1;
+    }
+    return getMyRatingFor(officialDishId) ?? -1;
+  }
   let dishTypeFilter = ""; // por typeName (los oficiales no tienen typeId)
 
   // IDs del/los mejor(es) plato(s) de la carta según TU nota. Recalculado antes de
   // cada render (la corona 👑 se mueve al cambiar tu nota).
   let topOfficialDishIds = new Set<string>();
 
-  /** Mejor(es) plato(s) según TU nota personal (≥2 platos calificados por ti). */
+  /** Mejor(es) plato(s) de la carta según la lente activa (≥2 platos con nota
+   *  en esa lente). La corona 👑 sigue el mismo criterio que el ordenamiento. */
   function computeTopMyOfficialDishIds(): Set<string> {
     const rated = officialDishes
       .map((od) => {
-        const r = getMyRatingFor(od.id);
-        return r !== null ? { id: od.id, rating: r } : null;
+        const r = dishRatingScore(od.id);
+        return r >= 0 ? { id: od.id, rating: r } : null;
       })
       .filter((x): x is { id: string; rating: number } => x !== null);
     if (rated.length < 2) return new Set();
@@ -1075,7 +1091,7 @@ const tplRestaurant: Restaurant = {
 
     paintRatingBadge(badge, badgeScore, { button: true });
     if (topOfficialDishIds.has(od.id))
-      badge.appendChild(makeCrown("Tu plato estrella"));
+      badge.appendChild(makeCrown("Plato estrella de la comunidad"));
     badge.addEventListener("click", (e) => {
       e.stopPropagation();
       openOfficialModal(od);
@@ -1102,13 +1118,13 @@ const tplRestaurant: Restaurant = {
     }
     if (dishTypeFilter) ds = ds.filter((d) => (d.typeName ?? "") === dishTypeFilter);
     return [...ds].sort((a, b) => {
-      let cmp = 0;
-      if (sortField === "name") cmp = a.name.localeCompare(b.name);
-      else {
-        const score = (id: string): number => getMyRatingFor(id) ?? -1;
-        cmp = score(a.id) - score(b.id);
+      if (sortField === "name") {
+        const cmp = a.name.localeCompare(b.name);
+        return sortDir === "asc" ? cmp : -cmp;
       }
-      return sortDir === "asc" ? cmp : -cmp;
+      // Rating: SIEMPRE de mayor a menor. El pill no invierte la dirección;
+      // solo cambia la lente (global vs mía) vía dishRatingScore.
+      return dishRatingScore(b.id) - dishRatingScore(a.id);
     });
   }
 
@@ -1249,6 +1265,17 @@ const tplRestaurant: Restaurant = {
 
   function updateSortUI(): void {
     updateSortPills(sortField, sortDir);
+    // El pill "Rating" en oficiales no muestra flecha asc/desc (el orden es fijo
+    // de mayor a menor): muestra la lente activa. Global 🌐 o Yo 👤.
+    const ratingPill = document.querySelector<HTMLButtonElement>(
+      '.sort-pill[data-field="rating"]',
+    );
+    if (ratingPill) {
+      const isGlobal = ratingLens === "global";
+      ratingPill.innerHTML = isGlobal
+        ? 'Rating <i class="bi bi-globe-americas"></i> Global'
+        : 'Rating <i class="bi bi-person-fill"></i> Yo';
+    }
   }
 
   function wireControls(): void {
@@ -1256,10 +1283,17 @@ const tplRestaurant: Restaurant = {
     document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach((btn) => {
       btn.onclick = () => {
         const field = btn.dataset.field as SortField;
-        if (sortField === field) sortDir = sortDir === "asc" ? "desc" : "asc";
-        else {
+        if (field === "rating") {
+          // Ya activo → alterna la lente (Global ↔ Yo). Nunca invierte el orden.
+          if (sortField === "rating")
+            ratingLens = ratingLens === "global" ? "me" : "global";
+          sortField = "rating";
+          sortDir = "desc";
+        } else if (sortField === field) {
+          sortDir = sortDir === "asc" ? "desc" : "asc";
+        } else {
           sortField = field;
-          sortDir = field === "name" ? "asc" : "desc";
+          sortDir = "asc";
         }
         updateSortUI();
         renderDishes();
