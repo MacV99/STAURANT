@@ -393,12 +393,13 @@ const tplRestaurant: Restaurant = {
     // Pill de rating global junto al de cantidad de platos
     if (e.officialRestaurantId && pill) {
       const stat = getOfficialRestaurantStat(e.officialRestaurantId);
-      if (stat && stat.ratingsCount > 0 && pill.parentElement) {
+      // Oficial nuevo sin calificaciones = pill "🌐 0 · 👤 0" (no se oculta la fila).
+      if (pill.parentElement) {
         const wrapper = document.createElement("div");
         wrapper.style.cssText = "display:flex; flex-direction:row; flex-wrap:wrap; gap:6px;";
         pill.parentElement.insertBefore(wrapper, pill);
         wrapper.appendChild(pill);
-        wrapper.appendChild(buildGlobalRatingPill(stat.avgRating, stat.ratingsCount));
+        wrapper.appendChild(buildGlobalRatingPill(stat?.avgRating ?? 0, stat?.ratingsCount ?? 0));
       }
     }
 

@@ -302,7 +302,7 @@ export async function initCache(userId: string): Promise<void> {
 
   // Tipos por defecto para usuarios nuevos (sin tipos todavía)
   if (fresh.dishTypes.length === 0) {
-    ["HAMBURGUESA", "PERRO CALIENTE", "PIZZA"].forEach(name => createDishType(name));
+    ["HAMBURGUESAS", "PERROS CALIENTES", "PIZZAS"].forEach(name => createDishType(name));
   }
 }
 

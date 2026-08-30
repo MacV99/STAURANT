@@ -4,10 +4,9 @@ import RatingBadge from "./RatingBadge.astro";
 
 interface Props {
   dish: Dish;
-  typeName?: string | null;
 }
 
-const { dish: d, typeName } = Astro.props;
+const { dish: d } = Astro.props;
 ---
 
 <article class="dish-card flex-row" data-id={d.id}>
@@ -15,8 +14,6 @@ const { dish: d, typeName } = Astro.props;
   <RatingBadge score={d.rating} />
   <div class="dish-info">
     <h4>{d.name}</h4>
-    {typeName && <span class="dish-type-tag">{typeName}</span>}
-    {d.notes && <p class="dish-notes">{d.notes}</p>}
   </div>
   <div class="dish-actions flex-row">
     <div class="dish-menu">
@@ -68,29 +65,11 @@ const { dish: d, typeName } = Astro.props;
     font-size: 1.05rem;
     font-weight: 800;
     letter-spacing: 0.1px;
+    /* Anula el text-indent global de headings (compensa el letter-spacing:2px
+       global) que solo indenta el 1er renglón → desalinea títulos de 2 líneas. */
+    text-indent: 0;
     line-height: 1.2;
     color: var(--clr-text);
-  }
-
-  .dish-type-tag {
-    display: inline-block;
-    font-size: 0.6rem;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    color: var(--clr-primary);
-    background-color: var(--clr-white2);
-    border-radius: var(--radius-lg);
-    padding: 2px 6px;
-    margin-top: 3px;
-  }
-
-  .dish-info .dish-notes {
-    font-size: 0.8rem;
-    color: var(--clr-text);
-    margin-top: 3px;
-    line-height: 1.4;
-    opacity: 0.75;
   }
 
   .dish-actions {

@@ -184,17 +184,18 @@ import FormModal from "./FormModal.astro";
     font-weight: 800;
     line-height: 1.08;
     letter-spacing: -0.6px;
+    text-indent: 0; /* anula el text-indent global (desalinea títulos de 2 líneas) */
     text-transform: uppercase;
     color: var(--clr-text);
   }
 
   .official-type {
-    font-size: 0.82rem;
+    margin-top: 2px;
+    font-size: 0.85rem;
     font-weight: 600;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
+    letter-spacing: 0.2px;
     color: var(--clr-text);
-    opacity: 0.5;
+    opacity: 0.6;
   }
 
   .official-type[hidden] {
@@ -990,7 +991,7 @@ import FormModal from "./FormModal.astro";
         officialImageFrameEl.hidden = true;
       }
       officialNameEl.textContent = od.name;
-      officialTypeEl.textContent = od.typeName ?? "";
+      officialTypeEl.textContent = od.typeName ? `Categoría: ${od.typeName}` : "";
       officialTypeEl.hidden = isGenericView || !od.typeName;
 
       // Precio: se muestra SOLO aquí (no en la card). Sin precio → oculto.

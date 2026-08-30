@@ -317,9 +317,10 @@ import Layout1 from "../layouts/Layout1.astro";
     meta.className = "ec-meta flex-row";
 
     // La ciudad NO se muestra en la card: solo alimenta el filtro de arriba.
-    if (stat && stat.ratingsCount > 0) {
-      meta.appendChild(buildGlobalRatingPill(stat.avgRating, stat.ratingsCount));
-    }
+    // Oficial nuevo sin calificaciones = pill "🌐 0 · 👤 0" (no se oculta la fila).
+    meta.appendChild(
+      buildGlobalRatingPill(stat?.avgRating ?? 0, stat?.ratingsCount ?? 0),
+    );
 
     if (adopted) {
       const tag = document.createElement("span");

@@ -146,7 +146,7 @@ const tplRestaurant: Restaurant = {
   <OfficialManage />
 
   <template id="tpl-dish-card">
-    <DishCard dish={tplDish} typeName="..." />
+    <DishCard dish={tplDish} />
   </template>
 
   <template id="tpl-restaurant-header">
@@ -231,21 +231,6 @@ const tplRestaurant: Restaurant = {
     order: 3;
   }
 
-  /* Tipo → eyebrow: etiqueta pequeña en versalitas ARRIBA del nombre (order:-1),
-     sin fondo de pill. Look de ficha, no de chip. */
-  .dish-card.official-dish .dish-type-tag {
-    order: -1;
-    margin: 0 0 1px;
-    padding: 0;
-    background: none;
-    border-radius: 0;
-    font-size: 0.62rem;
-    font-weight: 700;
-    letter-spacing: 1.2px;
-    color: var(--clr-text);
-    opacity: 0.45;
-  }
-
   .dish-card.official-dish h4 {
     font-size: 1.02rem;
     font-weight: 800;
@@ -254,15 +239,6 @@ const tplRestaurant: Restaurant = {
     /* Look de ficha uniforme: nombre en mayúsculas sin importar cómo se guardó
        el dato (igual que el modal .official-name). */
     text-transform: uppercase;
-  }
-
-  /* Descripción: gris, máx 2 líneas (elipsis) para no descuadrar la card. */
-  .dish-card.official-dish .dish-notes {
-    margin-top: 2px;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
   }
 
   /* Fila meta al pie: pill secundario del otro lente (el precio vive en el modal). */
@@ -1041,18 +1017,7 @@ const tplRestaurant: Restaurant = {
 
     const infoEl = article.querySelector<HTMLElement>(".dish-info")!;
 
-    // Tipo → eyebrow (etiqueta pequeña ARRIBA del nombre vía CSS order).
-    const typeTagEl = article.querySelector<HTMLElement>(".dish-type-tag");
-    if (od.typeName && typeTagEl) typeTagEl.textContent = od.typeName;
-    else typeTagEl?.remove();
-
-    // Notas / descripción de la carta (antes de la fila meta).
-    const notesEl = article.querySelector<HTMLElement>(".dish-notes");
-    if (od.notes) {
-      if (notesEl) notesEl.textContent = od.notes;
-    } else {
-      notesEl?.remove();
-    }
+    // Categoría y descripción ya NO se muestran en la card (solo en el modal).
 
     // ── Producto genérico (Coca-Cola, agua…) ─────────────────────────────────
     // Sin calificación: no hay badge ni flujo de rating. En su lugar, el precio a
@@ -1571,6 +1536,13 @@ const tplRestaurant: Restaurant = {
     // Cada entrada arranca en vista visitante: el dueño ve su restaurante como los
     // demás y activa gestión manualmente. (El módulo persiste entre ViewTransitions.)
     adminMode = false;
+
+    // Orden por defecto al entrar a CUALQUIER carta oficial: rating global, de mayor
+    // a menor. El módulo persiste entre ViewTransitions, así que reseteamos aquí para
+    // no arrastrar el orden/lente elegido en una carta anterior.
+    sortField = "rating";
+    sortDir = "desc";
+    ratingLens = "global";
 
     wireControls();
     wireOwnerBar();

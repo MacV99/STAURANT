@@ -94,7 +94,7 @@ const tplRestaurant: Restaurant = {
   <ConfirmDialog />
 
   <template id="tpl-dish-card">
-    <DishCard dish={tplDish} typeName="..." />
+    <DishCard dish={tplDish} />
   </template>
 
   <template id="tpl-restaurant-header">
@@ -612,18 +612,7 @@ const tplRestaurant: Restaurant = {
     ).querySelector("article")!;
     article.setAttribute("data-id", d.id);
     article.querySelector("h4")!.textContent = d.name;
-    const typeTagEl = article.querySelector<HTMLElement>(".dish-type-tag");
-    if (d.typeId) {
-      const typeName =
-        getDishTypes().find((t) => t.id === d.typeId)?.name ?? null;
-      if (typeName && typeTagEl) {
-        typeTagEl.textContent = typeName;
-      } else {
-        typeTagEl?.remove();
-      }
-    } else {
-      typeTagEl?.remove();
-    }
+    // La categoría ya NO se muestra en la card (solo en el modal de detalle).
     // Pill de rating global del plato (solo si es oficial y hay agregados)
     if (d.officialDishId) {
       const stat = getOfficialDishStat(d.officialDishId);
@@ -633,12 +622,7 @@ const tplRestaurant: Restaurant = {
       }
     }
 
-    const notesEl = article.querySelector<HTMLElement>(".dish-notes");
-    if (d.notes) {
-      notesEl!.textContent = d.notes;
-    } else {
-      notesEl?.remove();
-    }
+    // La descripción ya NO se muestra en la card (solo en el modal de detalle).
     const badge = article.querySelector(".rating-badge")!;
     paintRatingBadge(badge, d.rating, { button: true });
     if (topDishIds.has(d.id)) badge.appendChild(makeCrown("Plato estrella"));

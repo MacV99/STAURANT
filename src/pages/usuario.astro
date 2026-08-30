@@ -94,7 +94,7 @@ const tplDish: Dish = {
     <RestaurantHeader restaurant={tplRestaurant} avg={5} dishCount={0} />
   </template>
   <template id="tpl-user-dish-card">
-    <DishCard dish={tplDish} typeName="..." />
+    <DishCard dish={tplDish} />
   </template>
 
   <ConfirmDialog />
@@ -892,12 +892,7 @@ const tplDish: Dish = {
 
     article.querySelector("h4")!.textContent = d.name;
 
-    const typeTagEl = article.querySelector<HTMLElement>(".dish-type-tag");
-    const typeName = d.typeId
-      ? (dishTypes.find((t) => t.id === d.typeId)?.name ?? null)
-      : null;
-    if (typeName && typeTagEl) typeTagEl.textContent = typeName;
-    else typeTagEl?.remove();
+    // La categoría ya NO se muestra en la card (solo en el modal de detalle).
 
     // Pill global del plato (si es oficial y hay agregados)
     if (d.officialDishId) {
@@ -909,9 +904,7 @@ const tplDish: Dish = {
       }
     }
 
-    const notesEl = article.querySelector<HTMLElement>(".dish-notes");
-    if (d.notes) notesEl!.textContent = d.notes;
-    else notesEl?.remove();
+    // La descripción ya NO se muestra en la card (solo en el modal de detalle).
 
     paintRatingBadge(article.querySelector(".rating-badge")!, d.rating);
 
