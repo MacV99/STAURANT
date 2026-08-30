@@ -35,7 +35,28 @@ import FormModal from "./FormModal.astro";
     />
   </label>
 
-  <div class="cc-field flex-column">
+  {/* Producto genérico (Coca-Cola, agua…): no lleva foto ni calificación. Solo
+      se muestra nombre + precio en el modal. Compacto: label + ícono ⓘ cuyo
+      contexto aparece al pasar el mouse / mantener presionado. */}
+  <div class="odf-generic-row flex-row">
+    <label class="odf-generic flex-row" for="odf-generic">
+      <input type="checkbox" id="odf-generic" />
+      <span class="odf-generic-title">Producto genérico</span>
+    </label>
+    <button
+      type="button"
+      class="odf-generic-info"
+      aria-label="Qué es un producto genérico"
+    >
+      <i class="bi bi-info-circle"></i>
+      <span class="odf-generic-tip" role="tooltip"
+        >Bebidas y similares (Coca-Cola, agua…): sin foto ni calificación, solo
+        nombre y precio.</span
+      >
+    </button>
+  </div>
+
+  <div class="cc-field flex-column" id="odf-type-field">
     <span class="label-text flex-row"
       >Tipo / categoría <span class="optional">(opcional)</span></span
     >
@@ -88,7 +109,7 @@ import FormModal from "./FormModal.astro";
     </div>
   </label>
 
-  <label for="odf-notes">
+  <label for="odf-notes" id="odf-notes-field">
     <span class="label-text flex-row">Descripción</span>
     <textarea
       id="odf-notes"
@@ -97,7 +118,7 @@ import FormModal from "./FormModal.astro";
     ></textarea>
   </label>
 
-  <div class="odf-image-field">
+  <div class="odf-image-field" id="odf-image-field">
     <span class="label-text flex-row"
       >Imagen <span class="optional">(opcional)</span></span
     >
@@ -272,6 +293,111 @@ import FormModal from "./FormModal.astro";
   #opf-address,
   #opf-notes {
     font-size: 0.9rem;
+  }
+
+  /* ── Producto genérico (checkbox compacto + ícono ⓘ con tooltip) ── */
+  .odf-generic-row {
+    justify-content: flex-start;
+    align-items: center;
+    gap: 6px;
+    margin: -2px 0;
+  }
+
+  .odf-generic {
+    justify-content: flex-start;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+
+  .odf-generic input[type="checkbox"] {
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
+    accent-color: var(--clr-primary);
+    cursor: pointer;
+  }
+
+  .odf-generic-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    color: var(--clr-text);
+  }
+
+  /* Ícono ⓘ: el contexto vive en el tooltip (hover / foco / mantener presionado),
+     no ocupa espacio en el formulario. */
+  .odf-generic-info {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border: none;
+    background: none;
+    color: var(--clr-text);
+    opacity: 0.4;
+    font-size: 0.9rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: opacity var(--transition);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .odf-generic-tip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    width: max-content;
+    max-width: 240px;
+    padding: 8px 10px;
+    border-radius: var(--radius-md);
+    background: var(--clr-text);
+    color: var(--clr-white);
+    font-size: 0.74rem;
+    font-weight: 500;
+    line-height: 1.35;
+    letter-spacing: 0.1px;
+    text-align: left;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity var(--transition),
+      transform var(--transition);
+    z-index: 10;
+  }
+
+  /* Flecha del tooltip. */
+  .odf-generic-tip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: var(--clr-text);
+  }
+
+  /* Aparece al pasar el mouse, enfocar (tab) o mantener presionado (:active). */
+  .odf-generic-info:hover,
+  .odf-generic-info:focus-visible {
+    opacity: 0.9;
+  }
+
+  .odf-generic-info:hover .odf-generic-tip,
+  .odf-generic-info:focus .odf-generic-tip,
+  .odf-generic-info:active .odf-generic-tip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* Al marcar genérico se oculta la imagen. `.odf-image-field` fija display:flex
+     → hace falta forzar el ocultado sobre el [hidden] del user-agent. */
+  #odf-image-field[hidden] {
+    display: none;
   }
 
   /* ── Zona de peligro (eliminar restaurante) ── */
@@ -851,7 +977,17 @@ import FormModal from "./FormModal.astro";
     const dTypeEl = document.getElementById("odf-type") as HTMLInputElement;
     const dPriceEl = document.getElementById("odf-price") as HTMLInputElement;
     const dNotesEl = document.getElementById("odf-notes") as HTMLTextAreaElement;
+    const dGenericEl = document.getElementById("odf-generic") as HTMLInputElement;
+    const dImageFieldEl = document.getElementById("odf-image-field") as HTMLElement;
     const dErrEl = document.getElementById("odf-error")!;
+
+    /** Genérico (Coca-Cola, agua…): sin foto ni calificación. Solo se oculta la
+     *  imagen; la categoría se conserva (agrupa la carta: BEBIDA, etc.) y la
+     *  descripción sigue disponible. En el modal público solo se ve nombre+precio. */
+    function applyGenericUI(generic: boolean) {
+      dImageFieldEl.hidden = generic;
+    }
+    dGenericEl.onchange = () => applyGenericUI(dGenericEl.checked);
 
     // Combobox creable de tipo/categoría. Las opciones = tipos ya usados en la
     // carta (se pasan como `suggestions` al abrir); `typeOptions` se lee en vivo.
@@ -925,15 +1061,23 @@ import FormModal from "./FormModal.astro";
       dImgViewEl.hidden = false;
       dImgAddEl.hidden = true;
       dImgLoadingEl.hidden = false;
-      const url = await uploadOfficialDishImage(dRestEl.value, file);
+      const res = await uploadOfficialDishImage(dRestEl.value, file);
       dImgLoadingEl.hidden = true;
       dImgFileEl.value = "";
       URL.revokeObjectURL(localUrl);
-      if (!url) {
-        dErrEl.textContent = "No se pudo subir la imagen (formato o tamaño ≤ 5 MB).";
+      if ("error" in res) {
+        // Mensaje honesto según el motivo real (antes todo decía "≤ 5 MB").
+        const MSG: Record<typeof res.error, string> = {
+          type: "Ese archivo no es una imagen.",
+          size: "La imagen supera los 5 MB.",
+          permission: "No tienes permiso para editar la carta de este perfil.",
+          upload: "No se pudo subir la imagen. Revisa tu conexión e intenta de nuevo.",
+        };
+        dErrEl.textContent = MSG[res.error];
         renderImageField(prev); // revierte al estado anterior (foto previa o vacío)
         return;
       }
+      const url = res.url;
       // Reemplazo: borra la anterior si era una subida nueva (no la original).
       if (prev && prev !== originalImageUrl) deleteOfficialDishImage(prev);
       dImgUrlEl.value = url;
@@ -963,6 +1107,8 @@ import FormModal from "./FormModal.astro";
       originalImageUrl = null;
       dImgUrlEl.value = "";
       renderImageField(null);
+      dGenericEl.checked = false;
+      applyGenericUI(false);
       fillTypeSuggestions(suggestions);
       typeCombo.setValue("");
       openDishModal();
@@ -981,6 +1127,8 @@ import FormModal from "./FormModal.astro";
       originalImageUrl = od.imageUrl ?? null;
       dImgUrlEl.value = originalImageUrl ?? "";
       renderImageField(originalImageUrl);
+      dGenericEl.checked = od.isGeneric;
+      applyGenericUI(od.isGeneric);
       fillTypeSuggestions(suggestions);
       typeCombo.setValue(od.typeName ?? "");
       openDishModal();
@@ -995,7 +1143,6 @@ import FormModal from "./FormModal.astro";
         dNameEl.focus();
         return;
       }
-      const typeName = typeCombo.getValue() || null;
       // El input muestra el precio con puntos de miles; el valor real son los dígitos.
       const priceDigits = dPriceEl.value.replace(/\D/g, "");
       const price = priceDigits === "" ? null : Number(priceDigits);
@@ -1004,14 +1151,19 @@ import FormModal from "./FormModal.astro";
         dPriceEl.focus();
         return;
       }
+      const isGeneric = dGenericEl.checked;
+      // Genérico: sin foto. Conserva categoría y descripción. Si había una foto
+      // recién subida (huérfana en storage), se descarta para no dejar basura.
+      if (isGeneric) discardOrphanImage();
+      const typeName = typeCombo.getValue() || null;
       const notes = dNotesEl.value.trim() || null;
-      const imageUrl = dImgUrlEl.value || null;
+      const imageUrl = isGeneric ? null : (dImgUrlEl.value || null);
       const officialRestaurantId = dRestEl.value;
       const id = dIdEl.value;
 
       const saved = id
-        ? await updateOfficialDish(id, { name, typeName, price, notes, imageUrl })
-        : await createOfficialDish({ officialRestaurantId, name, typeName, price, notes, imageUrl });
+        ? await updateOfficialDish(id, { name, typeName, price, notes, imageUrl, isGeneric })
+        : await createOfficialDish({ officialRestaurantId, name, typeName, price, notes, imageUrl, isGeneric });
 
       if (!saved) {
         dErrEl.textContent = "No se pudo guardar. ¿Sigues siendo dueño de este perfil?";

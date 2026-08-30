@@ -163,6 +163,7 @@ export async function getUserOfficials(
           ? [o.city as string]
           : []
       ).map((c) => c.trim().toUpperCase()),
+      address: (o.address as string | null) ?? null,
       createdAt: created,
       updatedAt: (m?.updated_at as string | null) ?? created,
       officialRestaurantId: o.id as string,

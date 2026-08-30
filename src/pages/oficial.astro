@@ -29,6 +29,7 @@ const tplRestaurant: Restaurant = {
   status: "visited",
   notes: " ",
   cities: [],
+  address: null,
   createdAt: "",
   updatedAt: "",
   officialRestaurantId: "x",
@@ -277,6 +278,18 @@ const tplRestaurant: Restaurant = {
   .dish-card.official-dish .rating-badge {
     flex-shrink: 0;
     transform: scale(1.06);
+  }
+
+  /* Producto genérico: en vez del badge de nota, el precio a la derecha (look de
+     carta). Sin calificación, el precio es la información principal. */
+  .dish-card.official-dish .od-price-tag {
+    order: 2;
+    flex-shrink: 0;
+    font-size: 1.02rem;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    color: var(--clr-text);
+    white-space: nowrap;
   }
 
   @media (hover: hover) {
@@ -895,6 +908,12 @@ const tplRestaurant: Restaurant = {
    *  → modal en modo lectura: ve foto y detalles libremente; al intentar calificar
    *  se pide login y, tras entrar, se reanuda la calificación de ESE plato. */
   function openOfficialModal(od: OfficialDish): void {
+    // Genérico: modal solo-informativo (nombre + precio). No requiere sesión ni
+    // agrega el restaurante a la lista; nada que calificar.
+    if (od.isGeneric) {
+      (window as any).dishForm?.openOfficial(od, null);
+      return;
+    }
     if (userId) {
       void continueRate(od);
       return;
@@ -1033,6 +1052,23 @@ const tplRestaurant: Restaurant = {
       if (notesEl) notesEl.textContent = od.notes;
     } else {
       notesEl?.remove();
+    }
+
+    // ── Producto genérico (Coca-Cola, agua…) ─────────────────────────────────
+    // Sin calificación: no hay badge ni flujo de rating. En su lugar, el precio a
+    // la derecha (look de carta). En modo admin cae al bloque de edición de abajo.
+    if (od.isGeneric && !adminMode) {
+      article.querySelector(".rating-badge")?.remove();
+      if (od.price !== null) {
+        const priceTag = document.createElement("div");
+        priceTag.className = "od-price-tag";
+        priceTag.textContent = `$${od.price.toLocaleString("es-CO")}`;
+        article.appendChild(priceTag);
+      }
+      article.querySelector(".dish-actions")?.remove();
+      article.classList.add("is-rateable");
+      article.addEventListener("click", () => openOfficialModal(od));
+      return article;
     }
 
     // Fila meta al pie: pill secundario del otro lente. El precio NO va en la

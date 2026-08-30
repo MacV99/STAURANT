@@ -9,11 +9,17 @@ import FormModal from "./FormModal.astro";
   <input type="hidden" id="df-rating" value="5" />
 
   <div class="official-hero flex-column" id="df-official-fields" hidden>
-    {/* Foto del plato (solo si tiene). Sin imagen → no se renderiza: cero hueco. */}
-    <img class="official-photo" id="df-official-image" alt="" hidden />
+    {/* Foto del plato (solo si tiene). El frame reserva el espacio con alto fijo
+       desde el inicio (skeleton) para evitar el salto visual mientras la imagen
+       carga; la <img> aparece con fade dentro. Sin imagen → frame hidden: cero hueco. */}
+    <div class="official-photo-frame" id="df-official-image-frame" hidden>
+      <img class="official-photo" id="df-official-image" alt="" />
+    </div>
     <h3 class="official-name" id="df-official-name"></h3>
     <span class="official-type" id="df-official-type"></span>
     <span class="official-price" id="df-official-price" hidden></span>
+    {/* Descripción del plato (la escribe el dueño en la gestión). Oculta si vacía. */}
+    <p class="official-desc" id="df-official-desc" hidden></p>
   </div>
 
   <div class="type-field flex-column" id="df-type-field">
@@ -117,19 +123,59 @@ import FormModal from "./FormModal.astro";
     display: none;
   }
 
-  /* Foto del plato dentro del modal de detalles. Ancho completo del modal,
-     esquinas redondeadas. Oculta (sin hueco) si el plato no tiene foto. */
+  /* Frame de la foto: reserva el espacio (alto fijo) desde que se abre el modal,
+     así el layout no salta mientras la imagen carga. Mientras carga se ve como
+     skeleton (fondo + shimmer). Oculto (sin hueco) si el plato no tiene foto. */
+  .official-photo-frame {
+    position: relative;
+    width: 100%;
+    height: 220px;
+    overflow: hidden;
+    border-radius: var(--border-radius);
+    margin-bottom: 4px;
+    background: var(--clr-white2);
+  }
+
+  .official-photo-frame[hidden] {
+    display: none;
+  }
+
+  /* Shimmer sutil mientras la imagen aún no ha cargado. */
+  .official-photo-frame.is-loading::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      100deg,
+      transparent 25%,
+      rgba(0, 0, 0, 0.045) 50%,
+      transparent 75%
+    );
+    background-size: 220% 100%;
+    animation: photo-shimmer 1.15s ease-in-out infinite;
+  }
+
+  @keyframes photo-shimmer {
+    from {
+      background-position: 220% 0;
+    }
+    to {
+      background-position: -220% 0;
+    }
+  }
+
+  /* La imagen ocupa todo el frame y aparece con fade sobre el skeleton. */
   .official-photo {
     display: block;
     width: 100%;
-    max-height: 220px;
+    height: 100%;
     object-fit: cover;
-    border-radius: var(--border-radius);
-    margin-bottom: 4px;
+    opacity: 0;
+    transition: opacity 0.35s ease;
   }
 
-  .official-photo[hidden] {
-    display: none;
+  .official-photo.loaded {
+    opacity: 1;
   }
 
   .official-name {
@@ -167,10 +213,28 @@ import FormModal from "./FormModal.astro";
     display: none;
   }
 
+  .official-desc {
+    margin: 10px 0 0;
+    font-size: 0.92rem;
+    line-height: 1.45;
+    color: var(--clr-text);
+    opacity: 0.72;
+    white-space: pre-line; /* respeta saltos de línea que escriba el dueño */
+  }
+
+  .official-desc[hidden] {
+    display: none;
+  }
+
   /* `.flex-column` fija display:flex y gana al [hidden] del user-agent →
      forzar el ocultado de los campos editables en platos oficiales. */
   #df-type-field[hidden],
   #df-name-field[hidden] {
+    display: none;
+  }
+
+  /* `.rating-field` es flex-column → forzar ocultado en productos genéricos. */
+  .rating-field[hidden] {
     display: none;
   }
 
@@ -582,6 +646,9 @@ import FormModal from "./FormModal.astro";
     const ratingClearBtn = document.getElementById(
       "df-rating-clear",
     ) as HTMLButtonElement;
+    const ratingFieldEl = document.querySelector(
+      "#dish-form .rating-field",
+    ) as HTMLElement;
     const drumOuterEl = document.getElementById("df-drum-outer") as HTMLElement;
     const drumEl = document.getElementById("df-rating-drum") as HTMLElement;
     const drumTrackEl = document.getElementById("df-drum-track") as HTMLElement;
@@ -603,6 +670,12 @@ import FormModal from "./FormModal.astro";
     const officialImageEl = document.getElementById(
       "df-official-image",
     ) as HTMLImageElement;
+    const officialImageFrameEl = document.getElementById(
+      "df-official-image-frame",
+    ) as HTMLElement;
+    const officialDescEl = document.getElementById(
+      "df-official-desc",
+    ) as HTMLElement;
     const typeFieldEl = document.getElementById("df-type-field") as HTMLElement;
     const nameFieldEl = document.getElementById("df-name-field") as HTMLElement;
 
@@ -617,6 +690,9 @@ import FormModal from "./FormModal.astro";
     // foto y los detalles, pero cualquier intento de calificar (tocar la rueda o
     // enviar) dispara este callback (login). null = sesión activa, sí puede calificar.
     let officialViewAuth: (() => void) | null = null;
+    // Producto genérico (Coca-Cola, agua…): el modal es SOLO informativo (nombre +
+    // precio). Sin foto, sin tipo, sin rueda de calificación. Enviar = cerrar.
+    let isGenericView = false;
 
     let isRated = false;
 
@@ -796,6 +872,8 @@ import FormModal from "./FormModal.astro";
       restaurantIdInput.value = restaurantId;
       officialRatingDishId = null;
       officialViewAuth = null;
+      isGenericView = false;
+      ratingFieldEl.hidden = false;
       submitBtn.textContent = "Guardar";
       drumHintTextEl.textContent = "Toca para calificar";
 
@@ -854,9 +932,12 @@ import FormModal from "./FormModal.astro";
       errorEl.textContent = "";
       form.reset();
       isOfficial = true;
-      officialRatingDishId = od.id;
+      // Genérico (Coca-Cola, agua…): modal solo-informativo. Sin rueda, sin foto,
+      // sin tipo; nada que guardar. Enviar = cerrar.
+      isGenericView = od.isGeneric;
+      officialRatingDishId = isGenericView ? null : od.id;
       // Anónimo: modo lectura. Ve foto/detalles; calificar dispara login.
-      officialViewAuth = opts?.onRequireAuth ?? null;
+      officialViewAuth = isGenericView ? null : (opts?.onRequireAuth ?? null);
       const viewOnly = !!officialViewAuth;
 
       // Solo cabecera + rueda: ocultar campos editables (nombre/tipo/notas).
@@ -864,30 +945,53 @@ import FormModal from "./FormModal.astro";
       typeFieldEl.hidden = true;
       nameFieldEl.hidden = true;
       (document.getElementById("df-notes-field") as HTMLElement).hidden = true;
+      // Genérico: sin calificación → ocultar la rueda por completo.
+      ratingFieldEl.hidden = isGenericView;
 
-      titleEl.textContent = viewOnly ? "Detalle del plato" : "Calificar plato";
-      submitBtn.textContent = viewOnly
-        ? "Iniciar sesión para calificar"
-        : "Guardar";
+      titleEl.textContent = "Detalle del plato";
+      if (!isGenericView)
+        titleEl.textContent = viewOnly ? "Detalle del plato" : "Calificar plato";
+      submitBtn.textContent = isGenericView
+        ? "Cerrar"
+        : viewOnly
+          ? "Iniciar sesión para calificar"
+          : "Guardar";
       drumHintTextEl.textContent = viewOnly
         ? "Inicia sesión para calificar"
         : "Toca para calificar";
-      // Foto del plato: se muestra SOLO aquí (no en la card). Sin foto o URL rota
-      // → se oculta, sin dejar espacio reservado.
-      if (od.imageUrl) {
+      // Foto del plato: se muestra SOLO aquí (no en la card). Genérico → sin foto.
+      // El frame reserva el alto desde ya (skeleton) para que no haya salto; la
+      // imagen entra con fade al terminar de cargar. URL rota → se oculta el frame.
+      if (od.imageUrl && !isGenericView) {
+        officialImageEl.classList.remove("loaded");
+        officialImageFrameEl.classList.add("is-loading");
+        officialImageFrameEl.hidden = false;
+        const markLoaded = () => {
+          officialImageEl.classList.add("loaded");
+          officialImageFrameEl.classList.remove("is-loading");
+        };
+        officialImageEl.onload = markLoaded;
         officialImageEl.onerror = () => {
-          officialImageEl.hidden = true;
+          officialImageFrameEl.hidden = true;
+          officialImageFrameEl.classList.remove("is-loading");
         };
         officialImageEl.src = od.imageUrl;
-        officialImageEl.hidden = false;
+        // Imagen en caché (o misma URL que la apertura previa): onload puede no
+        // dispararse; si ya está completa, la marcamos cargada de inmediato.
+        if (officialImageEl.complete && officialImageEl.naturalWidth > 0) {
+          markLoaded();
+        }
       } else {
+        officialImageEl.onload = null;
         officialImageEl.onerror = null;
+        officialImageEl.classList.remove("loaded");
+        officialImageFrameEl.classList.remove("is-loading");
         officialImageEl.removeAttribute("src");
-        officialImageEl.hidden = true;
+        officialImageFrameEl.hidden = true;
       }
       officialNameEl.textContent = od.name;
       officialTypeEl.textContent = od.typeName ?? "";
-      officialTypeEl.hidden = !od.typeName;
+      officialTypeEl.hidden = isGenericView || !od.typeName;
 
       // Precio: se muestra SOLO aquí (no en la card). Sin precio → oculto.
       if (od.price !== null) {
@@ -895,6 +999,15 @@ import FormModal from "./FormModal.astro";
         officialPriceEl.hidden = false;
       } else {
         officialPriceEl.hidden = true;
+      }
+
+      // Descripción del plato: la escribe el dueño. Genérico o vacía → oculta.
+      const desc = od.notes?.trim();
+      if (desc && !isGenericView) {
+        officialDescEl.textContent = desc;
+        officialDescEl.hidden = false;
+      } else {
+        officialDescEl.hidden = true;
       }
 
       if (currentRating !== null) {
@@ -1277,6 +1390,12 @@ import FormModal from "./FormModal.astro";
     form.onsubmit = (e) => {
       e.preventDefault();
       errorEl.textContent = "";
+
+      // ── Producto genérico: modal informativo, nada que guardar → cerrar ──────
+      if (isGenericView) {
+        close();
+        return;
+      }
 
       // ── Anónimo en modo lectura: enviar = pedir login, no guardar nada ───────
       if (officialViewAuth) {

@@ -9,6 +9,7 @@ export interface Restaurant {
   status: "visited" | "pending";
   notes: string;
   cities: string[]; // MAYÚSCULAS; puede tener varias (cadenas / multi-sede)
+  address: string | null; // dirección/ubicación libre; alimenta el enlace a Google Maps
   createdAt: string;
   updatedAt: string;
   officialRestaurantId: string | null;
@@ -54,6 +55,7 @@ export interface OfficialDish {
   notes: string | null; // descripción del plato en la carta
   price: number | null; // solo platos oficiales; null = sin precio
   imageUrl: string | null; // foto del plato (carta oficial)
+  isGeneric: boolean; // producto genérico (Coca-Cola, agua…): sin foto ni calificación, solo nombre + precio
 }
 
 export interface OfficialStat {
@@ -335,6 +337,7 @@ export function toRestaurant(row: Record<string, unknown>): Restaurant {
     status: row.status as "visited" | "pending",
     notes: row.notes as string,
     cities: (row.cities as string[] | null) ?? [],
+    address: (row.address as string | null) ?? null,
     createdAt: row.created_at as string,
     updatedAt: (row.updated_at as string | null) ?? (row.created_at as string),
     officialRestaurantId: (row.official_restaurant_id as string | null) ?? null,
@@ -383,6 +386,14 @@ export function getRestaurants(): Restaurant[] {
   return getCache().restaurants;
 }
 
+/** URL universal de Google Maps para una dirección libre. null si vacía.
+ *  Usa el esquema oficial `search/?api=1&query=` (abre app o web). */
+export function mapsUrl(address: string | null | undefined): string | null {
+  const q = address?.trim();
+  if (!q) return null;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+}
+
 export function getDishes(): Dish[] {
   return getCache().dishes;
 }
@@ -406,6 +417,7 @@ export function createRestaurant(
   input: Pick<Restaurant, "name" | "notes"> & {
     officialRestaurantId?: string | null;
     cities?: string[];
+    address?: string | null;
   },
 ): Restaurant {
   const now = new Date().toISOString();
@@ -414,6 +426,7 @@ export function createRestaurant(
     name: input.name,
     notes: input.notes,
     cities: input.cities ?? [],
+    address: input.address ?? null,
     status: "pending",
     createdAt: now,
     updatedAt: now,
@@ -426,7 +439,7 @@ export function createRestaurant(
   bgSync(() =>
     supabase.from("restaurants").insert({
       id: r.id, user_id: _userId,
-      name: r.name, notes: r.notes, cities: r.cities,
+      name: r.name, notes: r.notes, cities: r.cities, address: r.address,
       status: r.status, created_at: r.createdAt, updated_at: r.updatedAt,
       official_restaurant_id: r.officialRestaurantId,
     })
@@ -436,7 +449,7 @@ export function createRestaurant(
 
 export function updateRestaurant(
   id: string,
-  input: Partial<Pick<Restaurant, "name" | "notes" | "status" | "cities">>
+  input: Partial<Pick<Restaurant, "name" | "notes" | "status" | "cities" | "address">>
 ): Restaurant | null {
   const cache = getCache();
   const idx = cache.restaurants.findIndex((r) => r.id === id);
@@ -450,6 +463,7 @@ export function updateRestaurant(
   if (input.notes !== undefined) patch.notes = input.notes;
   if (input.status !== undefined) patch.status = input.status;
   if (input.cities !== undefined) patch.cities = input.cities;
+  if (input.address !== undefined) patch.address = input.address;
   bgSync(() => supabase.from("restaurants").update(patch).eq("id", id));
 
   return cache.restaurants[idx];
@@ -588,12 +602,18 @@ export function getDishTypes(): DishType[] {
 }
 
 export function createDishType(name: string): DishType {
+  const normalized = name.trim().toUpperCase();
+  // Idempotente: si ya existe un tipo con ese nombre, reutilizarlo en vez de
+  // crear un duplicado (centraliza/unifica categorías; evita "HAMBURGUESA" x2).
+  const cache = getCache();
+  const existing = cache.dishTypes.find((t) => t.name === normalized);
+  if (existing) return existing;
+
   const dt: DishType = {
     id: crypto.randomUUID(),
-    name: name.trim().toUpperCase(),
+    name: normalized,
     createdAt: new Date().toISOString(),
   };
-  const cache = getCache();
   // Insertar en orden alfabético para mantener el mismo invariante que Supabase
   const idx = cache.dishTypes.findIndex(t => t.name.localeCompare(dt.name) > 0);
   if (idx === -1) cache.dishTypes.push(dt);
@@ -693,6 +713,7 @@ function toOfficialDish(row: Record<string, unknown>): OfficialDish {
     notes: (row.notes as string | null) ?? null,
     price: (row.price as number | null) ?? null,
     imageUrl: (row.image_url as string | null) ?? null,
+    isGeneric: (row.is_generic as boolean | null) ?? false,
   };
 }
 
@@ -991,6 +1012,7 @@ export async function createOfficialDish(input: {
   price?: number | null;
   notes?: string | null;
   imageUrl?: string | null;
+  isGeneric?: boolean;
 }): Promise<OfficialDish | null> {
   const { data, error } = await supabase
     .from("official_dishes")
@@ -1001,6 +1023,7 @@ export async function createOfficialDish(input: {
       price: input.price ?? null,
       notes: input.notes ?? null,
       image_url: input.imageUrl ?? null,
+      is_generic: input.isGeneric ?? false,
     })
     .select()
     .single();
@@ -1011,7 +1034,7 @@ export async function createOfficialDish(input: {
 /** Edita un plato de la carta oficial (solo dueño). */
 export async function updateOfficialDish(
   id: string,
-  patch: Partial<{ name: string; typeName: string | null; price: number | null; notes: string | null; imageUrl: string | null }>,
+  patch: Partial<{ name: string; typeName: string | null; price: number | null; notes: string | null; imageUrl: string | null; isGeneric: boolean }>,
 ): Promise<OfficialDish | null> {
   const row: Record<string, unknown> = {};
   if (patch.name !== undefined) row.name = patch.name;
@@ -1019,6 +1042,7 @@ export async function updateOfficialDish(
   if (patch.price !== undefined) row.price = patch.price;
   if (patch.notes !== undefined) row.notes = patch.notes;
   if (patch.imageUrl !== undefined) row.image_url = patch.imageUrl;
+  if (patch.isGeneric !== undefined) row.is_generic = patch.isGeneric;
   const { data, error } = await supabase
     .from("official_dishes")
     .update(row)
@@ -1086,21 +1110,30 @@ async function optimizeImage(file: File): Promise<File> {
   }
 }
 
+/** Motivo de fallo al subir una foto de plato oficial. Sirve para dar un
+ *  mensaje honesto: antes CUALQUIER fallo (formato, tamaño, permiso o red)
+ *  se mostraba como "tamaño ≤ 5 MB", lo que confundía al usuario. */
+export type UploadDishImageError = "type" | "size" | "permission" | "upload";
+
+export type UploadDishImageResult =
+  | { url: string }
+  | { error: UploadDishImageError };
+
 /** Sube la foto de un plato oficial al bucket 'official-dishes' y devuelve su URL
  *  pública. El path SIEMPRE empieza por el officialRestaurantId: la RLS del bucket
- *  exige que la primera carpeta sea un perfil del que el usuario es dueño. Solo
- *  imágenes; máx 5 MB. Devuelve null si algo falla. */
+ *  exige que la primera carpeta sea un perfil del que el usuario sea dueño (o
+ *  superadmin). Solo imágenes; máx 5 MB. Devuelve { error } con el motivo real. */
 export async function uploadOfficialDishImage(
   officialRestaurantId: string,
   file: File,
-): Promise<string | null> {
+): Promise<UploadDishImageResult> {
   if (!file.type.startsWith("image/")) {
     console.error("[uploadOfficialDishImage] no es imagen:", file.type);
-    return null;
+    return { error: "type" };
   }
   if (file.size > 5 * 1024 * 1024) {
     console.error("[uploadOfficialDishImage] imagen > 5 MB");
-    return null;
+    return { error: "size" };
   }
   const optimized = await optimizeImage(file); // resize + WebP en el cliente
   const path = `${officialRestaurantId}/${crypto.randomUUID()}.webp`;
@@ -1111,9 +1144,18 @@ export async function uploadOfficialDishImage(
       upsert: false,
       contentType: "image/webp",
     });
-  if (error) { console.error("[uploadOfficialDishImage]", error); return null; }
+  if (error) {
+    console.error("[uploadOfficialDishImage]", error);
+    // RLS del bucket → status 403 / "row-level security". No es un problema de
+    // tamaño ni formato: el usuario no tiene permiso sobre ese perfil oficial.
+    const status = (error as { statusCode?: string | number }).statusCode;
+    const isPermission =
+      status === 403 || status === "403" ||
+      /row-level security|unauthorized|permission/i.test(error.message);
+    return { error: isPermission ? "permission" : "upload" };
+  }
   const { data } = supabase.storage.from(OFFICIAL_DISH_BUCKET).getPublicUrl(path);
-  return data.publicUrl;
+  return { url: data.publicUrl };
 }
 
 /** Borra una imagen previa del bucket a partir de su URL pública (best-effort).

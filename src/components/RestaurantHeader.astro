@@ -72,6 +72,11 @@ const isPending = r.status === "pending";
     <i class="bi bi-geo-alt-fill" />
     <span class="rh-cities-list" />
   </span>
+  <a class="rh-address" target="_blank" rel="noopener" hidden>
+    <i class="bi bi-map-fill" />
+    <span class="rh-address-text" />
+    <i class="bi bi-box-arrow-up-right rh-address-ext" />
+  </a>
   <div class="rh-socials flex-row" hidden>
     <a class="rh-social rh-social-wa" aria-label="Llamar" hidden>
       <i class="bi bi-telephone-fill" />
@@ -199,6 +204,46 @@ const isPending = r.status === "pending";
     color: var(--clr-primary);
     font-size: 0.78rem;
     flex-shrink: 0;
+  }
+
+  /* Dirección → enlace a Google Maps */
+  .rh-address {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.8rem;
+    color: var(--clr-primary);
+    text-decoration: none;
+    width: fit-content;
+    max-width: 100%;
+  }
+
+  .rh-address[hidden] {
+    display: none;
+  }
+
+  .rh-address i {
+    font-size: 0.82rem;
+    flex-shrink: 0;
+  }
+
+  .rh-address-text {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rh-address-ext {
+    font-size: 0.68rem !important;
+    opacity: 0.7;
+  }
+
+  @media (hover: hover) {
+    .rh-address:hover .rh-address-text {
+      color: var(--clr-text);
+    }
   }
 
   /* Redes: solo se muestran los íconos con valor (los vacíos van hidden). */

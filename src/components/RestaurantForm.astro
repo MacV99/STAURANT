@@ -40,6 +40,17 @@ import FormModal from "./FormModal.astro";
     <div id="rf-city-chips" class="rf-city-chips flex-row" hidden></div>
   </div>
 
+  <label for="rf-address">
+    <span class="label-text flex-row">Dirección <span class="optional">(opcional)</span></span>
+    <input
+      type="text"
+      id="rf-address"
+      autocomplete="off"
+      placeholder="Calle 10 #43-20, Local 2..."
+    />
+    <span class="rf-address-hint">Se usará para abrir la ubicación en Google Maps.</span>
+  </label>
+
   <label for="rf-notes">
     <span class="label-text flex-row">Notas</span>
     <textarea
@@ -51,6 +62,15 @@ import FormModal from "./FormModal.astro";
 </FormModal>
 
 <style>
+  /* ── Dirección ────────────────────────────────────────────────────────── */
+
+  .rf-address-hint {
+    font-size: 0.72rem;
+    color: var(--clr-text);
+    opacity: 0.55;
+    margin-top: 4px;
+  }
+
   /* ── Autocomplete oficial ─────────────────────────────────────────────── */
 
   .name-combobox {
@@ -332,6 +352,7 @@ import FormModal from "./FormModal.astro";
     const idInput    = document.getElementById("rf-id") as HTMLInputElement;
     const officialIdInput = document.getElementById("rf-official-id") as HTMLInputElement;
     const nameInput  = document.getElementById("rf-name") as HTMLInputElement;
+    const addressInput = document.getElementById("rf-address") as HTMLInputElement;
     const notesInput = document.getElementById("rf-notes") as HTMLTextAreaElement;
     const errorEl    = document.getElementById("restaurant-form-error")!;
     const closeBtn   = document.getElementById("restaurant-form-close")!;
@@ -535,6 +556,7 @@ import FormModal from "./FormModal.astro";
         titleEl.textContent = "Editar restaurante";
         idInput.value   = data.id;
         nameInput.value = data.name;
+        addressInput.value = data.address ?? "";
         notesInput.value = data.notes;
       } else {
         titleEl.textContent = "Nuevo restaurante";
@@ -581,6 +603,7 @@ import FormModal from "./FormModal.astro";
       if (duplicate) { errorEl.textContent = "Ya existe un restaurante con ese nombre."; nameInput.focus(); return; }
 
       const notes = notesInput.value.trim();
+      const address = addressInput.value.trim() || null;
       // Incluye lo que quedó escrito en el input sin confirmar como un chip.
       addCity(cityInput.value);
       const cities = [...selectedCities];
@@ -590,10 +613,10 @@ import FormModal from "./FormModal.astro";
       close();
 
       if (id) {
-        const updated = updateRestaurant(id, { name, notes, cities });
+        const updated = updateRestaurant(id, { name, notes, cities, address });
         if (updated) emit("restaurant:updated", updated);
       } else {
-        emit("restaurant:created", createRestaurant({ name, notes, cities }));
+        emit("restaurant:created", createRestaurant({ name, notes, cities, address }));
       }
     };
 

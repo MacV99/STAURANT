@@ -25,6 +25,7 @@ const tplRestaurant: Restaurant = {
   status: "visited",
   notes: " ",
   cities: [],
+  address: null,
   createdAt: "",
   updatedAt: "",
   officialRestaurantId: null,
@@ -307,6 +308,7 @@ const tplRestaurant: Restaurant = {
     deleteDish,
     deleteRestaurant,
     getRestaurantAverage,
+    mapsUrl,
     markAsVisited,
     markAsPending,
     getDishTypes,
@@ -529,6 +531,14 @@ const tplRestaurant: Restaurant = {
     if (citiesEl && citiesListEl && r.cities.length > 0) {
       citiesListEl.textContent = r.cities.join(" · ");
       citiesEl.hidden = false;
+    }
+    const addressEl = div.querySelector<HTMLAnchorElement>(".rh-address");
+    const addressTextEl = div.querySelector(".rh-address-text");
+    const href = mapsUrl(r.address);
+    if (addressEl && addressTextEl && href) {
+      addressTextEl.textContent = r.address;
+      addressEl.href = href;
+      addressEl.hidden = false;
     }
     const badge = div.querySelector(".rating-badge")!;
     paintRatingBadge(badge, avg);
