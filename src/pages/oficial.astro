@@ -256,18 +256,6 @@ const tplRestaurant: Restaurant = {
     transform: scale(1.06);
   }
 
-  /* Producto genérico: en vez del badge de nota, el precio a la derecha (look de
-     carta). Sin calificación, el precio es la información principal. */
-  .dish-card.official-dish .od-price-tag {
-    order: 2;
-    flex-shrink: 0;
-    font-size: 1.02rem;
-    font-weight: 800;
-    letter-spacing: -0.3px;
-    color: var(--clr-text);
-    white-space: nowrap;
-  }
-
   @media (hover: hover) {
     /* Realce sutil al pasar el mouse (solo card calificable). */
     .dish-card.official-dish.is-rateable:hover {
@@ -1020,16 +1008,11 @@ const tplRestaurant: Restaurant = {
     // Categoría y descripción ya NO se muestran en la card (solo en el modal).
 
     // ── Producto genérico (Coca-Cola, agua…) ─────────────────────────────────
-    // Sin calificación: no hay badge ni flujo de rating. En su lugar, el precio a
-    // la derecha (look de carta). En modo admin cae al bloque de edición de abajo.
+    // Sin calificación: no hay badge ni flujo de rating. El precio NO va en la
+    // card — se muestra solo dentro del modal. En modo admin cae al bloque de
+    // edición de abajo.
     if (od.isGeneric && !adminMode) {
       article.querySelector(".rating-badge")?.remove();
-      if (od.price !== null) {
-        const priceTag = document.createElement("div");
-        priceTag.className = "od-price-tag";
-        priceTag.textContent = `$${od.price.toLocaleString("es-CO")}`;
-        article.appendChild(priceTag);
-      }
       article.querySelector(".dish-actions")?.remove();
       article.classList.add("is-rateable");
       article.addEventListener("click", () => openOfficialModal(od));
@@ -1123,8 +1106,13 @@ const tplRestaurant: Restaurant = {
         const cmp = a.name.localeCompare(b.name);
         return sortDir === "asc" ? cmp : -cmp;
       }
-      // Rating: SIEMPRE de mayor a menor. El pill no invierte la dirección;
-      // solo cambia la lente (global vs mía) vía dishRatingScore.
+      // Rating: los genéricos (no calificables: Coca-Cola, agua…) SIEMPRE al
+      // fondo, por debajo incluso de los calificables aún sin nota.
+      const ag = a.isGeneric ? 1 : 0;
+      const bg = b.isGeneric ? 1 : 0;
+      if (ag !== bg) return ag - bg;
+      // SIEMPRE de mayor a menor. El pill no invierte la dirección; solo
+      // cambia la lente (global vs mía) vía dishRatingScore.
       return dishRatingScore(b.id) - dishRatingScore(a.id);
     });
   }
