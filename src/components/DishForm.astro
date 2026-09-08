@@ -1084,11 +1084,16 @@ import FormModal from "./FormModal.astro";
       const w = drumEl.getBoundingClientRect().width;
       if (w === 0) return; // not laid out yet — wait for ResizeObserver
       const pad = Math.max(0, w / 2 - ITEM_W / 2);
-      // Spacers simétricos + OVERSCROLL: item 1 e item 10 centran igual,
-      // y queda un poco de cuerda para rebotar a cada lado.
+      // startSpacer = pad + OVERSCROLL: define el origen del scroll (la math de
+      // centrado depende de esto). endSpacer NO afecta el centrado, solo el máximo
+      // scrollable, así que puede crecer libre.
       const spacer = pad + OVERSCROLL;
       if (startSpacer) startSpacer.style.flex = `0 0 ${spacer}px`;
-      if (endSpacer) endSpacer.style.flex = `0 0 ${spacer}px`;
+      // iOS Safari trata la franja final como zona de rubber-band: rebota antes de
+      // que scrollLeft alcance el centro del item 10 (tope real ≈ 9.5). Buffer extra
+      // (1 ITEM_W) en el endSpacer saca el item 10 de esa zona → alcanzable en iOS.
+      // Android/desktop no tienen rebote; el buffer es inocuo (solo scroll muerto).
+      if (endSpacer) endSpacer.style.flex = `0 0 ${spacer + ITEM_W}px`;
     }
 
     // Drum-picker width may be 0 at first measurement (modal mid-open, dvh shift,
