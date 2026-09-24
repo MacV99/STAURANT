@@ -45,6 +45,9 @@ export interface OfficialRestaurant {
   instagram: string | null; // handle o URL; vacío = sin ícono
   facebook: string | null;
   tiktok: string | null;
+  /** Logo del restaurante (bucket 'official-dishes', misma carpeta = officialId).
+   *  null = sin logo; el header cae a un placeholder con la inicial del nombre. */
+  logoUrl: string | null;
 }
 
 export interface OfficialDish {
@@ -87,6 +90,7 @@ export interface HomeEntry {
   updatedAt: string;
   isOfficial: boolean;
   officialRestaurantId: string | null;
+  logoUrl: string | null; // solo oficiales; null = sin logo → placeholder inicial
   avg: number | null; // MI promedio
   dishCount: number;
   hasUnrated: boolean;
@@ -701,6 +705,7 @@ function toOfficialRestaurant(row: Record<string, unknown>): OfficialRestaurant 
     instagram: (row.instagram as string | null) ?? null,
     facebook: (row.facebook as string | null) ?? null,
     tiktok: (row.tiktok as string | null) ?? null,
+    logoUrl: (row.logo_url as string | null) ?? null,
   };
 }
 
@@ -1181,6 +1186,7 @@ export async function updateOfficialRestaurant(
     instagram: string | null;
     facebook: string | null;
     tiktok: string | null;
+    logoUrl: string | null;
   }>,
 ): Promise<OfficialRestaurant | null> {
   // `cities` es la fuente de verdad; se sincroniza la columna legacy `city` con la
@@ -1189,6 +1195,11 @@ export async function updateOfficialRestaurant(
   if (patch.cities !== undefined) {
     dbPatch.cities = patch.cities;
     dbPatch.city = patch.cities[0] ?? null;
+  }
+  // `logoUrl` (camelCase) → columna `logo_url` (snake_case). Único campo que difiere.
+  if (patch.logoUrl !== undefined) {
+    dbPatch.logo_url = patch.logoUrl;
+    delete dbPatch.logoUrl;
   }
   const { data, error } = await supabase
     .from("official_restaurants")
@@ -1361,6 +1372,7 @@ export function getHomeEntries(): HomeEntry[] {
       updatedAt: r.updatedAt,
       isOfficial: false,
       officialRestaurantId: null,
+      logoUrl: null,
       avg: getRestaurantAverage(r.id),
       dishCount: ds.length,
       hasUnrated: ds.some((d) => d.rating === null),
@@ -1392,6 +1404,7 @@ export function getHomeEntries(): HomeEntry[] {
         updatedAt: m.updatedAt,
         isOfficial: true,
         officialRestaurantId: m.officialRestaurantId,
+        logoUrl: off.logoUrl ?? null,
         avg: getMyOfficialAverage(m.officialRestaurantId),
         dishCount: dishes.length,
         hasUnrated: dishes.some((d) => cache.ratings[d.id] === undefined),

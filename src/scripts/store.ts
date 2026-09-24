@@ -49,6 +49,62 @@ export function buildGlobalRatingPill(avg: number, count: number): HTMLElement {
   return pill;
 }
 
+/** Logo de un restaurante oficial (img) o placeholder con la inicial del nombre
+ *  si no tiene logo o la imagen falla. Clase base `.logo-avatar`; `extraClass`
+ *  añade variantes de tamaño (p.ej. `logo-avatar-lg` en el header). Se usa en el
+ *  header /oficial, las cards del inicio y las de /explorar. */
+export function buildOfficialLogo(
+  logoUrl: string | null,
+  name: string,
+  extraClass = "",
+): HTMLElement {
+  const base = extraClass ? `logo-avatar ${extraClass}` : "logo-avatar";
+  const initial = name.trim().charAt(0).toUpperCase() || "?";
+  const placeholder = () => {
+    const box = document.createElement("div");
+    box.className = `${base} logo-avatar-placeholder`;
+    box.textContent = initial;
+    box.setAttribute("aria-label", name);
+    return box;
+  };
+  if (!logoUrl) return placeholder();
+  const img = document.createElement("img");
+  img.className = base;
+  img.src = logoUrl;
+  img.alt = name;
+  img.onerror = () => img.replaceWith(placeholder());
+  return img;
+}
+
+/** Pill de calificación con etiqueta (Global 🌐 / Personal 👤), mismo estilo visual
+ *  que `.global-rating-pill`. Se usa en el header oficial donde antes iba el badge:
+ *  la nota se parte en dos pills (comunidad vs. tú). `score` null → em dash. */
+export function buildRatingPill(
+  kind: "global" | "personal",
+  score: number | null,
+  count?: number,
+): HTMLElement {
+  const pill = document.createElement("span");
+  pill.className = "global-rating-pill";
+  const icon = kind === "global" ? "bi-globe2" : "bi-person-fill";
+  const label = kind === "global" ? "Global" : "Personal";
+  const val = score === null ? "—" : String(score);
+  pill.title =
+    kind === "global"
+      ? count && count > 0
+        ? `Promedio global basado en ${count} ${count === 1 ? "calificación" : "calificaciones"}`
+        : "Aún sin calificaciones de la comunidad"
+      : score === null
+        ? "Aún no has calificado platos de este restaurante"
+        : "Tu promedio en este restaurante";
+  const countHtml =
+    kind === "global" && count && count > 0
+      ? ` <span class="grp-count">· <i class="bi bi-person-fill"></i> ${count}</span>`
+      : "";
+  pill.innerHTML = `<i class="bi ${icon}"></i> ${label} <span class="rp-score">${val}</span>${countHtml}`;
+  return pill;
+}
+
 /** Rellena un heading con el nombre del restaurante. Los oficiales llevan el sello
  *  verificado pegado a la última palabra (`.name-tail-nowrap`) para que no caiga
  *  sola en una línea. Unifica el `fillName`/head-tail repartido por las páginas. */

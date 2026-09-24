@@ -747,6 +747,8 @@ const tplRestaurant: Restaurant = {
   import {
     paintRatingBadge,
     buildGlobalRatingPill,
+    buildRatingPill,
+    buildOfficialLogo,
     fillRestaurantName,
     updateSortPills,
     makeCrown,
@@ -956,18 +958,32 @@ const tplRestaurant: Restaurant = {
       citiesEl.hidden = false;
     }
 
-    // Badge grande = TU promedio; pill secundario = 🌐 promedio del público.
+    // Logo donde antes iba el badge de nota; la calificación baja a dos pills
+    // (Global = comunidad · Personal = tú), mismo estilo que la nota global.
     const stat = getOfficialRestaurantStat(official!.id);
     const myAvg = userId ? getMyOfficialAverage(official!.id) : null;
     const badge = div.querySelector(".rating-badge")!;
     const pillsRow = div.querySelector<HTMLElement>(".rh-pills");
 
-    paintRatingBadge(badge, myAvg);
-    if (stat && stat.ratingsCount > 0)
-      pillsRow?.insertBefore(
-        buildGlobalRatingPill(stat.avgRating, stat.ratingsCount),
+    badge.replaceWith(
+      buildOfficialLogo(official!.logoUrl, official!.name, "logo-avatar-lg"),
+    );
+
+    // Orden: Global primero, Personal después, luego el conteo de platos.
+    if (pillsRow) {
+      pillsRow.insertBefore(
+        buildRatingPill("personal", myAvg),
         pillsRow.firstChild,
       );
+      pillsRow.insertBefore(
+        buildRatingPill(
+          "global",
+          stat && stat.ratingsCount > 0 ? stat.avgRating : null,
+          stat?.ratingsCount,
+        ),
+        pillsRow.firstChild,
+      );
+    }
 
     // Notas
     const notesEl = div.querySelector<HTMLElement>(".rh-notes");

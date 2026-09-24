@@ -175,6 +175,37 @@ import FormModal from "./FormModal.astro";
       <input type="text" id="opf-name" required placeholder="Nombre del restaurante" />
     </label>
 
+    <div class="opf-logo-field form-col-full flex-row">
+      <input type="hidden" id="opf-logo-url" />
+      {/* visually-hidden (no display:none): iOS/Safari no abren el selector si el
+          file input está oculto con display:none. */}
+      <input
+        type="file"
+        id="opf-logo-file"
+        accept="image/*"
+        class="odf-visually-hidden"
+      />
+      <button type="button" id="opf-logo-btn" class="opf-logo-btn" aria-label="Logo del restaurante">
+        <span class="opf-logo-preview" id="opf-logo-preview">
+          <i class="bi bi-image"></i>
+        </span>
+        <span class="opf-logo-loading" id="opf-logo-loading" hidden>
+          <span class="spinner"></span>
+        </span>
+      </button>
+      <div class="opf-logo-meta flex-column">
+        <span class="label-text flex-row">Logo <span class="optional">(opcional)</span></span>
+        <div class="opf-logo-actions flex-row">
+          <button type="button" id="opf-logo-change" class="opf-logo-act">
+            <i class="bi bi-arrow-repeat"></i> Cambiar
+          </button>
+          <button type="button" id="opf-logo-remove" class="opf-logo-act is-remove" hidden>
+            <i class="bi bi-trash"></i> Quitar
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div class="cc-field flex-column">
       <span class="label-text flex-row"
         >Ciudades <span class="optional">(opcional)</span></span
@@ -797,6 +828,127 @@ import FormModal from "./FormModal.astro";
       transform: rotate(360deg);
     }
   }
+
+  /* ── Campo LOGO del perfil: miniatura cuadrada + acciones al lado. ── */
+  .opf-logo-field {
+    align-items: center;
+    gap: 14px;
+  }
+
+  .opf-logo-btn {
+    position: relative;
+    flex-shrink: 0;
+    width: 72px;
+    height: 72px;
+    padding: 0;
+    border: 1.5px solid var(--clr-border);
+    border-radius: var(--radius-lg);
+    background: var(--clr-white2);
+    cursor: pointer;
+    overflow: hidden;
+    transition: var(--transition);
+  }
+
+  @media (hover: hover) {
+    .opf-logo-btn:hover {
+      border-color: var(--clr-border2);
+    }
+  }
+
+  .opf-logo-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    color: var(--clr-primary);
+    font-size: 1.5rem;
+  }
+
+  .opf-logo-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .opf-logo-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 2;
+  }
+
+  .opf-logo-loading[hidden] {
+    display: none;
+  }
+
+  .opf-logo-loading .spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(255, 255, 255, 0.4);
+    border-top-color: var(--clr-white);
+    border-radius: 50%;
+    animation: odf-spin 0.7s linear infinite;
+  }
+
+  .opf-logo-meta {
+    gap: 8px;
+    align-items: flex-start;
+    min-width: 0;
+  }
+
+  .opf-logo-actions {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .opf-logo-act {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border: 1.5px solid var(--clr-border);
+    border-radius: var(--border-radius);
+    background: var(--clr-white);
+    color: var(--clr-text);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .opf-logo-act i {
+    font-size: 0.9rem;
+    opacity: 0.8;
+  }
+
+  .opf-logo-act[hidden] {
+    display: none;
+  }
+
+  .opf-logo-act.is-remove {
+    background: var(--clr-danger-bg);
+    color: var(--clr-danger);
+    border-color: var(--clr-danger-border-soft);
+  }
+
+  .opf-logo-act.is-remove i {
+    opacity: 1;
+  }
+
+  @media (hover: hover) {
+    .opf-logo-act:hover {
+      background: var(--clr-white2);
+    }
+
+    .opf-logo-act.is-remove:hover {
+      background: var(--clr-danger-bg-strong);
+    }
+  }
 </style>
 
 <style is:global>
@@ -1206,6 +1358,81 @@ import FormModal from "./FormModal.astro";
     const pErrEl = document.getElementById("opf-error")!;
     const profApi = createOverlay("opf-overlay")!;
 
+    // ── Logo del perfil (mismo bucket 'official-dishes', carpeta = officialId) ──
+    const pLogoUrlEl = document.getElementById("opf-logo-url") as HTMLInputElement;
+    const pLogoFileEl = document.getElementById("opf-logo-file") as HTMLInputElement;
+    const pLogoBtnEl = document.getElementById("opf-logo-btn") as HTMLButtonElement;
+    const pLogoPreviewEl = document.getElementById("opf-logo-preview")!;
+    const pLogoLoadingEl = document.getElementById("opf-logo-loading")!;
+    const pLogoRemoveEl = document.getElementById("opf-logo-remove") as HTMLButtonElement;
+    // URL del logo YA persistido (null si no tenía). Evita borrar del storage el
+    // logo original si el usuario sube otro y luego cancela.
+    let originalLogoUrl: string | null = null;
+
+    /** Pinta el estado del campo logo: con URL → foto + botón Quitar; sin URL →
+     *  ícono de imagen y Quitar oculto. */
+    function renderLogoField(url: string | null) {
+      pLogoLoadingEl.hidden = true;
+      if (url) {
+        pLogoPreviewEl.innerHTML = "";
+        const img = document.createElement("img");
+        img.alt = "";
+        img.onerror = () => renderLogoField(null);
+        img.src = url;
+        pLogoPreviewEl.appendChild(img);
+        pLogoRemoveEl.hidden = false;
+      } else {
+        pLogoPreviewEl.innerHTML = '<i class="bi bi-image"></i>';
+        pLogoRemoveEl.hidden = true;
+      }
+    }
+
+    pLogoBtnEl.onclick = () => pLogoFileEl.click();
+    document.getElementById("opf-logo-change")!.onclick = () => pLogoFileEl.click();
+
+    pLogoRemoveEl.onclick = (e) => {
+      e.stopPropagation();
+      const cur = pLogoUrlEl.value || null;
+      if (cur && cur !== originalLogoUrl) deleteOfficialDishImage(cur);
+      pLogoUrlEl.value = "";
+      pLogoFileEl.value = "";
+      renderLogoField(null);
+    };
+
+    pLogoFileEl.onchange = async () => {
+      const file = pLogoFileEl.files?.[0];
+      if (!file) return;
+      pErrEl.textContent = "";
+      const prev = pLogoUrlEl.value || null;
+      // Preview local inmediato; el spinner se superpone mientras sube.
+      const localUrl = URL.createObjectURL(file);
+      pLogoPreviewEl.innerHTML = "";
+      const localImg = document.createElement("img");
+      localImg.alt = "";
+      localImg.src = localUrl;
+      pLogoPreviewEl.appendChild(localImg);
+      pLogoLoadingEl.hidden = false;
+      const res = await uploadOfficialDishImage(pIdEl.value, file);
+      pLogoLoadingEl.hidden = true;
+      pLogoFileEl.value = "";
+      URL.revokeObjectURL(localUrl);
+      if ("error" in res) {
+        const MSG: Record<typeof res.error, string> = {
+          type: "Ese archivo no es una imagen.",
+          size: "La imagen supera los 5 MB.",
+          permission: "No tienes permiso para editar este perfil.",
+          upload: "No se pudo subir el logo. Revisa tu conexión e intenta de nuevo.",
+        };
+        pErrEl.textContent = MSG[res.error];
+        renderLogoField(prev);
+        return;
+      }
+      // Reemplazo: borra la anterior si era una subida nueva (no la original).
+      if (prev && prev !== originalLogoUrl) deleteOfficialDishImage(prev);
+      pLogoUrlEl.value = res.url;
+      renderLogoField(res.url);
+    };
+
     // Combobox creable MULTI de ciudades (chips). Opciones = mis ciudades
     // personales + las de cualquier oficial, en MAYÚSCULAS (llegan async).
     let cityOptions: string[] = [];
@@ -1225,8 +1452,15 @@ import FormModal from "./FormModal.astro";
       );
     }
 
-    document.getElementById("opf-close")!.onclick = profApi.close;
-    document.getElementById("opf-cancel")!.onclick = profApi.close;
+    /** Cierra el editor descartando un logo recién subido y sin guardar (huérfano
+     *  en el storage). El original nunca se toca. */
+    function closeProfile() {
+      const cur = pLogoUrlEl.value || null;
+      if (cur && cur !== originalLogoUrl) deleteOfficialDishImage(cur);
+      profApi.close();
+    }
+    document.getElementById("opf-close")!.onclick = closeProfile;
+    document.getElementById("opf-cancel")!.onclick = closeProfile;
 
     // Eliminar restaurante (dueño o superadmin; RLS lo verifica). Doble paso:
     // confirmación explícita antes de un borrado irreversible con cascada.
@@ -1259,6 +1493,9 @@ import FormModal from "./FormModal.astro";
       pFbEl.value = official.facebook ?? "";
       pTtEl.value = official.tiktok ?? "";
       pNotesEl.value = official.notes ?? "";
+      originalLogoUrl = official.logoUrl ?? null;
+      pLogoUrlEl.value = originalLogoUrl ?? "";
+      renderLogoField(originalLogoUrl);
       profApi.open();
       // Opciones = mis ciudades personales (cache, inmediatas) + las de TODOS los
       // oficiales (async). Así aparecen ciudades como NEIVA/RIVERA que solo usé en
@@ -1281,6 +1518,7 @@ import FormModal from "./FormModal.astro";
       }
       // Incluye lo que quedó escrito sin confirmar como un chip más.
       cityCombo.flush();
+      const logoUrl = pLogoUrlEl.value || null;
       const saved = await updateOfficialRestaurant(pIdEl.value, {
         name,
         cities: cityCombo.getValues(),
@@ -1290,11 +1528,16 @@ import FormModal from "./FormModal.astro";
         facebook: pFbEl.value.trim() || null,
         tiktok: pTtEl.value.trim() || null,
         notes: pNotesEl.value.trim() || null,
+        logoUrl,
       });
       if (!saved) {
         pErrEl.textContent = "No se pudo guardar. ¿Sigues siendo dueño de este perfil?";
         return;
       }
+      // Logo reemplazado/quitado → borra el original del storage (evita huérfanos).
+      if (originalLogoUrl && originalLogoUrl !== logoUrl)
+        deleteOfficialDishImage(originalLogoUrl);
+      originalLogoUrl = logoUrl;
       profApi.close();
       emit("official:profile-changed", { official: saved });
     };

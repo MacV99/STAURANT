@@ -267,6 +267,7 @@ const tplRestaurant: Restaurant = {
     makeCrown,
     paintRatingBadge,
     buildGlobalRatingPill,
+    buildOfficialLogo,
     fillRestaurantName,
     updateSortPills,
   } from "../scripts/store.ts";
@@ -369,6 +370,13 @@ const tplRestaurant: Restaurant = {
     article.setAttribute("data-href", e.href);
     article.setAttribute("style", `view-transition-name: restaurant-${e.id}`);
     article.classList.toggle("is-official", e.isOfficial);
+
+    // Logo (o placeholder con la inicial) a la izquierda, solo en oficiales.
+    if (e.isOfficial) {
+      const body = article.querySelector(".card-body")!;
+      article.insertBefore(buildOfficialLogo(e.logoUrl, e.name), body);
+    }
+
     fillRestaurantName(article.querySelector("h3")!, e.name, e.isOfficial);
 
     const pill = article.querySelector(".dish-count-pill") as HTMLElement | null;
