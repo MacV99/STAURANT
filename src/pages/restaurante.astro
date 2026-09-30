@@ -46,7 +46,7 @@ const tplRestaurant: Restaurant = {
       </div>
 
       <div class="dish-search-wrap">
-        <i class="bi bi-search-fill dish-search-icon"></i>
+        <i class="bi bi-search dish-search-icon"></i>
         <input
           id="dish-search"
           class="dish-search-input"
@@ -140,6 +140,11 @@ const tplRestaurant: Restaurant = {
     font-size: 1rem;
     letter-spacing: 2px;
     color: var(--clr-text);
+  }
+
+  .dish-search-wrap[hidden],
+  .dishes-controls[hidden] {
+    display: none;
   }
 
   .dish-search-wrap {
@@ -717,6 +722,13 @@ const tplRestaurant: Restaurant = {
     dishesListEl: HTMLElement,
     sortBarEl: HTMLElement | null,
   ) {
+    // Con pocos platos, buscar/ordenar/filtrar sobra: se ocultan para ver los
+    // platos de una. Nunca mientras haya una búsqueda o filtro activo.
+    const fewDishes = totalCount < 5 && !dishSearch && !dishTypeFilter;
+    const searchWrapEl = document.querySelector<HTMLElement>(".dish-search-wrap");
+    const controlsEl = document.querySelector<HTMLElement>(".dishes-controls");
+    if (searchWrapEl) searchWrapEl.hidden = fewDishes;
+    if (controlsEl) controlsEl.hidden = fewDishes;
     if (sortBarEl) sortBarEl.hidden = totalCount < 2;
     if (filtered.length === 0) {
       const isFiltering = !!dishSearch || !!dishTypeFilter;

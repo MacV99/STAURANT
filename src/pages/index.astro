@@ -26,7 +26,7 @@ const tplRestaurant: Restaurant = {
       <TabBar />
 
       <div class="search-wrap">
-        <i class="bi bi-search-fill search-icon"></i>
+        <i class="bi bi-search search-icon"></i>
         <input
           id="restaurant-search"
           class="search-input"
@@ -649,16 +649,13 @@ const tplRestaurant: Restaurant = {
     const tabVisitadosEl = document.getElementById("tab-visitados");
     if (!tabVisitadosEl) return;
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session) {
-      window.location.href = "/login";
-      return;
-    }
-
-    // Inject skeleton cards while cache loads (first visit only)
+    // Tarjetas grises de "cargando" ANTES de cualquier espera (primera visita):
+    // antes se veía un instante la lista vacía con "0" visitados.
     if (!isCacheLoaded()) {
+      for (const id of ["count-visitados", "count-pendientes"]) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = "–";
+      }
       const activeTab = getActiveTab();
       const skeletonGrid = () => {
         const grid = document.createElement("div");
@@ -674,6 +671,14 @@ const tplRestaurant: Restaurant = {
       const tp = document.getElementById("tab-pendientes") as HTMLElement | null;
       if (tv) { tv.innerHTML = ""; tv.appendChild(skeletonGrid()); tv.hidden = activeTab !== "visitados"; }
       if (tp) { tp.innerHTML = ""; tp.appendChild(skeletonGrid()); tp.hidden = activeTab !== "pendientes"; }
+    }
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      window.location.href = "/login";
+      return;
     }
 
     await initCache(session.user.id);
