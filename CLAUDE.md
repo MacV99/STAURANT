@@ -30,7 +30,7 @@ pnpx astro check   # TypeScript checking (no test suite configured)
 | `src/lib/data.ts` | Cache management, all CRUD functions, background sync |
 | `src/lib/supabase.ts` | Supabase client singleton |
 | `src/scripts/store.ts` | Event bus helpers + HTML card renderers |
-| `src/layouts/Layout1.astro` | Root layout: meta, fonts, ViewTransitions, header |
+| `src/layouts/Layout1.astro` | Root layout: meta, fonts, ClientRouter (ViewTransitions), header, NoticeDialog global |
 | `src/styles/global.css` | CSS reset, variables, typography, base utilities |
 | `src/styles/project.css` | STAURANT-specific component styles |
 
@@ -40,6 +40,7 @@ pnpx astro check   # TypeScript checking (no test suite configured)
 - `src/pages/restaurante.astro` — Restaurant detail + dish management (`?id=…`)
 - `src/pages/login.astro` — Auth (login + register tab switcher)
 - `src/pages/perfil.astro` — User profile + logout
+- `src/pages/recomendaciones.astro` — "Chat" sin texto con un amigo (`?amigo=…`): solo recomendaciones de platos/restaurantes. Se envían desde `RecommendDialog` (montado en `Layout1`, `window.recommend.open({type,id,title,subtitle})`). Tabla `recommendations` guarda solo tipo+id; nombre/nota/enlace se resuelven al leer (`social.ts`). RLS: solo a amigos y solo lo propio.
 
 ### Interactivity pattern
 
@@ -122,3 +123,5 @@ function bgSync(fn: () => Promise<unknown>): void {
 ```
 
 Aplica este mismo patrón en cualquier otro lugar donde se llame `.catch()` sobre el resultado de una función cuyo tipo de retorno no está 100% garantizado como `Promise`.
+
+**Escrituras → `bgWrite`, no `bgSync`.** Supabase NO lanza excepción cuando la base rechaza una operación: resuelve con `{ error }`. `bgWrite` revisa ese `error`, emite `sync:error` (NoticeDialog, montado en `Layout1`, avisa al usuario) y lleva la cuenta de escrituras en vuelo para que `refreshCacheInBackground` no pise el caché con datos del servidor más viejos que un cambio local. `bgSync` queda solo para lecturas y limpiezas best-effort (Storage).

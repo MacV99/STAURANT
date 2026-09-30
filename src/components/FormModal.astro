@@ -7,6 +7,8 @@
  * pueda tomar referencias frescas en cada `astro:page-load`:
  *   {id}-overlay  {id}  {id}-title  {id}-close  {id}-cancel  {id}-submit  {id}-error
  *
+ * Slot opcional `header-actions`: botones extra junto a cerrar (p. ej. recomendar).
+ *
  * El consumidor proyecta SOLO los campos (inputs, labels, hidden inputs) en el
  * slot por defecto. El CSS compartido vive en project.css (.form-box …).
  */
@@ -25,13 +27,16 @@ const { id, title, maxWidth = "460px", submitLabel = "Guardar" } = Astro.props;
     {/* Cabecera fija */}
     <div class="form-header flex-row">
       <h2 id={`${id}-title`}>{title}</h2>
-      <button
-        id={`${id}-close`}
-        class="btn-close btn-icon-close boton2"
-        aria-label="Cerrar"
-      >
-        <i class="bi bi-x-lg"></i>
-      </button>
+      <div class="form-header-actions flex-row">
+        <slot name="header-actions" />
+        <button
+          id={`${id}-close`}
+          class="btn-close btn-icon-close boton2"
+          aria-label="Cerrar"
+        >
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
     </div>
 
     <form id={id} class="flex-column" novalidate>

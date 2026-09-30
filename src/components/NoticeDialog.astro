@@ -13,6 +13,12 @@
 <style>
   /* Estructura compartida en project.css (.dialog-box …). Sin acción doble:
      un único botón que ocupa todo el ancho vía .dialog-actions (flex:1). */
+
+  /* Un aviso debe verse aunque haya otro modal abierto (formularios 200,
+     recomendar 300). ConfirmDialog (400) sigue siendo la última palabra. */
+  #notice-overlay {
+    z-index: 350;
+  }
 </style>
 
 <script>
@@ -47,5 +53,18 @@
 
     // Actualizar API global con referencias frescas al DOM actual
     (window as any).noticeDialog = { show, hide: close };
+  });
+
+  // Un guardado en segundo plano falló (data.ts → bgWrite). Avisar al usuario
+  // en vez de perder el cambio en silencio. Máx. un aviso cada 10 s.
+  let lastSyncErrorAt = 0;
+  document.addEventListener("sync:error", () => {
+    const now = Date.now();
+    if (now - lastSyncErrorAt < 10_000) return;
+    lastSyncErrorAt = now;
+    (window as any).noticeDialog?.show(
+      "No se pudo guardar tu último cambio. Revisa tu conexión y vuelve a intentarlo.",
+      { variant: "error" },
+    );
   });
 </script>

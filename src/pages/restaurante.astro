@@ -562,6 +562,18 @@ const tplRestaurant: Restaurant = {
       notesEl?.remove();
     }
     div
+      .querySelector<HTMLButtonElement>(".rh-btn-recommend-rh")!
+      .addEventListener("click", () => {
+        (window as any).recommend?.open({
+          type: "restaurant",
+          id: r.id,
+          title: r.name,
+        });
+        div
+          .querySelector<HTMLElement>(".rh-menu-popup")
+          ?.classList.remove("active");
+      });
+    div
       .querySelector<HTMLButtonElement>(".rh-btn-edit-rh")!
       .addEventListener("click", () => {
         (window as any).restaurantForm.open("edit", r);
@@ -654,6 +666,17 @@ const tplRestaurant: Restaurant = {
       (window as any).dishForm.open("edit", d.restaurantId, d);
       menuPopup.classList.remove("active");
     });
+    article
+      .querySelector<HTMLButtonElement>(".btn-recommend-dish")!
+      .addEventListener("click", () => {
+        (window as any).recommend?.open({
+          type: "dish",
+          id: d.id,
+          title: d.name,
+          subtitle: currentRestaurant?.name ?? null,
+        });
+        menuPopup.classList.remove("active");
+      });
     const deleteBtn = article.querySelector<HTMLButtonElement>(".btn-delete-dish")!;
     if (d.officialDishId) {
       // Plato oficial: solo se permite calificar. No se puede editar la ficha ni
@@ -750,6 +773,12 @@ const tplRestaurant: Restaurant = {
       document.querySelectorAll(".menu-popup.active").forEach((p) =>
         p.classList.remove("active"),
       );
+    }
+    if (
+      !target.closest("#dish-type-btn") &&
+      !target.closest("#dish-type-dropdown")
+    ) {
+      closeDishTypeDropdown();
     }
   });
 
@@ -981,16 +1010,6 @@ const tplRestaurant: Restaurant = {
         if (typeDropdownEl.hidden) {
           openDishTypeDropdown();
         } else {
-          closeDishTypeDropdown();
-        }
-      });
-
-      document.addEventListener("click", (e) => {
-        const target = e.target as HTMLElement;
-        if (
-          !target.closest("#dish-type-btn") &&
-          !target.closest("#dish-type-dropdown")
-        ) {
           closeDishTypeDropdown();
         }
       });

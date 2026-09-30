@@ -399,6 +399,36 @@ import Layout1 from "../layouts/Layout1.astro";
     padding: 8px 11px;
   }
 
+  /* Botón de recomendaciones (chat) con contador de no vistas. */
+  .ur-btn-chat {
+    position: relative;
+    font-size: 0.9rem;
+  }
+
+  .ur-btn-chat.has-unread {
+    background: var(--clr-primary);
+    border-color: var(--clr-primary);
+    color: var(--clr-white);
+  }
+
+  .ur-unread {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 20px;
+    background: var(--clr-danger);
+    color: var(--clr-white);
+    border: 2px solid var(--clr-white);
+    font-size: 0.6rem;
+    font-weight: 800;
+    line-height: 14px;
+    text-align: center;
+    box-sizing: border-box;
+  }
+
   /* Etiquetas de estado (Amigos / Pendiente) */
   .ur-state {
     display: inline-flex;
@@ -461,6 +491,7 @@ import Layout1 from "../layouts/Layout1.astro";
     sendFriendRequest,
     acceptRequest,
     deleteFriendship,
+    getUnreadRecommendationCounts,
     type PublicUser,
     type FriendRequest,
   } from "../lib/social.ts";
@@ -469,6 +500,8 @@ import Layout1 from "../layouts/Layout1.astro";
   let friends: PublicUser[] = [];
   let incoming: FriendRequest[] = [];
   let outgoing: FriendRequest[] = [];
+  // Recomendaciones sin ver, por amigo (id → cantidad).
+  let unreadRecs = new Map<string, number>();
   let searchResults: PublicUser[] = [];
   let searchQuery = "";
   let searchTimer: number | undefined;
@@ -563,12 +596,15 @@ import Layout1 from "../layouts/Layout1.astro";
   // ─── Refresco de datos ──────────────────────────────────────────────────────
 
   async function reloadFriendsData() {
-    [friends, incoming, outgoing] = await Promise.all([
+    [friends, incoming, outgoing, unreadRecs] = await Promise.all([
       getFriends(),
       getIncomingRequests(),
       getOutgoingRequests(),
+      getUnreadRecommendationCounts(),
     ]);
     renderFriendsTab();
+    // Aceptar/rechazar cambia el globito de "Amigos" en el menú.
+    document.dispatchEvent(new CustomEvent("friends:badge-refresh"));
     if (getActiveTab() === "buscar") renderSearchResults();
   }
 
@@ -614,11 +650,28 @@ import Layout1 from "../layouts/Layout1.astro";
          </div>`;
       return;
     }
-    friends.forEach((f) => {
+    // Primero los amigos con recomendaciones sin ver.
+    const sorted = [...friends].sort(
+      (a, b) => (unreadRecs.get(b.id) ?? 0) - (unreadRecs.get(a.id) ?? 0),
+    );
+    sorted.forEach((f) => {
       const actions = actionsWrap();
+      const unread = unreadRecs.get(f.id) ?? 0;
+      const chat = iconBtn("ur-btn-icon ur-btn-chat", "bi-chat-heart", "", () =>
+        navigate(`/recomendaciones?amigo=${f.id}`),
+      );
+      chat.setAttribute("aria-label", `Recomendaciones con ${f.name || "tu amigo"}`);
+      chat.title = "Recomendaciones";
+      if (unread > 0) {
+        chat.classList.add("has-unread");
+        const dot = document.createElement("span");
+        dot.className = "ur-unread";
+        dot.textContent = unread > 9 ? "9+" : String(unread);
+        chat.appendChild(dot);
+      }
       const chevron = document.createElement("i");
       chevron.className = "bi bi-chevron-right ur-chevron";
-      actions.appendChild(chevron);
+      actions.append(chat, chevron);
       friendsList.appendChild(userRow(f, actions));
     });
   }

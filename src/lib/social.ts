@@ -33,6 +33,9 @@ function toPublicUser(row: Record<string, unknown>): PublicUser {
   };
 }
 
+// Ids que vienen de la URL y se interpolan en filtros `.or(...)`: solo UUIDs.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 async function currentUserId(): Promise<string | null> {
   const { data: { session } } = await supabase.auth.getSession();
   return session?.user.id ?? null;
@@ -275,7 +278,7 @@ export async function getFriendStatus(
   otherId: string,
 ): Promise<{ status: FriendStatus; friendshipId?: string }> {
   const me = await currentUserId();
-  if (!me || me === otherId) return { status: "none" };
+  if (!me || me === otherId || !UUID_RE.test(otherId)) return { status: "none" };
   const { data, error } = await supabase
     .from("friendships")
     .select("id, requester_id, addressee_id, status")
@@ -321,4 +324,305 @@ export async function deleteFriendship(friendshipId: string): Promise<boolean> {
   const { error } = await supabase.from("friendships").delete().eq("id", friendshipId);
   if (error) { console.error("[deleteFriendship]", error); return false; }
   return true;
+}
+
+// ─── Recomendaciones (chat sin texto: solo platos / restaurantes) ─────────────
+//
+// La tabla guarda SOLO qué se recomienda (tipo + id), nunca texto: nombre, nota
+// y enlace se resuelven al leer. La RLS garantiza que solo se envía a amigos y
+// que los restaurantes/platos personales sean de quien recomienda.
+
+export type RecTargetType =
+  | "restaurant"
+  | "dish"
+  | "official_restaurant"
+  | "official_dish";
+
+export interface Recommendation {
+  id: string;
+  senderId: string;
+  recipientId: string;
+  targetType: RecTargetType;
+  targetId: string;
+  createdAt: string;
+  seenAt: string | null;
+  /** Nombre del restaurante o plato. null = ya no existe (lo borraron). */
+  title: string | null;
+  /** Para platos: restaurante al que pertenece. */
+  subtitle: string | null;
+  /** Nota de quien recomienda (plato) o su promedio (restaurante). */
+  rating: number | null;
+  /** A dónde lleva tocar la recomendación. null si ya no existe. */
+  href: string | null;
+  isOfficial: boolean;
+}
+
+type RecRow = {
+  id: string;
+  sender_id: string;
+  recipient_id: string;
+  target_type: RecTargetType;
+  target_id: string;
+  created_at: string;
+  seen_at: string | null;
+};
+
+const REC_COLUMNS = "id, sender_id, recipient_id, target_type, target_id, created_at, seen_at";
+
+/** Envía una recomendación a un amigo. false si la base la rechaza. */
+export async function sendRecommendation(
+  recipientId: string,
+  targetType: RecTargetType,
+  targetId: string,
+): Promise<boolean> {
+  const me = await currentUserId();
+  if (!me || me === recipientId) return false;
+  const { error } = await supabase.from("recommendations").insert({
+    sender_id: me,
+    recipient_id: recipientId,
+    target_type: targetType,
+    target_id: targetId,
+  });
+  if (error) { console.error("[sendRecommendation]", error); return false; }
+  return true;
+}
+
+/** Conversación con un amigo (enviadas + recibidas), de la más vieja a la más nueva. */
+export async function getRecommendationThread(friendId: string): Promise<Recommendation[]> {
+  const me = await currentUserId();
+  if (!me || !UUID_RE.test(friendId)) return [];
+  const { data, error } = await supabase
+    .from("recommendations")
+    .select(REC_COLUMNS)
+    .or(
+      `and(sender_id.eq.${me},recipient_id.eq.${friendId}),and(sender_id.eq.${friendId},recipient_id.eq.${me})`,
+    )
+    .order("created_at", { ascending: true })
+    .limit(200);
+  if (error) { console.error("[getRecommendationThread]", error); return []; }
+  return resolveRecommendations(me, (data ?? []) as RecRow[]);
+}
+
+/** Marca como vistas las recomendaciones que me envió este amigo. */
+export async function markRecommendationsSeen(friendId: string): Promise<void> {
+  const me = await currentUserId();
+  if (!me) return;
+  const { error } = await supabase
+    .from("recommendations")
+    .update({ seen_at: new Date().toISOString() })
+    .eq("recipient_id", me)
+    .eq("sender_id", friendId)
+    .is("seen_at", null);
+  if (error) console.error("[markRecommendationsSeen]", error);
+}
+
+/** Recomendaciones sin ver, agrupadas por quien las envió (id → cantidad). */
+export async function getUnreadRecommendationCounts(): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  const me = await currentUserId();
+  if (!me) return counts;
+  const { data, error } = await supabase
+    .from("recommendations")
+    .select("sender_id")
+    .eq("recipient_id", me)
+    .is("seen_at", null);
+  if (error) { console.error("[getUnreadRecommendationCounts]", error); return counts; }
+  for (const row of data ?? []) {
+    const id = row.sender_id as string;
+    counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+  return counts;
+}
+
+/** Pendientes en "Amigos" para el globito del menú: recomendaciones sin ver +
+ *  solicitudes de amistad recibidas. */
+export async function getFriendsBadgeCount(): Promise<number> {
+  const me = await currentUserId();
+  if (!me) return 0;
+  const [recRes, reqRes] = await Promise.all([
+    supabase
+      .from("recommendations")
+      .select("id", { count: "exact", head: true })
+      .eq("recipient_id", me)
+      .is("seen_at", null),
+    supabase
+      .from("friendships")
+      .select("id", { count: "exact", head: true })
+      .eq("addressee_id", me)
+      .eq("status", "pending"),
+  ]);
+  return (recRes.count ?? 0) + (reqRes.count ?? 0);
+}
+
+/** Completa cada fila con nombre, nota de quien recomienda y enlace. Pocas
+ *  consultas agrupadas por tipo (no una por recomendación). */
+async function resolveRecommendations(me: string, rows: RecRow[]): Promise<Recommendation[]> {
+  if (rows.length === 0) return [];
+  const idsOf = (t: RecTargetType) => [
+    ...new Set(rows.filter((r) => r.target_type === t).map((r) => r.target_id)),
+  ];
+  const restIds = idsOf("restaurant");
+  const dishIds = idsOf("dish");
+  const offRestIds = idsOf("official_restaurant");
+  const offDishIds = idsOf("official_dish");
+  const people = [...new Set(rows.flatMap((r) => [r.sender_id, r.recipient_id]))];
+
+  type Row = Record<string, unknown>;
+  const none = Promise.resolve({ data: [] as Row[] });
+
+  const [restRes, dishRes, offDishRes] = await Promise.all([
+    restIds.length
+      ? supabase.from("restaurants").select("id, name, user_id").in("id", restIds)
+      : none,
+    dishIds.length
+      ? supabase.from("dishes").select("id, name, rating, restaurant_id, user_id").in("id", dishIds)
+      : none,
+    offDishIds.length
+      ? supabase.from("official_dishes").select("id, name, official_restaurant_id").in("id", offDishIds)
+      : none,
+  ]);
+  const rests = (restRes.data ?? []) as Row[];
+  const dishRows = (dishRes.data ?? []) as Row[];
+  const offDishes = (offDishRes.data ?? []) as Row[];
+
+  const dishRestIds = [...new Set(dishRows.map((d) => d.restaurant_id as string))];
+  const allOffRestIds = [
+    ...new Set([...offRestIds, ...offDishes.map((d) => d.official_restaurant_id as string)]),
+  ];
+
+  const [dishRestRes, restDishesRes, offRestRes, offRestDishesRes, offRatingsRes] =
+    await Promise.all([
+      dishRestIds.length
+        ? supabase.from("restaurants").select("id, name").in("id", dishRestIds)
+        : none,
+      // Platos de los restaurantes recomendados → promedio de quien recomienda.
+      restIds.length
+        ? supabase.from("dishes").select("restaurant_id, rating").in("restaurant_id", restIds)
+        : none,
+      allOffRestIds.length
+        ? supabase.from("official_restaurants").select("id, name").in("id", allOffRestIds)
+        : none,
+      offRestIds.length
+        ? supabase
+            .from("official_dishes")
+            .select("id, official_restaurant_id")
+            .in("official_restaurant_id", offRestIds)
+        : none,
+      offDishIds.length || offRestIds.length
+        ? supabase
+            .from("official_ratings")
+            .select("official_dish_id, user_id, rating")
+            .in("user_id", people)
+        : none,
+    ]);
+
+  const restById = new Map(rests.map((r) => [r.id as string, r]));
+  const dishById = new Map(dishRows.map((d) => [d.id as string, d]));
+  const offDishById = new Map(offDishes.map((d) => [d.id as string, d]));
+  const nameById = new Map<string, string>();
+  for (const r of [
+    ...((dishRestRes.data ?? []) as Row[]),
+    ...((offRestRes.data ?? []) as Row[]),
+  ])
+    nameById.set(r.id as string, r.name as string);
+
+  const ratingsByRest = new Map<string, number[]>();
+  for (const d of (restDishesRes.data ?? []) as Row[]) {
+    if (d.rating === null || d.rating === undefined) continue;
+    const list = ratingsByRest.get(d.restaurant_id as string) ?? [];
+    list.push(Number(d.rating));
+    ratingsByRest.set(d.restaurant_id as string, list);
+  }
+  const offRestOfDish = new Map<string, string>();
+  for (const d of (offRestDishesRes.data ?? []) as Row[])
+    offRestOfDish.set(d.id as string, d.official_restaurant_id as string);
+  const offRating = new Map<string, number>(); // `${userId}:${dishId}` → nota
+  for (const r of (offRatingsRes.data ?? []) as Row[])
+    offRating.set(`${r.user_id as string}:${r.official_dish_id as string}`, Number(r.rating));
+
+  // Restaurante personal: el mío → mi página; el de un amigo → su perfil.
+  const personalHref = (ownerId: string, restaurantId: string) =>
+    ownerId === me
+      ? `/restaurante?id=${restaurantId}`
+      : `/usuario?id=${ownerId}&r=${restaurantId}`;
+
+  return rows.map((row): Recommendation => {
+    const base = {
+      id: row.id,
+      senderId: row.sender_id,
+      recipientId: row.recipient_id,
+      targetType: row.target_type,
+      targetId: row.target_id,
+      createdAt: row.created_at,
+      seenAt: row.seen_at,
+    };
+    const gone: Recommendation = {
+      ...base,
+      title: null,
+      subtitle: null,
+      rating: null,
+      href: null,
+      isOfficial: row.target_type.startsWith("official"),
+    };
+
+    switch (row.target_type) {
+      case "restaurant": {
+        const r = restById.get(row.target_id);
+        if (!r) return gone;
+        return {
+          ...base,
+          title: r.name as string,
+          subtitle: null,
+          rating: roundedAverage(ratingsByRest.get(row.target_id) ?? []),
+          href: personalHref(r.user_id as string, row.target_id),
+          isOfficial: false,
+        };
+      }
+      case "dish": {
+        const d = dishById.get(row.target_id);
+        if (!d) return gone;
+        return {
+          ...base,
+          title: d.name as string,
+          subtitle: nameById.get(d.restaurant_id as string) ?? null,
+          rating: d.rating === null || d.rating === undefined ? null : Number(d.rating),
+          href: personalHref(d.user_id as string, d.restaurant_id as string),
+          isOfficial: false,
+        };
+      }
+      case "official_restaurant": {
+        const name = nameById.get(row.target_id);
+        if (!name) return gone;
+        const mine: number[] = [];
+        for (const [dishId, restId] of offRestOfDish) {
+          if (restId !== row.target_id) continue;
+          const v = offRating.get(`${row.sender_id}:${dishId}`);
+          if (v !== undefined) mine.push(v);
+        }
+        return {
+          ...base,
+          title: name,
+          subtitle: null,
+          rating: roundedAverage(mine),
+          href: `/oficial?id=${row.target_id}`,
+          isOfficial: true,
+        };
+      }
+      case "official_dish": {
+        const d = offDishById.get(row.target_id);
+        if (!d) return gone;
+        const restId = d.official_restaurant_id as string;
+        return {
+          ...base,
+          title: d.name as string,
+          subtitle: nameById.get(restId) ?? null,
+          rating: offRating.get(`${row.sender_id}:${row.target_id}`) ?? null,
+          href: `/oficial?id=${restId}&plato=${row.target_id}`,
+          isOfficial: true,
+        };
+      }
+      default:
+        return gone;
+    }
+  });
 }

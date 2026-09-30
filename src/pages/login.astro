@@ -257,8 +257,12 @@ import Layout1 from "../layouts/Layout1.astro";
   .auth-error {
     font-size: 0.85rem;
     color: var(--clr-danger);
-    min-height: 1.2em;
     text-align: center;
+  }
+
+  /* Sin error no ocupa espacio (antes dejaba un hueco vacío bajo las pestañas). */
+  .auth-error:empty {
+    display: none;
   }
 
   /* ── Google OAuth ── */

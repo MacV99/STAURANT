@@ -5,7 +5,6 @@ import RestaurantHeader from "../components/RestaurantHeader.astro";
 import SortBar from "../components/SortBar.astro";
 import AuthModal from "../components/AuthModal.astro";
 import DishForm from "../components/DishForm.astro";
-import NoticeDialog from "../components/NoticeDialog.astro";
 import ConfirmDialog from "../components/ConfirmDialog.astro";
 import OfficialManage from "../components/OfficialManage.astro";
 import type { Dish, Restaurant } from "../lib/data";
@@ -141,7 +140,6 @@ const tplRestaurant: Restaurant = {
 
   <AuthModal />
   <DishForm />
-  <NoticeDialog />
   <ConfirmDialog />
   <OfficialManage />
 
@@ -997,8 +995,26 @@ const tplRestaurant: Restaurant = {
     // ocultos (sin huecos). La fila entera se oculta si no hay ninguno.
     fillSocials(div, official!);
 
-    // Sin menú de editar/eliminar: no es el restaurante del usuario todavía.
-    div.querySelector(".rh-menu")?.remove();
+    // Sin menú de editar/eliminar (no es del usuario). Con sesión, en su lugar va
+    // "Recomendar a un amigo"; anónimo → nada.
+    const menu = div.querySelector<HTMLElement>(".rh-menu");
+    if (menu && userId) {
+      const recBtn = document.createElement("button");
+      recBtn.type = "button";
+      recBtn.className = "rh-btn-menu boton2";
+      recBtn.setAttribute("aria-label", "Recomendar a un amigo");
+      recBtn.title = "Recomendar a un amigo";
+      recBtn.innerHTML = '<i class="bi bi-send"></i>';
+      recBtn.onclick = () =>
+        (window as any).recommend?.open({
+          type: "official_restaurant",
+          id: official!.id,
+          title: official!.name,
+        });
+      menu.replaceChildren(recBtn);
+    } else {
+      menu?.remove();
+    }
 
     return div;
   }
@@ -1345,15 +1361,18 @@ const tplRestaurant: Restaurant = {
         if (typeDropdown.hidden) openTypeDropdown();
         else closeTypeDropdown();
       });
-      document.addEventListener("click", (e) => {
-        const t = e.target as HTMLElement;
-        if (!t.closest("#dish-type-btn") && !t.closest("#dish-type-dropdown"))
-          closeTypeDropdown();
-      });
     }
 
     updateSortUI();
   }
+
+  // Cerrar el filtro de tipo al tocar fuera. Registrado 1× a nivel módulo (antes
+  // se añadía uno nuevo en cada visita a la carta y se acumulaban).
+  document.addEventListener("click", (e) => {
+    const t = e.target as HTMLElement;
+    if (!t.closest("#dish-type-btn") && !t.closest("#dish-type-dropdown"))
+      closeTypeDropdown();
+  });
 
   // ─── Re-render en sincronizaciones globales ─────────────────────────────────
 
@@ -1463,6 +1482,10 @@ const tplRestaurant: Restaurant = {
     // El rewrite de Netlify (_redirects) sirve esta misma página en la ruta bonita;
     // el segmento se lee de location.pathname y se resuelve en cliente por handle.
     const idParam = new URLSearchParams(window.location.search).get("id") ?? "";
+    // ?plato=<id>: abrir ese plato al cargar (p. ej. desde una recomendación).
+    // Se lee antes de canonicalizar la URL, que quita la query.
+    const platoParam =
+      new URLSearchParams(window.location.search).get("plato") ?? "";
     const seg = decodeURIComponent(
       window.location.pathname.replace(/^\/oficial\/?/, "").replace(/\/+$/, ""),
     );
@@ -1551,6 +1574,11 @@ const tplRestaurant: Restaurant = {
     wireControls();
     wireOwnerBar();
     renderAll();
+
+    if (platoParam) {
+      const od = officialDishes.find((d) => d.id === platoParam);
+      if (od) openOfficialModal(od);
+    }
 
     // Reanudar la calificación pendiente tras volver del login con Google.
     if (userId) {

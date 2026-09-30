@@ -382,7 +382,12 @@ import FormModal from "./FormModal.astro";
         opt.className = "name-option";
         const title = document.createElement("div");
         title.className = "name-option-title";
-        title.innerHTML = `${o.name} <i class="bi bi-patch-check-fill verified-badge" title="Restaurante verificado"></i>`;
+        // Nombre como texto (lo escribe el dueño del oficial): nunca como HTML.
+        title.textContent = `${o.name} `;
+        title.insertAdjacentHTML(
+          "beforeend",
+          '<i class="bi bi-patch-check-fill verified-badge" title="Restaurante verificado"></i>',
+        );
         opt.appendChild(title);
         if (o.city || o.address) {
           const sub = document.createElement("div");

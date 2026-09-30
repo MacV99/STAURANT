@@ -75,6 +75,8 @@ body {
   background-image: radial-gradient(circle, var(--dot-texture) 1px, transparent 1px);
   background-size: 20px 20px;
   background-attachment: fixed;
+  /* Sin el recuadro gris que iOS pinta al tocar cards y botones. */
+  -webkit-tap-highlight-color: transparent;
 }
 
 @media (min-width: 768px) {
@@ -217,6 +219,17 @@ input:focus,
 textarea:focus,
 select:focus {
   border-color: var(--clr-border2);
+}
+
+/* iPhone hace zoom automático al enfocar un campo con letra < 16px (y no
+   des-hace el zoom al salir). Varios campos usan 0.8–0.9rem por diseño; solo
+   en iOS se suben a 1rem para evitar el salto. Android / escritorio intactos. */
+@supports (-webkit-touch-callout: none) {
+  input,
+  textarea,
+  select {
+    font-size: max(1rem, 1em) !important;
+  }
 }
 
 /* === FOCO VISIBLE (a11y AA) ===

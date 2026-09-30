@@ -308,6 +308,7 @@ const tplDish: Dish = {
 
   .u-friend-slot {
     flex-shrink: 0;
+    gap: 6px;
   }
 
   .u-friend-btn {
@@ -573,7 +574,20 @@ const tplDish: Dish = {
       else navigate("/amigos");
     };
 
-    slot.replaceChildren(buildFriendButton());
+    // Amigos → acceso directo al chat de recomendaciones.
+    const nodes: HTMLElement[] = [];
+    if (friend.status === "friends") {
+      const chat = document.createElement("button");
+      chat.type = "button";
+      chat.className = "boton2 u-friend-btn flex-row";
+      chat.setAttribute("aria-label", "Recomendaciones");
+      chat.title = "Recomendaciones";
+      chat.innerHTML = '<i class="bi bi-chat-heart"></i>';
+      chat.onclick = () => navigate(`/recomendaciones?amigo=${profileUser!.id}`);
+      nodes.push(chat);
+    }
+    nodes.push(buildFriendButton());
+    slot.replaceChildren(...nodes);
   }
 
   function buildFriendButton(): HTMLElement {

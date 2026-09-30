@@ -1,0 +1,327 @@
+---
+/**
+ * Elegir a qué amigo(s) recomendar un restaurante o plato. Montado 1× en
+ * Layout1 (todas las páginas). API global, reasignada en cada page-load:
+ *   window.recommend.open({ type, id, title, subtitle? })
+ * Tocar un amigo envía en el acto (sin texto: solo la recomendación).
+ */
+---
+
+<div id="recommend-overlay" class="overlay" aria-modal="true" role="dialog">
+  <div class="form-box form-box--sheet flex-column rec-box">
+    <div class="form-header flex-row">
+      <h2 id="recommend-title">Recomendar</h2>
+      <button
+        id="recommend-close"
+        class="btn-close btn-icon-close boton2"
+        aria-label="Cerrar"
+      >
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <div class="form-body">
+      <div class="rec-target flex-row">
+        <span class="rec-target-icon" id="recommend-icon">
+          <i class="bi bi-shop"></i>
+        </span>
+        <div class="rec-target-text flex-column">
+          <strong id="recommend-name"></strong>
+          <span id="recommend-sub" hidden></span>
+        </div>
+      </div>
+      <p class="rec-hint">¿A quién se lo recomiendas?</p>
+      <div id="recommend-friends" class="rec-friends flex-column"></div>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Por encima de otros modales (p. ej. se abre desde el de calificar). */
+  #recommend-overlay {
+    z-index: 300;
+  }
+
+  .rec-box {
+    max-width: 420px;
+  }
+
+  .rec-target {
+    justify-content: flex-start;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--clr-border);
+    border-radius: 14px;
+    background: var(--clr-white2);
+  }
+
+  .rec-target-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--clr-white);
+    border: 1px solid var(--clr-border);
+    color: var(--clr-primary);
+    font-size: 1.05rem;
+  }
+
+  .rec-target-text {
+    min-width: 0;
+    align-items: flex-start;
+    gap: 1px;
+  }
+
+  #recommend-name {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--clr-text);
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+  }
+
+  #recommend-sub {
+    font-size: 0.78rem;
+    color: var(--clr-text-soft);
+  }
+
+  #recommend-sub[hidden] {
+    display: none;
+  }
+
+  .rec-hint {
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--clr-text);
+    opacity: 0.55;
+  }
+
+  .rec-friends {
+    align-items: stretch;
+    gap: 8px;
+  }
+</style>
+
+<style is:global>
+  /* Filas creadas en JS → estilos globales, acotados al diálogo. */
+  #recommend-friends .rec-friend {
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--clr-border);
+    border-radius: 14px;
+    background: var(--clr-white);
+    color: var(--clr-text);
+    text-align: left;
+    text-transform: none;
+    letter-spacing: 0;
+    text-indent: 0;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  #recommend-friends .rec-friend:active {
+    transform: scale(0.985);
+  }
+
+  #recommend-friends .rec-friend-left {
+    min-width: 0;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 10px;
+  }
+
+  #recommend-friends .rec-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--clr-white2);
+    border: 1.5px solid var(--clr-border);
+    color: var(--clr-primary);
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  #recommend-friends .rec-friend-name {
+    font-size: 0.9rem;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #recommend-friends .rec-state {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--clr-primary);
+  }
+
+  #recommend-friends .rec-friend.is-sent {
+    border-color: var(--clr-success-border);
+    background: var(--clr-success-bg);
+    cursor: default;
+  }
+
+  #recommend-friends .rec-friend.is-sent .rec-state {
+    color: var(--clr-success);
+  }
+
+  #recommend-friends .rec-friend.is-sending {
+    opacity: 0.6;
+  }
+
+  @media (hover: hover) {
+    #recommend-friends .rec-friend:not(.is-sent):hover {
+      border-color: var(--clr-border2);
+    }
+  }
+</style>
+
+<script>
+  import { navigate } from "astro:transitions/client";
+  import { createOverlay } from "../scripts/store.ts";
+  import {
+    getFriends,
+    sendRecommendation,
+    type PublicUser,
+    type RecTargetType,
+  } from "../lib/social.ts";
+
+  interface RecommendTarget {
+    type: RecTargetType;
+    id: string;
+    title: string;
+    subtitle?: string | null;
+  }
+
+  // Amigos en memoria: se pintan al instante y se refrescan en cada apertura.
+  let friendsCache: PublicUser[] | null = null;
+  // Enviados en esta apertura: "tipo:id:amigo" (evita doble envío por toque doble).
+  const sent = new Set<string>();
+
+  document.addEventListener("astro:page-load", () => {
+    const overlayApi = createOverlay("recommend-overlay");
+    if (!overlayApi) return;
+    const { open: openOverlay, close } = overlayApi;
+
+    const nameEl = document.getElementById("recommend-name")!;
+    const subEl = document.getElementById("recommend-sub")!;
+    const iconEl = document.getElementById("recommend-icon")!;
+    const listEl = document.getElementById("recommend-friends")!;
+    document.getElementById("recommend-close")!.onclick = close;
+
+    let target: RecommendTarget | null = null;
+
+    function friendRow(f: PublicUser): HTMLButtonElement {
+      const key = `${target!.type}:${target!.id}:${f.id}`;
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = "rec-friend flex-row";
+
+      const left = document.createElement("span");
+      left.className = "rec-friend-left flex-row";
+      const avatar = document.createElement("span");
+      avatar.className = "rec-avatar";
+      avatar.textContent = (f.name.trim() || f.username || "?").charAt(0);
+      const name = document.createElement("span");
+      name.className = "rec-friend-name";
+      name.textContent = f.name || (f.username ? `@${f.username}` : "Usuario");
+      left.append(avatar, name);
+
+      const state = document.createElement("span");
+      state.className = "rec-state";
+      const paint = (s: "idle" | "sent") => {
+        row.classList.toggle("is-sent", s === "sent");
+        state.innerHTML =
+          s === "sent"
+            ? '<i class="bi bi-check2-circle"></i> Enviado'
+            : '<i class="bi bi-send"></i> Enviar';
+      };
+      paint(sent.has(key) ? "sent" : "idle");
+
+      row.onclick = async () => {
+        if (sent.has(key) || row.classList.contains("is-sending")) return;
+        row.classList.add("is-sending");
+        const ok = await sendRecommendation(f.id, target!.type, target!.id);
+        row.classList.remove("is-sending");
+        if (ok) {
+          sent.add(key);
+          paint("sent");
+        } else {
+          (window as any).noticeDialog?.show(
+            "No se pudo enviar la recomendación. Revisa tu conexión.",
+            { variant: "error" },
+          );
+        }
+      };
+
+      row.append(left, state);
+      return row;
+    }
+
+    function renderFriends() {
+      listEl.innerHTML = "";
+      if (!friendsCache) {
+        for (let i = 0; i < 3; i++) {
+          const sk = document.createElement("div");
+          sk.className = "skeleton-card";
+          sk.style.height = "58px";
+          listEl.appendChild(sk);
+        }
+        return;
+      }
+      if (friendsCache.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "empty-state flex-column";
+        empty.innerHTML = `<i class="bi bi-people"></i>
+          <p>Aún no tienes amigos.</p>`;
+        const go = document.createElement("button");
+        go.type = "button";
+        go.className = "boton";
+        go.textContent = "Buscar amigos";
+        go.onclick = () => {
+          close();
+          navigate("/amigos?tab=buscar");
+        };
+        empty.appendChild(go);
+        listEl.appendChild(empty);
+        return;
+      }
+      friendsCache.forEach((f) => listEl.appendChild(friendRow(f)));
+    }
+
+    async function open(t: RecommendTarget) {
+      target = t;
+      sent.clear();
+      nameEl.textContent = t.title;
+      subEl.textContent = t.subtitle ?? "";
+      subEl.hidden = !t.subtitle;
+      const isDish = t.type === "dish" || t.type === "official_dish";
+      iconEl.innerHTML = `<i class="bi ${isDish ? "bi-egg-fried" : "bi-shop"}"></i>`;
+      renderFriends();
+      openOverlay();
+      const fresh = await getFriends();
+      if (target !== t) return; // se abrió otra cosa mientras cargaba
+      friendsCache = fresh;
+      renderFriends();
+    }
+
+    (window as any).recommend = { open, close };
+  });
+</script>

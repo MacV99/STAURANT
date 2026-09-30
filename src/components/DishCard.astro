@@ -25,6 +25,10 @@ const { dish: d } = Astro.props;
           <i class="bi bi-pencil-fill"></i>
           <span>Editar</span>
         </button>
+        <button class="menu-item btn-recommend-dish" data-id={d.id}>
+          <i class="bi bi-send"></i>
+          <span>Recomendar</span>
+        </button>
         <button class="menu-item btn-delete-dish" data-id={d.id}>
           <i class="bi bi-trash-fill"></i>
           <span>Eliminar</span>

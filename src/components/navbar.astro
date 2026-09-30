@@ -5,15 +5,26 @@ const isPerfil = pathname.includes("/perfil");
 const isExplorar =
   pathname.includes("/explorar") || pathname.includes("/oficial");
 const isAmigos =
-  pathname.includes("/amigos") || pathname.includes("/usuario");
+  pathname.includes("/amigos") ||
+  pathname.includes("/usuario") ||
+  pathname.includes("/recomendaciones");
 // En el perfil de un amigo el botón central no crea nada: vuelve a tu cuenta.
 const isUsuario = pathname.includes("/usuario");
+// En el chat de recomendaciones el botón central recomienda algo al amigo.
+const isChat = pathname.includes("/recomendaciones");
 const fabIcon = isUsuario
   ? "bi bi-house-door-fill"
-  : pathname.includes("/restaurante")
-    ? "bi bi-fork-knife"
-    : "bi bi-shop-window";
-const createLabel = isUsuario ? "Mi cuenta" : "Crear";
+  : isChat
+    ? "bi bi-send-fill"
+    : pathname.includes("/restaurante")
+      ? "bi bi-fork-knife"
+      : "bi bi-shop-window";
+const createLabel = isUsuario ? "Mi cuenta" : isChat ? "Recomendar" : "Crear";
+const createAria = isUsuario
+  ? "Volver a mi cuenta"
+  : isChat
+    ? "Recomendar algo"
+    : "Crear restaurante o plato";
 ---
 
 <!-- ── Mobile header ───────────────────────────────────────────── -->
@@ -53,7 +64,10 @@ const createLabel = isUsuario ? "Mi cuenta" : "Crear";
       class:list={["sidebar-item", "flex-row", { active: isAmigos }]}
       aria-current={isAmigos ? "page" : undefined}
     >
-      <i class={isAmigos ? "bi bi-people-fill" : "bi bi-people"}></i>
+      <span class="nav-icon-wrap">
+        <i class={isAmigos ? "bi bi-people-fill" : "bi bi-people"}></i>
+        <span class="nav-badge" hidden></span>
+      </span>
       <span>Amigos</span>
     </a>
 
@@ -71,7 +85,7 @@ const createLabel = isUsuario ? "Mi cuenta" : "Crear";
     type="button"
     class:list={["sidebar-item", "sidebar-create", "flex-row", { "is-return": isUsuario }]}
     data-action="create"
-    aria-label={isUsuario ? "Volver a mi cuenta" : "Crear restaurante o plato"}
+    aria-label={createAria}
   >
     <span class="fab-inner sidebar-create-icon">
       <i class={fabIcon}></i>
@@ -105,7 +119,7 @@ const createLabel = isUsuario ? "Mi cuenta" : "Crear";
     type="button"
     class:list={["nav-item", "nav-fab", "flex-row", { "is-return": isUsuario }]}
     data-action="create"
-    aria-label={isUsuario ? "Volver a mi cuenta" : "Crear restaurante o plato"}
+    aria-label={createAria}
   >
     <span class="fab-inner">
       <i class={fabIcon}></i>
@@ -118,7 +132,10 @@ const createLabel = isUsuario ? "Mi cuenta" : "Crear";
     class:list={["nav-item", "flex-column", { active: isAmigos }]}
     aria-current={isAmigos ? "page" : undefined}
   >
-    <i class={isAmigos ? "bi bi-people-fill" : "bi bi-people"}></i>
+    <span class="nav-icon-wrap">
+      <i class={isAmigos ? "bi bi-people-fill" : "bi bi-people"}></i>
+      <span class="nav-badge" hidden></span>
+    </span>
     <span>Amigos</span>
   </a>
 
@@ -134,6 +151,7 @@ const createLabel = isUsuario ? "Mi cuenta" : "Crear";
 
 <script>
   import { navigate } from "astro:transitions/client";
+  import { getFriendsBadgeCount } from "../lib/social.ts";
 
   function updateActiveState(): void {
     const { pathname } = window.location;
@@ -142,7 +160,9 @@ const createLabel = isUsuario ? "Mi cuenta" : "Crear";
     const isExplorar =
       pathname.includes("/explorar") || pathname.includes("/oficial");
     const isAmigos =
-      pathname.includes("/amigos") || pathname.includes("/usuario");
+      pathname.includes("/amigos") ||
+      pathname.includes("/usuario") ||
+      pathname.includes("/recomendaciones");
 
     const roots = [".mobile-bottom-nav", ".desktop-sidebar"] as const;
 
@@ -167,7 +187,7 @@ const createLabel = isUsuario ? "Mi cuenta" : "Crear";
 
       const homeIcon = homeEl?.querySelector("i") as HTMLElement | null;
       const explorarIcon = explorarEl?.querySelector("i") as HTMLElement | null;
-      const amigosIcon = amigosEl?.querySelector("i") as HTMLElement | null;
+      const amigosIcon = amigosEl?.querySelector(".nav-icon-wrap > i") as HTMLElement | null;
       const perfilIcon = perfilEl?.querySelector("i") as HTMLElement | null;
       if (homeIcon)
         homeIcon.className = isHome
@@ -185,11 +205,14 @@ const createLabel = isUsuario ? "Mi cuenta" : "Crear";
   function updateFabIcon(): void {
     const { pathname } = window.location;
     const isUsuario = pathname.includes("/usuario");
+    const isChat = pathname.includes("/recomendaciones");
     const cls = isUsuario
       ? "bi bi-house-door-fill"
-      : pathname.includes("/restaurante")
-        ? "bi bi-fork-knife"
-        : "bi bi-shop-window";
+      : isChat
+        ? "bi bi-send-fill"
+        : pathname.includes("/restaurante")
+          ? "bi bi-fork-knife"
+          : "bi bi-shop-window";
     document
       .querySelectorAll("[data-action='create'] .fab-inner > i")
       .forEach((el) => {
@@ -200,11 +223,16 @@ const createLabel = isUsuario ? "Mi cuenta" : "Crear";
       btn.classList.toggle("is-return", isUsuario);
       btn.setAttribute(
         "aria-label",
-        isUsuario ? "Volver a mi cuenta" : "Crear restaurante o plato",
+        isUsuario
+          ? "Volver a mi cuenta"
+          : isChat
+            ? "Recomendar algo"
+            : "Crear restaurante o plato",
       );
     });
     const label = document.querySelector(".sidebar-create-label");
-    if (label) label.textContent = isUsuario ? "Mi cuenta" : "Crear";
+    if (label)
+      label.textContent = isUsuario ? "Mi cuenta" : isChat ? "Recomendar" : "Crear";
   }
 
   function initFab(): void {
@@ -215,6 +243,11 @@ const createLabel = isUsuario ? "Mi cuenta" : "Crear";
         // Perfil de un amigo → el botón central vuelve a tu cuenta (inicio).
         if (pathname.includes("/usuario")) {
           navigate("/");
+          return;
+        }
+        // Chat de recomendaciones → abre "¿Qué le recomiendas?".
+        if (pathname.includes("/recomendaciones")) {
+          document.getElementById("chat-recommend")?.click();
           return;
         }
         if (pathname === "/" || pathname.endsWith("/index")) {
@@ -233,11 +266,26 @@ const createLabel = isUsuario ? "Mi cuenta" : "Crear";
     });
   }
 
+  /** Globito en "Amigos": recomendaciones sin ver + solicitudes recibidas. */
+  async function updateFriendsBadge(): Promise<void> {
+    const badges = document.querySelectorAll<HTMLElement>(".nav-badge");
+    if (badges.length === 0) return;
+    const n = await getFriendsBadgeCount();
+    badges.forEach((b) => {
+      b.textContent = n > 9 ? "9+" : String(n);
+      b.hidden = n === 0;
+    });
+  }
+
   document.addEventListener("astro:page-load", () => {
     updateActiveState();
     updateFabIcon();
     initFab();
+    void updateFriendsBadge();
   });
+
+  // Otra pantalla marcó algo como visto / aceptó una solicitud → recalcular.
+  document.addEventListener("friends:badge-refresh", () => void updateFriendsBadge());
 </script>
 
 <style>
@@ -429,6 +477,34 @@ const createLabel = isUsuario ? "Mi cuenta" : "Crear";
   .sidebar-create .fab-badge {
     font-size: 1.9rem;
     color: var(--clr-white);
+  }
+
+  /* ── Globito de pendientes en "Amigos" ──────────────────────────── */
+  .nav-icon-wrap {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .nav-badge {
+    position: absolute;
+    top: -6px;
+    right: -10px;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
+    border-radius: 20px;
+    background: var(--clr-danger);
+    color: var(--clr-white);
+    border: 2px solid var(--clr-white);
+    font-size: 0.6rem;
+    font-weight: 800;
+    line-height: 13px;
+    text-align: center;
+    box-sizing: border-box;
+  }
+
+  .nav-badge[hidden] {
+    display: none;
   }
 
   /* ── Mobile bottom nav ──────────────────────────────────────────── */

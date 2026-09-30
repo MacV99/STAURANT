@@ -228,8 +228,9 @@ async function fetchOfficialProfilesFor(
 const MIGRATION_KEY = "staurant_migrated_v1";
 
 async function refreshCacheInBackground(): Promise<void> {
-  const local = getCache();
+  const seqAtStart = _writeSeq;
   const remote = await fetchFromSupabase();
+  const local = getCache();
 
   // Migración única: subir a Supabase lo que está en local pero no llegó.
   // Solo corre una vez por dispositivo; después de eso las eliminaciones
@@ -269,13 +270,16 @@ async function refreshCacheInBackground(): Promise<void> {
     localStorage.setItem(MIGRATION_KEY, "1");
   }
 
+  // Si hubo cambios locales mientras se consultaba (o aún se están guardando),
+  // la foto del servidor puede no incluirlos: no pisar el caché (el cambio
+  // "desaparecía" de la pantalla). El próximo refresh sincroniza.
+  if (_pendingWrites > 0 || _writeSeq !== seqAtStart) return;
+
   if (JSON.stringify(local) !== JSON.stringify(remote)) {
     writeCache(remote);
     document.dispatchEvent(new CustomEvent("cache:synced"));
   }
-
-  // Refrescar stats globales (cambian cuando otros users califican)
-  bgSync(fetchOfficialStats);
+  // Las stats globales ya las refresca initCache() en cada carga.
 }
 
 /** Llama esto al inicio de cada página protegida, pasando el userId de la sesión.
@@ -384,6 +388,32 @@ function bgSync(fn: () => unknown): void {
   Promise.resolve(fn()).catch((err) => console.error("[staurant sync]", err));
 }
 
+// Escrituras en vuelo + contador de escrituras. El refresh en background los usa
+// para no pisar el caché con datos del servidor más viejos que un cambio local.
+let _pendingWrites = 0;
+let _writeSeq = 0;
+
+/** Como bgSync, pero para ESCRITURAS. Supabase no lanza excepción cuando la
+ *  base rechaza la operación (permisos, red, validación): devuelve `{ error }`.
+ *  Sin revisarlo, el cambio quedaba solo en el celular y se perdía en silencio
+ *  al siguiente refresh. Si falla, avisa a la UI con el evento "sync:error". */
+function bgWrite(fn: () => unknown): void {
+  _pendingWrites++;
+  _writeSeq++;
+  Promise.resolve(fn())
+    .then((res) => {
+      const error = (res as { error?: unknown } | null | undefined)?.error;
+      if (error) throw error;
+    })
+    .catch((err) => {
+      console.error("[staurant sync]", err);
+      document.dispatchEvent(new CustomEvent("sync:error"));
+    })
+    .finally(() => {
+      _pendingWrites--;
+    });
+}
+
 // ─── Restaurants (síncronos — leen del caché) ──────────────────────────────────
 
 export function getRestaurants(): Restaurant[] {
@@ -440,7 +470,7 @@ export function createRestaurant(
   cache.restaurants.unshift(r);
   writeCache(cache);
 
-  bgSync(() =>
+  bgWrite(() =>
     supabase.from("restaurants").insert({
       id: r.id, user_id: _userId,
       name: r.name, notes: r.notes, cities: r.cities, address: r.address,
@@ -468,7 +498,7 @@ export function updateRestaurant(
   if (input.status !== undefined) patch.status = input.status;
   if (input.cities !== undefined) patch.cities = input.cities;
   if (input.address !== undefined) patch.address = input.address;
-  bgSync(() => supabase.from("restaurants").update(patch).eq("id", id));
+  bgWrite(() => supabase.from("restaurants").update(patch).eq("id", id));
 
   return cache.restaurants[idx];
 }
@@ -478,7 +508,7 @@ export function deleteRestaurant(id: string): void {
   cache.restaurants = cache.restaurants.filter((r) => r.id !== id);
   cache.dishes = cache.dishes.filter((d) => d.restaurantId !== id);
   writeCache(cache);
-  bgSync(() => supabase.from("restaurants").delete().eq("id", id));
+  bgWrite(() => supabase.from("restaurants").delete().eq("id", id));
 }
 
 export function markAsVisited(id: string): Restaurant | null {
@@ -502,7 +532,7 @@ function bumpRestaurantUpdatedAt(restaurantId: string, updatedAt: string): void 
   if (idx === -1) return;
   cache.restaurants[idx] = { ...cache.restaurants[idx], updatedAt };
   writeCache(cache);
-  bgSync(() =>
+  bgWrite(() =>
     supabase.from("restaurants").update({ updated_at: updatedAt }).eq("id", restaurantId)
   );
 }
@@ -529,7 +559,7 @@ export function createDish(
   cache.dishes.unshift(d);
   writeCache(cache);
 
-  bgSync(() =>
+  bgWrite(() =>
     supabase.from("dishes").insert({
       id: d.id, user_id: _userId,
       restaurant_id: d.restaurantId,
@@ -572,7 +602,7 @@ export function updateDish(
   if (effectiveInput.name !== undefined) patch.name = effectiveInput.name;
   if (effectiveInput.rating !== undefined) patch.rating = effectiveInput.rating;
   if (effectiveInput.notes !== undefined) patch.notes = effectiveInput.notes;
-  bgSync(() => supabase.from("dishes").update(patch).eq("id", id));
+  bgWrite(() => supabase.from("dishes").update(patch).eq("id", id));
 
   bumpRestaurantUpdatedAt(cache.dishes[idx].restaurantId, updatedAt);
   return cache.dishes[idx];
@@ -589,7 +619,7 @@ export function deleteDish(id: string): void {
   }
   cache.dishes = cache.dishes.filter((d) => d.id !== id);
   writeCache(cache);
-  bgSync(() => supabase.from("dishes").delete().eq("id", id));
+  bgWrite(() => supabase.from("dishes").delete().eq("id", id));
   if (dish) bumpRestaurantUpdatedAt(dish.restaurantId, new Date().toISOString());
 }
 
@@ -624,7 +654,7 @@ export function createDishType(name: string): DishType {
   else cache.dishTypes.splice(idx, 0, dt);
   writeCache(cache);
 
-  bgSync(() =>
+  bgWrite(() =>
     supabase.from("dish_types").insert({
       id: dt.id, user_id: _userId,
       name: dt.name, created_at: dt.createdAt,
@@ -639,7 +669,7 @@ export function deleteDishType(id: string): void {
   // Nullificar typeId en platos que usaban este tipo (consistencia local)
   cache.dishes = cache.dishes.map(d => d.typeId === id ? { ...d, typeId: null } : d);
   writeCache(cache);
-  bgSync(() => supabase.from("dish_types").delete().eq("id", id));
+  bgWrite(() => supabase.from("dish_types").delete().eq("id", id));
 }
 
 // ─── Derived (síncronos) ───────────────────────────────────────────────────────
@@ -1276,7 +1306,7 @@ export function addOfficialToMyList(
   upsertOfficialProfile(cache, official, dishes);
   writeCache(cache);
 
-  bgSync(() =>
+  bgWrite(() =>
     supabase.from("user_official_restaurants").insert({
       user_id: _userId,
       official_restaurant_id: official.id,
@@ -1301,7 +1331,7 @@ export function setOfficialStatus(
   const updatedAt = new Date().toISOString();
   cache.memberships[idx] = { ...cache.memberships[idx], status, updatedAt };
   writeCache(cache);
-  bgSync(() =>
+  bgWrite(() =>
     supabase
       .from("user_official_restaurants")
       .update({ status, updated_at: updatedAt })
@@ -1318,7 +1348,7 @@ export function rateOfficialDish(officialDishId: string, rating: number | null):
   if (rating === null) {
     delete cache.ratings[officialDishId];
     writeCache(cache);
-    bgSync(() =>
+    bgWrite(() =>
       supabase
         .from("official_ratings")
         .delete()
@@ -1331,7 +1361,7 @@ export function rateOfficialDish(officialDishId: string, rating: number | null):
   const now = new Date().toISOString();
   cache.ratings[officialDishId] = rating;
   writeCache(cache);
-  bgSync(() =>
+  bgWrite(() =>
     supabase.from("official_ratings").upsert(
       { user_id: _userId, official_dish_id: officialDishId, rating, updated_at: now },
       { onConflict: "user_id,official_dish_id" },
@@ -1341,6 +1371,24 @@ export function rateOfficialDish(officialDishId: string, rating: number | null):
   // Calificar implica que visité el restaurante del plato.
   const od = cache.officialDishes.find((d) => d.id === officialDishId);
   if (od) setOfficialStatus(od.officialRestaurantId, "visited");
+}
+
+/** Platos oficiales que califiqué (de los oficiales en mi lista), con el nombre
+ *  de su restaurante. Alimenta el selector de "recomendar" del chat. */
+export function getMyRatedOfficialDishes(): {
+  dish: OfficialDish;
+  restaurantName: string;
+  rating: number;
+}[] {
+  const cache = getCache();
+  const names = new Map(cache.officialRestaurants.map((o) => [o.id, o.name]));
+  return cache.officialDishes
+    .filter((d) => cache.ratings[d.id] !== undefined)
+    .map((d) => ({
+      dish: d,
+      restaurantName: names.get(d.officialRestaurantId) ?? "",
+      rating: cache.ratings[d.id],
+    }));
 }
 
 /** Promedio MÍO de un restaurante oficial (avg de mis ratings de su carta). */

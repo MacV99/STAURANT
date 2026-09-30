@@ -1,0 +1,798 @@
+---
+import Layout1 from "../layouts/Layout1.astro";
+---
+
+<Layout1 title="Recomendaciones · STAURANT">
+  <div class="chat-page flex-column">
+    <!-- ── Cinta superior: volver + amigo ── -->
+    <div class="chat-top texture-dotted flex-row">
+      <button id="chat-back" class="chat-back" type="button" aria-label="Atrás">
+        <i class="bi bi-arrow-left"></i>
+      </button>
+      <a id="chat-who" class="chat-who flex-row" href="/amigos">
+        <span id="chat-avatar" class="chat-avatar">·</span>
+        <span class="chat-who-text flex-column">
+          <span id="chat-name" class="chat-name">Cargando…</span>
+          <span id="chat-username" class="chat-username"></span>
+        </span>
+      </a>
+    </div>
+
+    <!-- ── Conversación (solo recomendaciones, sin texto) ── -->
+    <div id="chat-thread" class="chat-thread flex-column"></div>
+
+    <!-- ── Barra inferior: recomendar algo a este amigo ── -->
+    <div class="chat-bar flex-column">
+      <p id="chat-not-friends" class="chat-note" hidden>
+        Solo puedes recomendar a tus amigos.
+      </p>
+      <button id="chat-recommend" class="boton chat-recommend-btn flex-row" type="button" disabled>
+        <i class="bi bi-send"></i> Recomendar algo
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Selector: ¿qué le recomiendas? (mis restaurantes y platos) ── -->
+  <div id="chat-pick-overlay" class="overlay" aria-modal="true" role="dialog">
+    <div class="form-box form-box--sheet flex-column chat-pick-box">
+      <div class="form-header flex-row">
+        <h2>¿Qué le recomiendas?</h2>
+        <button
+          id="chat-pick-close"
+          class="btn-close btn-icon-close boton2"
+          aria-label="Cerrar"
+        >
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="form-body">
+        <div class="chat-pick-tabs flex-row" role="tablist">
+          <button class="chat-pick-tab active" data-kind="restaurants" type="button" role="tab">
+            <i class="bi bi-shop"></i> Restaurantes
+          </button>
+          <button class="chat-pick-tab" data-kind="dishes" type="button" role="tab">
+            <i class="bi bi-egg-fried"></i> Platos
+          </button>
+        </div>
+        <input
+          id="chat-pick-search"
+          class="chat-pick-search"
+          type="search"
+          placeholder="Buscar…"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <div id="chat-pick-list" class="chat-pick-list flex-column"></div>
+      </div>
+    </div>
+  </div>
+</Layout1>
+
+<style>
+  [hidden] {
+    display: none !important;
+  }
+
+  .chat-page {
+    width: 100%;
+    max-width: 760px;
+    min-height: calc(100dvh - 80px);
+    padding: 0 0 100px;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0;
+  }
+
+  /* ── Cinta superior (mismo patrón que el perfil de un amigo) ── */
+  .chat-top {
+    position: sticky;
+    top: 80px;
+    z-index: 90;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-bottom: solid 1px var(--clr-border);
+  }
+
+  .chat-back {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: 50%;
+    color: var(--clr-primary);
+    font-size: 1.1rem;
+    cursor: pointer;
+  }
+
+  .chat-who {
+    min-width: 0;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 10px;
+    color: var(--clr-text);
+    text-decoration: none;
+  }
+
+  .chat-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--clr-white2);
+    border: 1.5px solid var(--clr-border);
+    color: var(--clr-primary);
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .chat-who-text {
+    min-width: 0;
+    align-items: flex-start;
+    gap: 0;
+  }
+
+  .chat-name {
+    font-size: 0.95rem;
+    font-weight: 800;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  .chat-username {
+    font-size: 0.76rem;
+    color: var(--clr-text-soft);
+  }
+
+  /* ── Conversación ── */
+  .chat-thread {
+    flex: 1;
+    align-items: stretch;
+    gap: 10px;
+    padding: 16px;
+  }
+
+  /* ── Barra inferior fija sobre el menú ──
+     En móvil la acción es el botón central del menú (✈); aquí solo queda el
+     aviso de "solo amigos". En escritorio se muestra el botón. */
+  .chat-bar {
+    position: sticky;
+    bottom: calc(104px + env(safe-area-inset-bottom));
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px 0;
+  }
+
+  .chat-note {
+    font-size: 0.8rem;
+    color: var(--clr-text-soft);
+    text-align: center;
+  }
+
+  .chat-recommend-btn {
+    gap: 8px;
+    min-height: 46px;
+    padding: 0 22px;
+    border-radius: 50px;
+    box-shadow: 0 6px 18px rgba(var(--rgb-ink), 0.18);
+  }
+
+  @media (max-width: 767px) {
+    .chat-recommend-btn {
+      display: none;
+    }
+  }
+
+  .chat-recommend-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+    box-shadow: none;
+  }
+
+  /* ── Selector ── */
+  .chat-pick-box {
+    max-width: 440px;
+    height: min(640px, 88dvh);
+  }
+
+  .chat-pick-tabs {
+    gap: 8px;
+  }
+
+  .chat-pick-tab {
+    flex: 1;
+    gap: 6px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1.5px solid var(--clr-border);
+    background: var(--clr-white);
+    color: var(--clr-text);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: none;
+    text-indent: 0;
+    cursor: pointer;
+  }
+
+  .chat-pick-tab.active {
+    background: var(--clr-primary);
+    border-color: var(--clr-primary);
+    color: var(--clr-white);
+  }
+
+  .chat-pick-search {
+    width: 100%;
+    border-radius: var(--border-radius);
+    border: 1.5px solid var(--clr-border);
+    background: var(--clr-white);
+    font-size: 0.9rem;
+  }
+
+  .chat-pick-list {
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  @media (min-width: 768px) {
+    .chat-page {
+      min-height: 100dvh;
+      padding: 0 24px 40px;
+    }
+
+    .chat-top {
+      top: 0;
+    }
+
+    .chat-bar {
+      bottom: 16px;
+    }
+  }
+</style>
+
+<style is:global>
+  /* ── Burbujas y filas creadas en JS (acotadas a esta página por id) ── */
+  #chat-thread .chat-day {
+    align-self: center;
+    margin: 6px 0 2px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: var(--clr-white);
+    border: 1px solid var(--clr-border);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--clr-text-soft);
+    text-transform: uppercase;
+  }
+
+  #chat-thread .chat-msg {
+    max-width: 86%;
+    align-items: flex-start;
+    gap: 3px;
+  }
+
+  #chat-thread .chat-msg.is-mine {
+    align-self: flex-end;
+    align-items: flex-end;
+  }
+
+  #chat-thread .chat-msg.is-theirs {
+    align-self: flex-start;
+  }
+
+  #chat-thread .chat-card {
+    justify-content: flex-start;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 10px 10px 12px;
+    border: 1px solid var(--clr-border);
+    border-radius: 18px;
+    background: var(--clr-white);
+    color: var(--clr-text);
+    text-decoration: none;
+    text-align: left;
+    transition: var(--transition);
+  }
+
+  #chat-thread .chat-msg.is-theirs .chat-card {
+    border-bottom-left-radius: 6px;
+  }
+
+  #chat-thread .chat-msg.is-mine .chat-card {
+    border-bottom-right-radius: 6px;
+    background: var(--clr-white2);
+  }
+
+  #chat-thread a.chat-card:active {
+    transform: scale(0.985);
+  }
+
+  #chat-thread .chat-card.is-gone {
+    opacity: 0.6;
+  }
+
+  #chat-thread .chat-card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--clr-white2);
+    border: 1px solid var(--clr-border);
+    color: var(--clr-primary);
+  }
+
+  #chat-thread .chat-msg.is-mine .chat-card-icon {
+    background: var(--clr-white);
+  }
+
+  #chat-thread .chat-card-text {
+    min-width: 0;
+    flex: 1;
+    align-items: flex-start;
+    gap: 1px;
+  }
+
+  #chat-thread .chat-card-kicker {
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--clr-text-soft);
+  }
+
+  #chat-thread .chat-card-title {
+    font-size: 0.92rem;
+    font-weight: 800;
+    line-height: 1.25;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+  }
+
+  #chat-thread .chat-card-sub {
+    font-size: 0.78rem;
+    color: var(--clr-text-soft);
+  }
+
+  #chat-thread .chat-card .rating-badge {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+  }
+
+  #chat-thread .chat-time {
+    font-size: 0.68rem;
+    color: var(--clr-text-soft);
+    padding: 0 6px;
+  }
+
+  #chat-pick-list .chat-pick-item {
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--clr-border);
+    border-radius: 14px;
+    background: var(--clr-white);
+    color: var(--clr-text);
+    text-align: left;
+    text-transform: none;
+    letter-spacing: 0;
+    text-indent: 0;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  #chat-pick-list .chat-pick-item:active {
+    transform: scale(0.985);
+  }
+
+  #chat-pick-list .chat-pick-item:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  #chat-pick-list .chat-pick-text {
+    min-width: 0;
+    align-items: flex-start;
+    gap: 1px;
+  }
+
+  #chat-pick-list .chat-pick-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+  }
+
+  #chat-pick-list .chat-pick-sub {
+    font-size: 0.76rem;
+    color: var(--clr-text-soft);
+  }
+
+  #chat-pick-list .rating-badge {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+  }
+
+  @media (hover: hover) {
+    #chat-thread a.chat-card:hover,
+    #chat-pick-list .chat-pick-item:not(:disabled):hover {
+      border-color: var(--clr-border2);
+    }
+  }
+</style>
+
+<script>
+  import { navigate } from "astro:transitions/client";
+  import { supabase } from "../lib/supabase.ts";
+  import {
+    initCache,
+    getHomeEntries,
+    getDishes,
+    getRestaurants,
+    getMyRatedOfficialDishes,
+  } from "../lib/data.ts";
+  import {
+    getPublicProfile,
+    getFriendStatus,
+    getRecommendationThread,
+    markRecommendationsSeen,
+    sendRecommendation,
+    type Recommendation,
+    type RecTargetType,
+  } from "../lib/social.ts";
+  import { paintRatingBadge, createOverlay, fillRestaurantName } from "../scripts/store.ts";
+
+  // ─── Estado de módulo ───────────────────────────────────────────────────────
+  let me = "";
+  let friendId = "";
+  let friendName = "";
+  let thread: Recommendation[] = [];
+  let pickKind: "restaurants" | "dishes" = "restaurants";
+  let pickQuery = "";
+
+  const KICKER: Record<RecTargetType, string> = {
+    restaurant: "Restaurante",
+    official_restaurant: "Restaurante",
+    dish: "Plato",
+    official_dish: "Plato",
+  };
+
+  // ─── Conversación ───────────────────────────────────────────────────────────
+
+  function dayLabel(iso: string): string {
+    const d = new Date(iso);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    const same = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+    if (same(d, today)) return "Hoy";
+    if (same(d, yesterday)) return "Ayer";
+    return d.toLocaleDateString("es-CO", {
+      day: "numeric",
+      month: "short",
+      year: d.getFullYear() === today.getFullYear() ? undefined : "numeric",
+    });
+  }
+
+  function timeLabel(iso: string): string {
+    return new Date(iso).toLocaleTimeString("es-CO", {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }
+
+  function buildMessage(rec: Recommendation): HTMLElement {
+    const mine = rec.senderId === me;
+    const msg = document.createElement("div");
+    msg.className = `chat-msg flex-column ${mine ? "is-mine" : "is-theirs"}`;
+
+    const card = document.createElement(rec.href ? "a" : "div");
+    card.className = "chat-card flex-row" + (rec.href ? "" : " is-gone");
+    if (rec.href && card instanceof HTMLAnchorElement) card.href = rec.href;
+
+    const isDish = rec.targetType === "dish" || rec.targetType === "official_dish";
+    const icon = document.createElement("span");
+    icon.className = "chat-card-icon";
+    icon.innerHTML = `<i class="bi ${isDish ? "bi-egg-fried" : "bi-shop"}"></i>`;
+
+    const text = document.createElement("span");
+    text.className = "chat-card-text flex-column";
+    const kicker = document.createElement("span");
+    kicker.className = "chat-card-kicker";
+    kicker.textContent = KICKER[rec.targetType];
+    const title = document.createElement("span");
+    title.className = "chat-card-title";
+    if (rec.title) {
+      // Oficiales llevan el sello verificado, igual que en el resto de la app.
+      fillRestaurantName(title, rec.title, rec.isOfficial && !isDish);
+    } else {
+      title.textContent = "Ya no está disponible";
+    }
+    text.append(kicker, title);
+    if (rec.subtitle) {
+      const sub = document.createElement("span");
+      sub.className = "chat-card-sub";
+      sub.textContent = rec.subtitle;
+      text.appendChild(sub);
+    }
+
+    card.append(icon, text);
+    if (rec.title) {
+      const badge = document.createElement("span");
+      paintRatingBadge(badge, rec.rating);
+      badge.title = mine ? "Tu nota" : `Nota de ${friendName}`;
+      card.appendChild(badge);
+    }
+
+    const time = document.createElement("span");
+    time.className = "chat-time";
+    time.textContent = timeLabel(rec.createdAt);
+
+    msg.append(card, time);
+    return msg;
+  }
+
+  function renderThread() {
+    const el = document.getElementById("chat-thread");
+    if (!el) return;
+    el.innerHTML = "";
+    if (thread.length === 0) {
+      el.innerHTML = `<div class="empty-state flex-column">
+          <i class="bi bi-chat-heart"></i>
+          <p>Aún no se han recomendado nada.</p>
+          <p class="empty-hint">Recomiéndale un plato o un restaurante con el botón <i class="bi bi-send-fill"></i> de abajo.</p>
+        </div>`;
+      return;
+    }
+    let lastDay = "";
+    for (const rec of thread) {
+      const day = dayLabel(rec.createdAt);
+      if (day !== lastDay) {
+        const sep = document.createElement("div");
+        sep.className = "chat-day";
+        sep.textContent = day;
+        el.appendChild(sep);
+        lastDay = day;
+      }
+      el.appendChild(buildMessage(rec));
+    }
+  }
+
+  function scrollToEnd(smooth = false) {
+    window.scrollTo({
+      top: document.body.scrollHeight,
+      behavior: smooth ? "smooth" : "auto",
+    });
+  }
+
+  async function loadThread(smooth = false) {
+    thread = await getRecommendationThread(friendId);
+    renderThread();
+    scrollToEnd(smooth);
+    // Lo que me envió este amigo queda visto → apaga el globito del menú.
+    if (thread.some((r) => r.recipientId === me && !r.seenAt)) {
+      await markRecommendationsSeen(friendId);
+      document.dispatchEvent(new CustomEvent("friends:badge-refresh"));
+    }
+  }
+
+  // ─── Selector de qué recomendar ─────────────────────────────────────────────
+
+  interface PickItem {
+    type: RecTargetType;
+    id: string;
+    title: string;
+    sub: string;
+    rating: number | null;
+    isOfficial: boolean;
+  }
+
+  function pickItems(): PickItem[] {
+    if (pickKind === "restaurants") {
+      return getHomeEntries()
+        .map((e) => ({
+          type: (e.isOfficial ? "official_restaurant" : "restaurant") as RecTargetType,
+          id: e.isOfficial ? e.officialRestaurantId! : e.id,
+          title: e.name,
+          sub: e.status === "pending" ? "Pendiente" : e.cities.join(" · "),
+          rating: e.avg,
+          isOfficial: e.isOfficial,
+        }))
+        .sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1));
+    }
+    const restName = new Map(getRestaurants().map((r) => [r.id, r.name]));
+    const personal: PickItem[] = getDishes().map((d) => ({
+      type: "dish",
+      id: d.id,
+      title: d.name,
+      sub: restName.get(d.restaurantId) ?? "",
+      rating: d.rating,
+      isOfficial: false,
+    }));
+    const official: PickItem[] = getMyRatedOfficialDishes().map((o) => ({
+      type: "official_dish",
+      id: o.dish.id,
+      title: o.dish.name,
+      sub: o.restaurantName,
+      rating: o.rating,
+      isOfficial: true,
+    }));
+    return [...personal, ...official].sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1));
+  }
+
+  function renderPick(onPicked: (item: PickItem) => Promise<void>) {
+    const listEl = document.getElementById("chat-pick-list");
+    if (!listEl) return;
+    const q = pickQuery.trim().toLowerCase();
+    const items = pickItems().filter(
+      (i) => !q || i.title.toLowerCase().includes(q) || i.sub.toLowerCase().includes(q),
+    );
+    listEl.innerHTML = "";
+    if (items.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "empty-state flex-column";
+      empty.innerHTML = q
+        ? `<i class="bi bi-search"></i><p>Sin resultados.</p>`
+        : `<i class="bi bi-journal-x"></i><p>Aún no tienes ${
+            pickKind === "restaurants" ? "restaurantes" : "platos calificados"
+          }.</p>`;
+      listEl.appendChild(empty);
+      return;
+    }
+    for (const item of items) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "chat-pick-item flex-row";
+      const text = document.createElement("span");
+      text.className = "chat-pick-text flex-column";
+      const title = document.createElement("span");
+      title.className = "chat-pick-title";
+      fillRestaurantName(title, item.title, item.isOfficial && pickKind === "restaurants");
+      text.appendChild(title);
+      if (item.sub) {
+        const sub = document.createElement("span");
+        sub.className = "chat-pick-sub";
+        sub.textContent = item.sub;
+        text.appendChild(sub);
+      }
+      const badge = document.createElement("span");
+      paintRatingBadge(badge, item.rating);
+      btn.append(text, badge);
+      btn.onclick = async () => {
+        btn.disabled = true;
+        await onPicked(item);
+      };
+      listEl.appendChild(btn);
+    }
+  }
+
+  // ─── Init ───────────────────────────────────────────────────────────────────
+
+  document.addEventListener("astro:page-load", async () => {
+    const threadEl = document.getElementById("chat-thread");
+    if (!threadEl) return;
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      window.location.href = "/login";
+      return;
+    }
+    me = session.user.id;
+
+    friendId = new URLSearchParams(window.location.search).get("amigo") ?? "";
+    if (!friendId || friendId === me) {
+      navigate("/amigos");
+      return;
+    }
+
+    (document.getElementById("chat-back") as HTMLButtonElement).onclick = () =>
+      history.length > 1 ? history.back() : navigate("/amigos");
+
+    // Skeleton mientras carga
+    threadEl.innerHTML = "";
+    for (let i = 0; i < 3; i++) {
+      const sk = document.createElement("div");
+      sk.className = "skeleton-card";
+      sk.style.height = "64px";
+      sk.style.width = "70%";
+      sk.style.alignSelf = i % 2 ? "flex-end" : "flex-start";
+      threadEl.appendChild(sk);
+    }
+
+    const [, profile, rel] = await Promise.all([
+      initCache(me),
+      getPublicProfile(friendId),
+      getFriendStatus(friendId),
+    ]);
+
+    if (!profile) {
+      threadEl.innerHTML = `<div class="empty-state flex-column">
+          <i class="bi bi-person-x"></i><p>No se encontró este usuario.</p>
+        </div>`;
+      return;
+    }
+
+    friendName = profile.name || (profile.username ? `@${profile.username}` : "tu amigo");
+    document.title = `${friendName} · Recomendaciones · STAURANT`;
+    (document.getElementById("chat-name") as HTMLElement).textContent = friendName;
+    (document.getElementById("chat-username") as HTMLElement).textContent =
+      profile.username ? `@${profile.username}` : "";
+    (document.getElementById("chat-avatar") as HTMLElement).textContent = friendName
+      .replace(/^@/, "")
+      .charAt(0);
+    (document.getElementById("chat-who") as HTMLAnchorElement).href = `/usuario?id=${friendId}`;
+
+    const isFriend = rel.status === "friends";
+    const recBtn = document.getElementById("chat-recommend") as HTMLButtonElement;
+    recBtn.disabled = !isFriend;
+    (document.getElementById("chat-not-friends") as HTMLElement).hidden = isFriend;
+
+    // Selector
+    const pickApi = createOverlay("chat-pick-overlay");
+    const searchEl = document.getElementById("chat-pick-search") as HTMLInputElement;
+    const onPicked = async (item: PickItem) => {
+      const ok = await sendRecommendation(friendId, item.type, item.id);
+      if (!ok) {
+        (window as any).noticeDialog?.show(
+          "No se pudo enviar la recomendación. Revisa tu conexión.",
+          { variant: "error" },
+        );
+        renderPick(onPicked);
+        return;
+      }
+      pickApi?.close();
+      await loadThread(true);
+    };
+    document.querySelectorAll<HTMLButtonElement>(".chat-pick-tab").forEach((tab) => {
+      tab.onclick = () => {
+        pickKind = tab.dataset.kind as "restaurants" | "dishes";
+        document
+          .querySelectorAll(".chat-pick-tab")
+          .forEach((t) => t.classList.toggle("active", t === tab));
+        renderPick(onPicked);
+      };
+    });
+    searchEl.oninput = () => {
+      pickQuery = searchEl.value;
+      renderPick(onPicked);
+    };
+    (document.getElementById("chat-pick-close") as HTMLButtonElement).onclick = () =>
+      pickApi?.close();
+    recBtn.onclick = () => {
+      pickQuery = "";
+      searchEl.value = "";
+      renderPick(onPicked);
+      pickApi?.open();
+    };
+
+    await loadThread();
+  });
+
+  // Al volver a la app (otra pestaña / segundo plano) trae lo nuevo.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible") return;
+    if (!document.getElementById("chat-thread") || !friendId) return;
+    void loadThread();
+  });
+</script>

@@ -3,6 +3,17 @@ import FormModal from "./FormModal.astro";
 ---
 
 <FormModal id="dish-form" title="Nuevo plato" maxWidth="420px">
+  <button
+    slot="header-actions"
+    type="button"
+    id="df-recommend"
+    class="btn-icon-close boton2"
+    aria-label="Recomendar a un amigo"
+    title="Recomendar a un amigo"
+    hidden
+  >
+    <i class="bi bi-send"></i>
+  </button>
   <input type="hidden" id="df-id" />
   <input type="hidden" id="df-restaurant-id" />
   <input type="hidden" id="df-type-id" />
@@ -102,6 +113,10 @@ import FormModal from "./FormModal.astro";
 <style>
   /* Estilos base de form/label/footer viven en project.css (.form-box …).
      Aquí solo lo específico de este formulario (rating, drum, combobox tipo). */
+
+  #df-recommend[hidden] {
+    display: none;
+  }
 
   /* Igualar el tamaño de fuente del nombre/notas al del input de tipo (0.9rem). */
   #df-name,
@@ -337,13 +352,14 @@ import FormModal from "./FormModal.astro";
   .drum-picker {
     flex: 1;
     min-width: 0;
-    overflow-x: scroll;
-    overflow-y: hidden;
-    scrollbar-width: none;
-    /* Snap handled fully in JS (debounced on scroll-end). Native mandatory snap
-       on iOS Safari refuses to land on the last item when it's near edge — caused
-       picker to cap at ~9.7. */
-    overscroll-behavior-x: contain;
+    /* Sin scroll nativo: el arrastre, la inercia y el snap viven en JS (pointer
+       events + translateX del track). El scroll de iOS Safari rebotaba antes de
+       llegar al 10. pan-y deja al navegador solo el scroll vertical del modal. */
+    overflow: hidden;
+    touch-action: pan-y;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
     -webkit-mask-image: linear-gradient(
       to right,
       transparent,
@@ -371,9 +387,6 @@ import FormModal from "./FormModal.astro";
     opacity: 0;
   }
 
-  .drum-picker::-webkit-scrollbar {
-    display: none;
-  }
   .drum-outer:not(.is-unrated) .drum-picker:active {
     cursor: grabbing;
   }
@@ -382,10 +395,9 @@ import FormModal from "./FormModal.astro";
     display: flex;
     align-items: center;
     height: 100%;
-    /* width: max-content → track se dimensiona al ancho real de sus items + spacers.
-       Sin esto, drum-track adopta ancho del padre y los items desbordan, lo que en
-       iOS Safari hace que scrollWidth no cubra el último ítem. */
+    /* Ancho real de los items; JS lo desplaza con translateX para centrar el valor. */
     width: max-content;
+    will-change: transform;
   }
 
   /* ── Combobox de tipo — elementos estáticos ───────────────────────────── */
@@ -678,6 +690,7 @@ import FormModal from "./FormModal.astro";
       "df-official-desc",
     ) as HTMLElement;
     const typeFieldEl = document.getElementById("df-type-field") as HTMLElement;
+    const recommendBtn = document.getElementById("df-recommend") as HTMLButtonElement;
     const nameFieldEl = document.getElementById("df-name-field") as HTMLElement;
 
     // Platos oficiales: nombre/tipo/notas los administra el sistema, solo se permite
@@ -790,7 +803,8 @@ import FormModal from "./FormModal.astro";
       if (q && !exactMatch) {
         const createOpt = document.createElement("div");
         createOpt.className = "type-option is-create flex-row";
-        createOpt.innerHTML = `<i class="bi bi-plus-lg"></i> Crear "<span class="create-name">${q}</span>"`;
+        createOpt.innerHTML = `<i class="bi bi-plus-lg"></i> Crear "<span class="create-name"></span>"`;
+        createOpt.querySelector(".create-name")!.textContent = q;
         createOpt.addEventListener("mousedown", (e) => e.preventDefault());
         createOpt.addEventListener("click", () => {
           // Verificar que no exista ya (race condition)
@@ -916,10 +930,29 @@ import FormModal from "./FormModal.astro";
         initTypeCombobox(null);
       }
 
+      // Recomendar a un amigo: solo platos que ya existen (editar).
+      if (mode === "edit" && data) {
+        const restaurantName =
+          document.querySelector("#restaurant-header h1")?.textContent?.trim() ?? null;
+        setRecommend({ type: "dish", id: data.id, title: data.name, subtitle: restaurantName });
+      } else {
+        setRecommend(null);
+      }
+
       overlay.classList.add("is-open");
       requestAnimationFrame(() =>
         initDrumForValue(parseFloat(ratingInput.value)),
       );
+    }
+
+    /** Muestra el botón "Recomendar" de la cabecera para `target` (null = oculto). */
+    function setRecommend(
+      target: { type: string; id: string; title: string; subtitle?: string | null } | null,
+    ) {
+      recommendBtn.hidden = !target;
+      recommendBtn.onclick = target
+        ? () => (window as any).recommend?.open(target)
+        : null;
     }
 
     /** Califica un plato OFICIAL desde la carta compartida (/oficial). No hay Dish
@@ -1019,6 +1052,19 @@ import FormModal from "./FormModal.astro";
         setRated(false);
       }
 
+      // Recomendar: con sesión y si no es un genérico (Coca-Cola…).
+      setRecommend(
+        !isGenericView && !viewOnly
+          ? {
+              type: "official_dish",
+              id: od.id,
+              title: od.name,
+              subtitle:
+                document.querySelector("#oficial-header h1")?.textContent?.trim() ?? null,
+            }
+          : null,
+      );
+
       overlay.classList.add("is-open");
       requestAnimationFrame(() =>
         initDrumForValue(parseFloat(ratingInput.value)),
@@ -1031,7 +1077,7 @@ import FormModal from "./FormModal.astro";
     cancelBtn.onclick = close;
 
     // Visitante anónimo viendo un plato oficial: tocar la rueda pide login en vez
-    // de dejar calificar. Captura en fase de captura para adelantarse al scroll.
+    // de dejar calificar. Captura en fase de captura para adelantarse al arrastre.
     drumEl.addEventListener(
       "pointerdown",
       (e) => {
@@ -1047,18 +1093,22 @@ import FormModal from "./FormModal.astro";
     );
 
     // ─── Drum picker ──────────────────────────────────────────────────────────
+    // Rueda 100% controlada en JS, sin scroll nativo: la posición es un índice
+    // fraccionario `pos` y el track se mueve con translateX. El scroll nativo de
+    // iOS Safari (rebote + inercia) peleaba con el snap y no dejaba llegar a los
+    // extremos (el 10 costaba mucho). Con pointer events el arrastre, la inercia y
+    // el tope en 1 y 10 se comportan igual en iOS, Android y escritorio.
 
     const ITEM_W = 52;
     const MIN_V = 1.0;
     const MAX_V = 10.0;
     const STEP = 0.5;
     const NUM_ITEMS = Math.round((MAX_V - MIN_V) / STEP) + 1; // 1.0 → 10.0 at 0.5 steps
+    const MAX_IDX = NUM_ITEMS - 1;
     // Valor del item idx, redondeado al step para evitar errores de punto flotante.
     const valueForIdx = (idx: number) =>
       Math.round((MIN_V + idx * STEP) * 10) / 10;
-    // Espacio extra simétrico a cada lado para permitir rebote/overscroll
-    // pasando el 1 (izq) y el 10 (der). El snap JS regresa al item.
-    const OVERSCROLL = Math.round(ITEM_W * 0.55);
+    const clampIdx = (idx: number) => Math.max(0, Math.min(MAX_IDX, idx));
 
     const drumItems: HTMLElement[] = [];
     let prevDrumV = -1;
@@ -1066,57 +1116,21 @@ import FormModal from "./FormModal.astro";
     let prevLo = -1;
     let prevHi = -1;
     let drumBuilt = false;
-    let startSpacer: HTMLElement | null = null;
-    let endSpacer: HTMLElement | null = null;
-
-    // scrollLeft que centra el item idx (las dos spacers añaden OVERSCROLL al origen).
-    const scrollLeftFor = (idx: number) => idx * ITEM_W + OVERSCROLL;
-    // Índice fraccionario del punto que está en el centro ahora mismo. La clave
+    // Índice fraccionario del item que está en el centro ahora mismo. La clave
     // de la fluidez: los visuales se calculan a partir de ESTE valor continuo,
     // no del índice redondeado, así el número central crece/encoge de forma
     // gradual en vez de "saltar" al cruzar la mitad entre dos números.
-    const centerFromScrollLeft = () =>
-      (drumEl.scrollLeft - OVERSCROLL) / ITEM_W;
-    const idxFromScrollLeft = () =>
-      Math.max(0, Math.min(NUM_ITEMS - 1, Math.round(centerFromScrollLeft())));
+    let pos = 0;
+    let drumW = 0;
 
-    function syncDrumPadding() {
-      const w = drumEl.getBoundingClientRect().width;
-      if (w === 0) return; // not laid out yet — wait for ResizeObserver
-      const pad = Math.max(0, w / 2 - ITEM_W / 2);
-      // startSpacer = pad + OVERSCROLL: define el origen del scroll (la math de
-      // centrado depende de esto). endSpacer NO afecta el centrado, solo el máximo
-      // scrollable, así que puede crecer libre.
-      const spacer = pad + OVERSCROLL;
-      if (startSpacer) startSpacer.style.flex = `0 0 ${spacer}px`;
-      // iOS Safari trata la franja final como zona de rubber-band: rebota antes de
-      // que scrollLeft alcance el centro del item 10 (tope real ≈ 9.5). Buffer extra
-      // (1 ITEM_W) en el endSpacer saca el item 10 de esa zona → alcanzable en iOS.
-      // Android/desktop no tienen rebote; el buffer es inocuo (solo scroll muerto).
-      if (endSpacer) endSpacer.style.flex = `0 0 ${spacer + ITEM_W}px`;
-    }
-
-    // Drum-picker width may be 0 at first measurement (modal mid-open, dvh shift,
-    // rotation). Re-sync spacers whenever it resizes and re-anchor the current
-    // value so item 10 stays reachable.
-    const drumResizeObserver = new ResizeObserver(() => {
-      if (!drumBuilt) return;
-      const prevIdx = idxFromScrollLeft();
-      syncDrumPadding();
-      drumEl.scrollLeft = scrollLeftFor(prevIdx);
-    });
-    drumResizeObserver.observe(drumEl);
+    const ITEM_OFF_OPACITY = "0.04";
+    const ITEM_OFF_SCALE = 0.25;
 
     function buildDrum() {
       if (drumBuilt) return;
       drumBuilt = true;
       drumTrackEl.innerHTML = "";
       drumItems.length = 0;
-
-      startSpacer = document.createElement("div");
-      startSpacer.style.flexShrink = "0";
-      startSpacer.setAttribute("aria-hidden", "true");
-      drumTrackEl.appendChild(startSpacer);
 
       for (let i = 0; i < NUM_ITEMS; i++) {
         const v = valueForIdx(i);
@@ -1128,16 +1142,11 @@ import FormModal from "./FormModal.astro";
         } else {
           item.innerHTML = `<span class="drum-int">${Math.floor(v)}</span><span class="drum-dec">.${tenths}</span>`;
         }
-        item.style.opacity = "0.04";
-        item.style.transform = "scale(0.25)";
+        item.style.opacity = ITEM_OFF_OPACITY;
+        item.style.transform = `scale(${ITEM_OFF_SCALE})`;
         drumTrackEl.appendChild(item);
         drumItems.push(item);
       }
-
-      endSpacer = document.createElement("div");
-      endSpacer.style.flexShrink = "0";
-      endSpacer.setAttribute("aria-hidden", "true");
-      drumTrackEl.appendChild(endSpacer);
     }
 
     // Interpola una tabla de keyframes por distancia fraccionaria `d` (0,1,2…).
@@ -1170,15 +1179,15 @@ import FormModal from "./FormModal.astro";
       const CENTER_GAP = 8; // px extra separation around the center
       const nearest = Math.round(center);
       const lo = Math.max(0, nearest - RADIUS);
-      const hi = Math.min(NUM_ITEMS - 1, nearest + RADIUS);
+      const hi = Math.min(MAX_IDX, nearest + RADIUS);
 
       // Apaga los items que salieron de la ventana visible.
       if (prevLo >= 0) {
         for (let i = prevLo; i <= prevHi; i++) {
           if (i < lo || i > hi) {
             const shift = Math.sign(i - center) * CENTER_GAP;
-            drumItems[i].style.opacity = "0.04";
-            drumItems[i].style.transform = `translateX(${shift}px) scale(0.25)`;
+            drumItems[i].style.opacity = ITEM_OFF_OPACITY;
+            drumItems[i].style.transform = `translateX(${shift}px) scale(${ITEM_OFF_SCALE})`;
             drumItems[i].classList.remove("is-center");
           }
         }
@@ -1197,196 +1206,217 @@ import FormModal from "./FormModal.astro";
       prevHi = hi;
     }
 
-    let scrollSnapTimer: number | undefined;
-    let isTouching = false;
+    // Pinta la rueda con el item `p` (fraccionario) en el centro. Solo visual.
+    function renderDrum(p: number) {
+      pos = p;
+      const x = drumW / 2 - ITEM_W / 2 - p * ITEM_W;
+      drumTrackEl.style.transform = `translate3d(${x}px, 0, 0)`;
+      updateDrumVisuals(p);
+    }
 
-    // Velocity tracking for smart snap (don't fight momentum on fast flick)
-    let lastScrollLeft = 0;
-    let lastScrollTime = 0;
-    let scrollVelocity = 0;
+    // Guarda el valor del item más cercano al centro. Solo en interacción del
+    // usuario: el primer cambio marca el plato como calificado.
+    function commitDrumValue() {
+      const v = valueForIdx(clampIdx(Math.round(pos)));
+      if (v === prevDrumV) return;
+      prevDrumV = v;
+      ratingInput.value = String(v);
+      if (!isRated) setRated(true);
+      if ("vibrate" in navigator) navigator.vibrate(1);
+    }
 
-    function snapToNearest() {
-      const target = scrollLeftFor(idxFromScrollLeft());
-      if (Math.abs(drumEl.scrollLeft - target) > 0.5) {
-        drumEl.scrollTo({ left: target, behavior: "smooth" });
+    // `is-scrolling` acorta las transiciones CSS de los items mientras la rueda
+    // se mueve; se quita con retraso para que el asentamiento final sea suave.
+    let scrollingTimer: number | undefined;
+    function startScrolling() {
+      clearTimeout(scrollingTimer);
+      drumEl.classList.add("is-scrolling");
+    }
+    function endScrolling() {
+      clearTimeout(scrollingTimer);
+      scrollingTimer = window.setTimeout(
+        () => drumEl.classList.remove("is-scrolling"),
+        320,
+      );
+    }
+
+    // Anima `pos` hasta el item `target` (ease-out) y deja la rueda quieta ahí.
+    let animFrame = 0;
+    function stopDrumAnim() {
+      if (animFrame) cancelAnimationFrame(animFrame);
+      animFrame = 0;
+    }
+    function animateDrumTo(target: number) {
+      stopDrumAnim();
+      const from = pos;
+      const dist = Math.abs(target - from);
+      if (dist < 0.001) {
+        renderDrum(target);
+        commitDrumValue();
+        endScrolling();
+        return;
       }
-    }
-
-    function removeIsScrolling() {
-      window.setTimeout(() => drumEl.classList.remove("is-scrolling"), 320);
-    }
-
-    drumEl.addEventListener(
-      "scroll",
-      () => {
-        const now = Date.now();
-        const dt = now - lastScrollTime;
-        if (dt > 0)
-          scrollVelocity = Math.abs(drumEl.scrollLeft - lastScrollLeft) / dt;
-        lastScrollLeft = drumEl.scrollLeft;
-        lastScrollTime = now;
-
-        const center = centerFromScrollLeft();
-        updateDrumVisuals(center);
-        const idx = Math.max(0, Math.min(NUM_ITEMS - 1, Math.round(center)));
-        const v = valueForIdx(idx);
-        if (v !== prevDrumV) {
-          prevDrumV = v;
-          if (!isRated) {
-            isRated = true;
-            ratingClearBtn.hidden = false;
-            drumOuterEl.classList.remove("is-unrated");
-          }
-          ratingInput.value = String(v);
-          if ("vibrate" in navigator) navigator.vibrate(1);
+      startScrolling();
+      const duration = Math.min(600, 180 + Math.sqrt(dist) * 110);
+      const t0 = performance.now();
+      const step = (now: number) => {
+        const t = Math.min(1, (now - t0) / duration);
+        const eased = 1 - Math.pow(1 - t, 3);
+        renderDrum(from + (target - from) * eased);
+        commitDrumValue();
+        if (t < 1) {
+          animFrame = requestAnimationFrame(step);
+        } else {
+          animFrame = 0;
+          endScrolling();
         }
+      };
+      animFrame = requestAnimationFrame(step);
+    }
 
-        // Suppress CSS transitions while scrolling for instant visual response
-        drumEl.classList.add("is-scrolling");
+    // Resistencia al pasar de los extremos (tipo iOS): se puede estirar un poco
+    // más allá del 1 o del 10, cada vez cuesta más, y al soltar vuelve al tope.
+    const RUBBER_MAX = 0.6; // items
+    const rubberBand = (over: number) =>
+      RUBBER_MAX * (1 - 1 / ((over * 0.55) / RUBBER_MAX + 1));
+    const withResistance = (p: number) =>
+      p < 0
+        ? -rubberBand(-p)
+        : p > MAX_IDX
+          ? MAX_IDX + rubberBand(p - MAX_IDX)
+          : p;
 
-        // Velocity-aware debounced snap: if still moving fast, re-arm once more
-        if (scrollSnapTimer) clearTimeout(scrollSnapTimer);
-        scrollSnapTimer = window.setTimeout(() => {
-          if (isDragging || isTouching) return;
-          if (scrollVelocity >= 0.3) {
-            // Still has momentum — wait one more beat
-            scrollSnapTimer = window.setTimeout(() => {
-              if (!isDragging && !isTouching) {
-                snapToNearest();
-                removeIsScrolling();
-              }
-            }, 80);
-          } else {
-            snapToNearest();
-            removeIsScrolling();
-          }
-        }, 120);
-      },
-      { passive: true },
-    );
+    // El ancho puede ser 0 al abrir (modal a mitad de animación, rotación…):
+    // se re-mide al cambiar de tamaño y se re-centra el valor actual.
+    const drumResizeObserver = new ResizeObserver(() => {
+      if (!drumBuilt) return;
+      drumW = drumEl.clientWidth;
+      renderDrum(pos);
+    });
+    drumResizeObserver.observe(drumEl);
 
-    // Track de dedo apoyado: sin esto, el timer de 120ms snappea bajo el dedo
-    // si el usuario pausa el movimiento sin soltar.
-    drumEl.addEventListener(
-      "touchstart",
-      () => {
-        isTouching = true;
-        if (scrollSnapTimer) clearTimeout(scrollSnapTimer);
-        drumEl.classList.add("is-scrolling");
-      },
-      { passive: true },
-    );
-    const onTouchRelease = () => {
-      isTouching = false;
-      // Snap inmediato al soltar: ya sabemos que el gesto terminó, no hay nada
-      // que debouncear. El timer del scroll se cancela para que no dispare otro.
-      if (scrollSnapTimer) clearTimeout(scrollSnapTimer);
-      if (!isDragging) {
-        snapToNearest();
-        removeIsScrolling();
-      }
-    };
-    drumEl.addEventListener("touchend", onTouchRelease, { passive: true });
-    drumEl.addEventListener("touchcancel", onTouchRelease, { passive: true });
-
-    // Wheel support for desktop
-    let wheelSnapTimer: number | undefined;
-    drumEl.addEventListener(
-      "wheel",
-      (e) => {
-        e.preventDefault();
-        drumEl.scrollLeft += e.deltaY !== 0 ? e.deltaY : e.deltaX;
-        drumEl.classList.add("is-scrolling");
-        // Debounced snap-to-nearest after wheel stops
-        if (wheelSnapTimer) clearTimeout(wheelSnapTimer);
-        wheelSnapTimer = window.setTimeout(() => {
-          drumEl.scrollTo({
-            left: scrollLeftFor(idxFromScrollLeft()),
-            behavior: "smooth",
-          });
-          removeIsScrolling();
-        }, 120);
-      },
-      { passive: false },
-    );
-
-    // Mouse drag support for desktop (touch already scrolls natively)
-    let isDragging = false;
+    // ── Arrastre (dedo y mouse) ──
+    // touch-action: pan-y (CSS) deja el scroll vertical del modal al navegador y
+    // nos entrega el gesto horizontal completo.
+    const TOUCH_SPEED = 1.4; // un poco más que el dedo: menos recorrido hasta el 10
+    const MOUSE_SPEED = 1.8;
+    const DECEL = 0.004; // px/ms² — frenado de la inercia tras un "flick"
+    let dragId: number | null = null;
     let dragStartX = 0;
-    let dragStartScroll = 0;
+    let dragStartPos = 0;
+    let dragSpeed = TOUCH_SPEED;
     let dragMoved = false;
+    let dragSamples: { t: number; x: number }[] = [];
 
     drumEl.addEventListener("pointerdown", (e) => {
-      if (e.pointerType === "touch") return;
-      if (drumOuterEl.classList.contains("is-unrated")) return;
-      isDragging = true;
-      dragMoved = false;
+      if (officialViewAuth || !isRated || dragId !== null) return;
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      stopDrumAnim();
+      startScrolling();
+      dragId = e.pointerId;
       dragStartX = e.clientX;
-      dragStartScroll = drumEl.scrollLeft;
+      dragStartPos = pos;
+      dragSpeed = e.pointerType === "mouse" ? MOUSE_SPEED : TOUCH_SPEED;
+      dragMoved = false;
+      dragSamples = [{ t: e.timeStamp, x: e.clientX }];
       try {
         drumEl.setPointerCapture(e.pointerId);
       } catch {}
     });
 
-    const DRAG_SPEED = 1.8; // multiplier so reaching the edges doesn't require a huge drag
-
     drumEl.addEventListener("pointermove", (e) => {
-      if (!isDragging) return;
+      if (e.pointerId !== dragId) return;
       const dx = e.clientX - dragStartX;
-      if (Math.abs(dx) > 2) dragMoved = true;
-      drumEl.scrollLeft = dragStartScroll - dx * DRAG_SPEED;
+      if (Math.abs(dx) > 4) dragMoved = true;
+      renderDrum(withResistance(dragStartPos - (dx * dragSpeed) / ITEM_W));
+      commitDrumValue();
+      // Muestras de los últimos ~100ms para medir la velocidad al soltar.
+      dragSamples.push({ t: e.timeStamp, x: e.clientX });
+      while (dragSamples.length > 2 && e.timeStamp - dragSamples[0].t > 100)
+        dragSamples.shift();
     });
 
     const endDrag = (e: PointerEvent) => {
-      if (!isDragging) return;
-      isDragging = false;
+      if (e.pointerId !== dragId) return;
+      dragId = null;
       try {
         drumEl.releasePointerCapture(e.pointerId);
       } catch {}
-      // Custom JS scroll doesn't trigger CSS scroll-snap. Snap to nearest item manually
-      // so releases always land exactly on a value (including the max, 10).
-      drumEl.scrollTo({
-        left: scrollLeftFor(idxFromScrollLeft()),
-        behavior: "smooth",
-      });
-      removeIsScrolling();
-      if (dragMoved) {
-        const stopClick = (ev: Event) => {
-          ev.stopPropagation();
-        };
-        window.addEventListener("click", stopClick, {
-          capture: true,
-          once: true,
-        });
+
+      // El navegador tomó el gesto (scroll vertical): volver al item más cercano.
+      if (e.type === "pointercancel") {
+        animateDrumTo(clampIdx(Math.round(pos)));
+        return;
       }
+
+      // Toque sin arrastre: salta al número tocado (p. ej. el 10 si se ve).
+      if (!dragMoved) {
+        const rect = drumEl.getBoundingClientRect();
+        const offset = (e.clientX - (rect.left + rect.width / 2)) / ITEM_W;
+        animateDrumTo(clampIdx(Math.round(pos + offset)));
+        return;
+      }
+
+      // Inercia: con la velocidad del dedo al soltar se proyecta dónde frenaría
+      // la rueda; un flick fuerte llega hasta el tope (1 o 10) y se queda ahí.
+      const first = dragSamples[0];
+      const last = dragSamples[dragSamples.length - 1];
+      const dt = last.t - first.t;
+      const v = dt > 0 && e.timeStamp - last.t < 80 ? (last.x - first.x) / dt : 0;
+      const throwPx = (Math.sign(v) * v * v) / (2 * DECEL);
+      const projected = pos - (throwPx * dragSpeed) / ITEM_W;
+      animateDrumTo(clampIdx(Math.round(projected)));
     };
     drumEl.addEventListener("pointerup", endDrag);
     drumEl.addEventListener("pointercancel", endDrag);
 
+    // Rueda del mouse / trackpad (escritorio).
+    let wheelSnapTimer: number | undefined;
+    drumEl.addEventListener(
+      "wheel",
+      (e) => {
+        if (!isRated) return;
+        e.preventDefault();
+        stopDrumAnim();
+        startScrolling();
+        const delta =
+          Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+        const px = e.deltaMode === 1 ? delta * 16 : delta; // Firefox: líneas
+        renderDrum(Math.max(0, Math.min(MAX_IDX, pos + px / ITEM_W)));
+        commitDrumValue();
+        clearTimeout(wheelSnapTimer);
+        wheelSnapTimer = window.setTimeout(
+          () => animateDrumTo(clampIdx(Math.round(pos))),
+          120,
+        );
+      },
+      { passive: false },
+    );
+
     function initDrumForValue(v: number) {
       buildDrum();
-      syncDrumPadding();
+      stopDrumAnim();
+      dragId = null;
       // Aproxima el valor entrante (p.ej. 7.9 de datos viejos) al step 0.5 más cercano
       // y lo mantiene dentro del rango [1, 10].
-      const idx = Math.max(
-        0,
-        Math.min(NUM_ITEMS - 1, Math.round((v - MIN_V) / STEP)),
-      );
-      // Pre-cargar prevDrumV con el valor inicial: al fijar scrollLeft abajo se
-      // dispara un evento "scroll" programático; sin esto el handler lo trataría
-      // como interacción del usuario y auto-calificaría el plato (isRated=true),
-      // rompiendo el invariante de "plato nuevo nace sin calificación".
+      const idx = clampIdx(Math.round((v - MIN_V) / STEP));
+      // Pre-cargar prevDrumV con el valor inicial: el render de abajo no debe
+      // contarse como interacción del usuario (un plato nuevo nace sin calificación).
       prevDrumV = valueForIdx(idx);
       // Persistimos el valor ya aproximado al step: así un 7.9 heredado se guarda
       // como 8 aunque el usuario no toque la rueda. No afecta el invariante de
       // "sin calificar" porque el rating solo se guarda si isRated es true.
       ratingInput.value = String(prevDrumV);
+      // Apagar todos los items (la apertura anterior pudo dejar otros encendidos).
+      for (const item of drumItems) {
+        item.style.opacity = ITEM_OFF_OPACITY;
+        item.style.transform = `scale(${ITEM_OFF_SCALE})`;
+        item.classList.remove("is-center");
+      }
       prevLo = -1;
       prevHi = -1;
-      drumEl.scrollLeft = scrollLeftFor(idx);
-      requestAnimationFrame(() => {
-        updateDrumVisuals(centerFromScrollLeft());
-      });
+      drumW = drumEl.clientWidth;
+      renderDrum(idx);
     }
 
     nameInput.oninput = () => {
