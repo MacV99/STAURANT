@@ -2,8 +2,32 @@
 import { defineConfig } from 'astro/config';
 import AstroPWA from '@vite-pwa/astro';
 
+/** En local imita la regla de public/_redirects (`/oficial/*  /oficial  200`), que
+ *  solo existe en Netlify: sin esto, recargar `/oficial/@handle` daba 404 en dev/preview. */
+function officialHandleRewrite() {
+  const rewrite = (req, _res, next) => {
+    const [path, query] = (req.url ?? '').split('?');
+    if (/^\/oficial\/[^/]+\/?$/.test(path)) {
+      req.url = '/oficial/' + (query ? `?${query}` : '');
+    }
+    next();
+  };
+  return {
+    name: 'official-handle-rewrite',
+    configureServer(server) {
+      server.middlewares.use(rewrite);
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(rewrite);
+    },
+  };
+}
+
 // https://astro.build/config
 export default defineConfig({
+  vite: {
+    plugins: [officialHandleRewrite()],
+  },
   integrations: [
     AstroPWA({
       registerType: 'autoUpdate',
