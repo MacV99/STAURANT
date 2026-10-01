@@ -384,8 +384,8 @@ import FormModal from "./FormModal.astro";
     max-width: 240px;
     padding: 8px 10px;
     border-radius: var(--radius-md);
-    background: var(--clr-text);
-    color: var(--clr-white);
+    background: var(--clr-accent-bg);
+    color: var(--clr-on-accent);
     font-size: 0.74rem;
     font-weight: 500;
     line-height: 1.35;
@@ -1221,7 +1221,7 @@ import FormModal from "./FormModal.astro";
         // Mensaje honesto según el motivo real (antes todo decía "≤ 5 MB").
         const MSG: Record<typeof res.error, string> = {
           type: "Ese archivo no es una imagen.",
-          size: "La imagen supera los 5 MB.",
+          size: "La imagen sigue pesando más de 5 MB después de comprimirla. Prueba con otra.",
           permission: "No tienes permiso para editar la carta de este perfil.",
           upload: "No se pudo subir la imagen. Revisa tu conexión e intenta de nuevo.",
         };
@@ -1419,7 +1419,7 @@ import FormModal from "./FormModal.astro";
       if ("error" in res) {
         const MSG: Record<typeof res.error, string> = {
           type: "Ese archivo no es una imagen.",
-          size: "La imagen supera los 5 MB.",
+          size: "La imagen sigue pesando más de 5 MB después de comprimirla. Prueba con otra.",
           permission: "No tienes permiso para editar este perfil.",
           upload: "No se pudo subir el logo. Revisa tu conexión e intenta de nuevo.",
         };

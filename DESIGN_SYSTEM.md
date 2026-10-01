@@ -166,3 +166,10 @@ Registro fechado de cambios de identidad (fecha absoluta · qué cambió · por 
   borde**, tampoco en danger — quitado `border-color` de hover en `.owner-dish-btn.is-delete`,
   `.odf-image-act.is-remove` y `.pt-action`; el hover solo sube el fondo. Motivo: unificar el
   efecto de hover y quitar cortes de color. Ver §9.
+- `2026-10-01` — **Modo oscuro.** `:root[data-theme="dark"]` re-define solo primitivos
+  (tinta clara, superficies oscuras, estados más claros) + nuevo primitivo `--clr-shade`;
+  niveles 2/3 ahora mezclan con `var(--clr-white)`/`var(--clr-shade)` en vez de
+  `white`/`black` para derivarse solos. Se elige en /perfil (localStorage `staurant_theme`,
+  aplicado en `Layout1` antes de pintar). El logo PNG se invierte con `filter`.
+  Rellenos de "seleccionado"/botón principal usan `--clr-accent-bg` / `--clr-accent-bg-hover`
+  / `--clr-on-accent` (claro = tinta; oscuro = gris suave) para no encandilar.

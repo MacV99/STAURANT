@@ -121,9 +121,9 @@ import Layout1 from "../layouts/Layout1.astro";
   }
 
   .ftab.active {
-    background: var(--clr-primary);
-    border-color: var(--clr-primary);
-    color: var(--clr-white);
+    background: var(--clr-accent-bg);
+    border-color: var(--clr-accent-bg);
+    color: var(--clr-on-accent);
   }
 
   .ftab .tab-icon {
@@ -145,12 +145,12 @@ import Layout1 from "../layouts/Layout1.astro";
     padding: 0 6px;
     border-radius: 20px;
     text-align: center;
-    background: rgba(0, 0, 0, 0.1);
+    background: rgba(var(--rgb-ink), 0.1);
     letter-spacing: 1px;
   }
 
   .ftab.active .tab-count {
-    background: rgba(255, 255, 255, 0.25);
+    background: color-mix(in srgb, var(--clr-on-accent) 25%, transparent);
   }
 
   .ftab-panel {
@@ -375,9 +375,9 @@ import Layout1 from "../layouts/Layout1.astro";
   }
 
   .ur-btn.ur-btn-primary {
-    background: var(--clr-primary);
-    border-color: var(--clr-primary);
-    color: var(--clr-white);
+    background: var(--clr-accent-bg);
+    border-color: var(--clr-accent-bg);
+    color: var(--clr-on-accent);
   }
 
   .ur-btn.ur-btn-danger {
@@ -406,9 +406,9 @@ import Layout1 from "../layouts/Layout1.astro";
   }
 
   .ur-btn-chat.has-unread {
-    background: var(--clr-primary);
-    border-color: var(--clr-primary);
-    color: var(--clr-white);
+    background: var(--clr-accent-bg);
+    border-color: var(--clr-accent-bg);
+    color: var(--clr-on-accent);
   }
 
   .ur-unread {

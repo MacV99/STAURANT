@@ -94,7 +94,7 @@ const tplRestaurant: Restaurant = {
   <ConfirmDialog />
 
   <template id="tpl-dish-card">
-    <DishCard dish={tplDish} />
+    <DishCard dish={tplDish} typeName="..." />
   </template>
 
   <template id="tpl-restaurant-header">
@@ -245,9 +245,9 @@ const tplRestaurant: Restaurant = {
   }
 
   .type-pill.active {
-    background: var(--clr-primary);
-    border-color: var(--clr-primary);
-    color: var(--clr-white);
+    background: var(--clr-accent-bg);
+    border-color: var(--clr-accent-bg);
+    color: var(--clr-on-accent);
   }
 
   .type-pill-label {
@@ -629,7 +629,13 @@ const tplRestaurant: Restaurant = {
     ).querySelector("article")!;
     article.setAttribute("data-id", d.id);
     article.querySelector("h4")!.textContent = d.name;
-    // La categoría ya NO se muestra en la card (solo en el modal de detalle).
+    // Categoría: pequeña, debajo del nombre.
+    const typeTagEl = article.querySelector<HTMLElement>(".dish-type-tag");
+    const typeName = d.typeId
+      ? (getDishTypes().find((t) => t.id === d.typeId)?.name ?? null)
+      : null;
+    if (typeName && typeTagEl) typeTagEl.textContent = typeName;
+    else typeTagEl?.remove();
     // Pill de rating global del plato (solo si es oficial y hay agregados)
     if (d.officialDishId) {
       const stat = getOfficialDishStat(d.officialDishId);

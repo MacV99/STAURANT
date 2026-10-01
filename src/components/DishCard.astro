@@ -4,9 +4,10 @@ import RatingBadge from "./RatingBadge.astro";
 
 interface Props {
   dish: Dish;
+  typeName?: string | null;
 }
 
-const { dish: d } = Astro.props;
+const { dish: d, typeName } = Astro.props;
 ---
 
 <article class="dish-card flex-row" data-id={d.id}>
@@ -14,6 +15,7 @@ const { dish: d } = Astro.props;
   <RatingBadge score={d.rating} />
   <div class="dish-info">
     <h4>{d.name}</h4>
+    {typeName && <span class="dish-type-tag">{typeName}</span>}
   </div>
   <div class="dish-actions flex-row">
     <div class="dish-menu">
@@ -74,6 +76,17 @@ const { dish: d } = Astro.props;
     text-indent: 0;
     line-height: 1.2;
     color: var(--clr-text);
+  }
+
+  /* Categoría: pequeña y discreta, debajo del nombre. */
+  .dish-type-tag {
+    display: block;
+    margin-top: 3px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--clr-text-soft);
   }
 
   .dish-actions {

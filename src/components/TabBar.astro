@@ -37,9 +37,9 @@
   }
 
   .tab-btn.active {
-    background: var(--clr-primary);
-    border-color: var(--clr-primary);
-    color: var(--clr-white);
+    background: var(--clr-accent-bg);
+    border-color: var(--clr-accent-bg);
+    color: var(--clr-on-accent);
   }
 
   .tab-icon {
@@ -62,13 +62,13 @@
     border-radius: 20px;
     display: inline-block;
     text-align: center;
-    background: rgba(0, 0, 0, 0.1);
+    background: rgba(var(--rgb-ink), 0.1);
     letter-spacing: 1px;
     box-sizing: border-box;
   }
 
   .tab-btn.active .tab-count {
-    background: rgba(255, 255, 255, 0.25);
+    background: color-mix(in srgb, var(--clr-on-accent) 25%, transparent);
   }
 
   @media (hover: hover) {

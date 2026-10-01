@@ -1,5 +1,4 @@
 import { supabase } from "./supabase.ts";
-import imageCompression from "browser-image-compression";
 
 // ─── Interfaces ────────────────────────────────────────────────────────────────
 
@@ -227,7 +226,12 @@ async function fetchOfficialProfilesFor(
 
 const MIGRATION_KEY = "staurant_migrated_v1";
 
+/** Mínimo entre refrescos completos al navegar (ms). */
+const REFRESH_MIN_INTERVAL_MS = 30_000;
+let _lastRefreshAt = 0;
+
 async function refreshCacheInBackground(): Promise<void> {
+  _lastRefreshAt = Date.now();
   const seqAtStart = _writeSeq;
   const remote = await fetchFromSupabase();
   const local = getCache();
@@ -288,11 +292,14 @@ async function refreshCacheInBackground(): Promise<void> {
 export async function initCache(userId: string): Promise<void> {
   _userId = userId;
   loadStatsFromLocalStorage();
-  bgSync(fetchOfficialStats);
+  const stale = Date.now() - _lastRefreshAt > REFRESH_MIN_INTERVAL_MS;
+  if (stale) bgSync(fetchOfficialStats);
 
   // Si ya tenemos datos en memoria para este usuario → fast path, refresh en background.
+  // Throttle: navegar entre páginas no re-descarga todo si se sincronizó hace poco
+  // (los cambios propios ya están en el caché; esto solo trae cambios de otro equipo).
   if (_mem?.userId === _userId) {
-    bgSync(refreshCacheInBackground);
+    if (stale) bgSync(refreshCacheInBackground);
     return;
   }
 
@@ -305,6 +312,7 @@ export async function initCache(userId: string): Promise<void> {
   }
 
   // Primera vez: cargar desde Supabase de forma bloqueante.
+  _lastRefreshAt = Date.now();
   const fresh = await fetchFromSupabase();
   writeCache(fresh);
 
@@ -320,6 +328,7 @@ export function clearCache(): void {
   _userId = null;
   _mem = null;
   _isSuperAdmin = null;
+  _lastRefreshAt = 0;
 }
 
 /** true si initCache() ya fue llamado en esta sesión de módulo.
@@ -663,15 +672,6 @@ export function createDishType(name: string): DishType {
   return dt;
 }
 
-export function deleteDishType(id: string): void {
-  const cache = getCache();
-  cache.dishTypes = cache.dishTypes.filter(t => t.id !== id);
-  // Nullificar typeId en platos que usaban este tipo (consistencia local)
-  cache.dishes = cache.dishes.map(d => d.typeId === id ? { ...d, typeId: null } : d);
-  writeCache(cache);
-  bgWrite(() => supabase.from("dish_types").delete().eq("id", id));
-}
-
 // ─── Derived (síncronos) ───────────────────────────────────────────────────────
 
 /** Promedio redondeado a 1 decimal de un conjunto de calificaciones (null si vacío).
@@ -688,19 +688,6 @@ export function getRestaurantAverage(restaurantId: string): number | null {
       .filter((d) => d.rating !== null)
       .map((d) => d.rating!),
   );
-}
-
-/** IDs de los restaurantes con el promedio PERSONAL más alto (corona 👑).
- *  - Solo cuenta restaurantes con al menos un plato calificado.
- *  - Requiere ≥2 restaurantes calificados para destacar (sin comparación no hay "mejor").
- *  - Empate → se devuelven todos los líderes (varias coronas). */
-export function getTopRatedRestaurantIds(): Set<string> {
-  const rated = getRestaurants()
-    .map((r) => ({ id: r.id, avg: getRestaurantAverage(r.id) }))
-    .filter((x): x is { id: string; avg: number } => x.avg !== null);
-  if (rated.length < 2) return new Set();
-  const max = Math.max(...rated.map((x) => x.avg));
-  return new Set(rated.filter((x) => x.avg === max).map((x) => x.id));
 }
 
 /** IDs de los platos con la mejor calificación PERSONAL dentro de un restaurante (corona 👑).
@@ -1127,11 +1114,18 @@ export async function deleteOfficial(id: string): Promise<boolean> {
 
 const OFFICIAL_DISH_BUCKET = "official-dishes";
 
+/** Peso máximo de la foto YA comprimida (lo que realmente se sube). */
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+
 /** Comprime en el navegador antes de subir: resize a máx 1600px, WebP,
- *  apunta a ~0.3 MB. Devuelve un File nuevo y ligero. Si algo falla,
- *  cae al original para no bloquear al usuario. */
+ *  apunta a ~0.3 MB. Devuelve un File nuevo y ligero. Si algo falla
+ *  (p. ej. HEIC en un navegador que no lo decodifica), cae al original:
+ *  el límite de peso se valida DESPUÉS, sobre lo que de verdad se sube. */
 async function optimizeImage(file: File): Promise<File> {
   try {
+    // Carga perezosa: la librería (~50 KB) solo se baja al subir una foto,
+    // no en cada página que importa data.ts.
+    const { default: imageCompression } = await import("browser-image-compression");
     return await imageCompression(file, {
       maxSizeMB: 0.3,          // objetivo de peso
       maxWidthOrHeight: 1600,  // resize si más grande
@@ -1157,7 +1151,7 @@ export type UploadDishImageResult =
 /** Sube la foto de un plato oficial al bucket 'official-dishes' y devuelve su URL
  *  pública. El path SIEMPRE empieza por el officialRestaurantId: la RLS del bucket
  *  exige que la primera carpeta sea un perfil del que el usuario sea dueño (o
- *  superadmin). Solo imágenes; máx 5 MB. Devuelve { error } con el motivo real. */
+ *  superadmin). Solo imágenes; se comprime y luego se exige máx 5 MB. Devuelve { error } con el motivo real. */
 export async function uploadOfficialDishImage(
   officialRestaurantId: string,
   file: File,
@@ -1166,18 +1160,24 @@ export async function uploadOfficialDishImage(
     console.error("[uploadOfficialDishImage] no es imagen:", file.type);
     return { error: "type" };
   }
-  if (file.size > 5 * 1024 * 1024) {
-    console.error("[uploadOfficialDishImage] imagen > 5 MB");
+  // Primero comprimir, luego validar: una foto de 12 MB del celular suele
+  // quedar en ~0.3 MB y debe aceptarse. Solo se rechaza si, ya procesada,
+  // sigue pasando el límite.
+  const optimized = await optimizeImage(file); // resize + WebP en el cliente
+  if (optimized.size > MAX_UPLOAD_BYTES) {
+    console.error("[uploadOfficialDishImage] imagen procesada > 5 MB:", optimized.size);
     return { error: "size" };
   }
-  const optimized = await optimizeImage(file); // resize + WebP en el cliente
-  const path = `${officialRestaurantId}/${crypto.randomUUID()}.webp`;
+  // Si la compresión falló se sube el original: extensión y tipo según el archivo real.
+  const isWebp = optimized.type === "image/webp";
+  const ext = isWebp ? "webp" : (optimized.name.split(".").pop() || "jpg").toLowerCase();
+  const path = `${officialRestaurantId}/${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage
     .from(OFFICIAL_DISH_BUCKET)
     .upload(path, optimized, {
       cacheControl: "3600",
       upsert: false,
-      contentType: "image/webp",
+      contentType: optimized.type || "image/webp",
     });
   if (error) {
     console.error("[uploadOfficialDishImage]", error);
@@ -1463,25 +1463,6 @@ export function getHomeEntries(): HomeEntry[] {
     });
 
   return [...personal, ...official];
-}
-
-/** Refresca en background los perfiles/cartas oficiales de mis membresías
- *  (por si el sistema cambió el menú). Dispara "cache:synced" si algo cambió. */
-export async function refreshOfficialProfiles(): Promise<void> {
-  const cache = getCache();
-  if (cache.memberships.length === 0) return;
-  const { officialRestaurants, officialDishes } = await fetchOfficialProfilesFor(
-    cache.memberships.map((m) => m.officialRestaurantId),
-  );
-  const cur = getCache();
-  const changed =
-    JSON.stringify(cur.officialRestaurants) !== JSON.stringify(officialRestaurants) ||
-    JSON.stringify(cur.officialDishes) !== JSON.stringify(officialDishes);
-  if (!changed) return;
-  cur.officialRestaurants = officialRestaurants;
-  cur.officialDishes = officialDishes;
-  writeCache(cur);
-  document.dispatchEvent(new CustomEvent("cache:synced"));
 }
 
 /** Fetch agregaciones globales (RPCs Supabase) y guarda en cache local.

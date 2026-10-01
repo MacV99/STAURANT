@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
 
 :root {
   /* TIPOGRAFÍA */
@@ -41,7 +40,7 @@ html {
 /* === SCROLLBAR === */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
+  scrollbar-color: rgba(var(--rgb-ink), 0.3) transparent;
 }
 
 ::-webkit-scrollbar {
@@ -54,13 +53,13 @@ html {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(var(--rgb-ink), 0.3);
   border-radius: 10px;
 }
 
 @media (hover: hover) {
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(var(--rgb-ink), 0.5);
   }
 }
 

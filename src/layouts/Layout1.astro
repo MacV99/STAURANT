@@ -31,11 +31,37 @@ const { title, bare = false } = Astro.props;
     <meta name="apple-mobile-web-app-title" content="STAURANT" />
     <meta name="generator" content={Astro.generator} />
     <meta name="mobile-web-app-capable" content="yes" />
+    <!-- Fuente: <link> en el head (no @import en CSS, que encadena peticiones y
+         retrasa el primer pintado). Sin itálicas: la app no las usa. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400..900&display=swap"
+    />
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
     />
     <title>{title}</title>
+    <!-- Tema (claro/oscuro) antes de pintar, sin parpadeo. Se elige en /perfil.
+         ClientRouter reemplaza los atributos de <html> al navegar: se re-aplica
+         sobre el documento entrante en astro:before-swap. -->
+    <script is:inline>
+      (function () {
+        function apply(doc) {
+          var t = null;
+          try { t = localStorage.getItem("staurant_theme"); } catch (e) {}
+          if (t === "dark") doc.documentElement.setAttribute("data-theme", "dark");
+          else doc.documentElement.removeAttribute("data-theme");
+        }
+        apply(document);
+        if (!window.__themeSwapHooked) {
+          window.__themeSwapHooked = true;
+          document.addEventListener("astro:before-swap", function (e) { apply(e.newDocument); });
+        }
+      })();
+    </script>
     <ClientRouter />
   </head>
 

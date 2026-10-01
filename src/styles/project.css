@@ -15,6 +15,7 @@
 
   --clr-white: #ffffff;
   --clr-white2: #f7f7f7;
+  --clr-shade: black;              /* extremo de oscurecer (hover/bordes fuertes) */
 
   /* Semillas de estado — bg/border se DERIVAN por color-mix abajo. */
   --clr-danger:  #b02a3a;  --rgb-danger: 176, 42, 58;
@@ -25,34 +26,69 @@
 
   /* ---- NIVEL 2 · SEMÁNTICOS (rol, derivado del primitivo) ------ */
   --clr-primary: var(--clr-ink);
-  --clr-primary-dark: color-mix(in oklch, var(--clr-ink) 25%, black);
-  --clr-primary-light: color-mix(in oklch, var(--clr-ink) 80%, white);
+  --clr-primary-dark: color-mix(in oklch, var(--clr-ink) 25%, var(--clr-shade));
+  --clr-primary-light: color-mix(in oklch, var(--clr-ink) 80%, var(--clr-white));
 
   --clr-text: var(--clr-ink);
-  --clr-text-soft: color-mix(in oklch, var(--clr-ink) 60%, white);
-  --clr-border: color-mix(in oklch, var(--clr-ink) 10%, white);
-  --clr-border2: color-mix(in oklch, var(--clr-ink) 20%, white);
+  --clr-text-soft: color-mix(in oklch, var(--clr-ink) 60%, var(--clr-white));
+  --clr-border: color-mix(in oklch, var(--clr-ink) 10%, var(--clr-white));
+  --clr-border2: color-mix(in oklch, var(--clr-ink) 20%, var(--clr-white));
 
-  --clr-danger-bg: color-mix(in oklch, var(--clr-danger) 10%, white);
-  --clr-danger-bg-strong: color-mix(in oklch, var(--clr-danger) 18%, white); /* hover de superficie danger suave */
-  --clr-danger-border: color-mix(in oklch, var(--clr-danger) 75%, black);    /* borde fuerte: confirm final (btn-danger) */
-  --clr-danger-border-soft: color-mix(in oklch, var(--clr-danger) 34%, white); /* borde suave: destructivo inline (Quitar, borrar) */
-  --clr-danger-strong: color-mix(in oklch, var(--clr-danger) 82%, white); /* texto error/required */
+  --clr-danger-bg: color-mix(in oklch, var(--clr-danger) 10%, var(--clr-white));
+  --clr-danger-bg-strong: color-mix(in oklch, var(--clr-danger) 18%, var(--clr-white)); /* hover de superficie danger suave */
+  --clr-danger-border: color-mix(in oklch, var(--clr-danger) 75%, var(--clr-shade));    /* borde fuerte: confirm final (btn-danger) */
+  --clr-danger-border-soft: color-mix(in oklch, var(--clr-danger) 34%, var(--clr-white)); /* borde suave: destructivo inline (Quitar, borrar) */
+  --clr-danger-strong: color-mix(in oklch, var(--clr-danger) 82%, var(--clr-white)); /* texto error/required */
 
-  --clr-success-bg: color-mix(in oklch, var(--clr-success) 12%, white);
-  --clr-success-border: color-mix(in oklch, var(--clr-success) 42%, white);
+  --clr-success-bg: color-mix(in oklch, var(--clr-success) 12%, var(--clr-white));
+  --clr-success-border: color-mix(in oklch, var(--clr-success) 42%, var(--clr-white));
 
-  --clr-warning-bg: color-mix(in oklch, var(--clr-warning) 14%, white);
-  --clr-warning-border: color-mix(in oklch, var(--clr-warning) 45%, white);
+  --clr-warning-bg: color-mix(in oklch, var(--clr-warning) 14%, var(--clr-white));
+  --clr-warning-border: color-mix(in oklch, var(--clr-warning) 45%, var(--clr-white));
 
   --focus-ring: 0 0 0 3px rgba(var(--rgb-ink), 0.18);
 
+  /* Relleno de lo SELECCIONADO / botón principal (tabs, pills activas, Guardar).
+     En claro = tinta; en oscuro se re-define abajo a un gris suave (no blanco). */
+  --clr-accent-bg: var(--clr-primary);
+  --clr-accent-bg-hover: var(--clr-primary-dark);
+  --clr-on-accent: var(--clr-white);
+
   /* ---- NIVEL 3 · COMPONENTE (específico de una pieza) ---------- */
-  --dot-texture: color-mix(in oklch, var(--clr-ink) 20%, white);        /* fondo punteado body */
+  --dot-texture: color-mix(in oklch, var(--clr-ink) 20%, var(--clr-white));        /* fondo punteado body */
   --skeleton-shine: color-mix(in oklch, var(--clr-ink) 9%, var(--clr-white2));
   --crown-shadow: rgba(var(--rgb-gold), 0.45);
   --official-tint: rgba(var(--rgb-gold), 0.14);
   --official-border: rgba(var(--rgb-gold), 0.5);
+}
+
+/* ---- MODO OSCURO · solo se re-definen PRIMITIVOS (niveles 2/3 se derivan solos).
+   Lo activa data-theme="dark" en <html> (Layout1, elegido en /perfil). ---- */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --clr-ink: #ececec;              /* tinta clara sobre fondo oscuro */
+  --rgb-ink: 236, 236, 236;
+
+  --clr-white: #1e1e1e;            /* superficie (cards, modales) */
+  --clr-white2: #121212;           /* fondo de página */
+  --clr-shade: white;              /* "oscurecer" = aclarar en oscuro */
+
+  --clr-danger:  #ef6b7a;  --rgb-danger: 239, 107, 122;
+  --clr-success: #4cbf6c;
+  --clr-warning: #e0a24a;
+
+  --dot-texture: color-mix(in oklch, var(--clr-ink) 12%, var(--clr-white2));
+
+  /* Seleccionado: gris suave con texto claro, en vez de blanco encandilante. */
+  --clr-accent-bg: color-mix(in oklch, var(--clr-ink) 26%, var(--clr-white));
+  --clr-accent-bg-hover: color-mix(in oklch, var(--clr-ink) 34%, var(--clr-white));
+  --clr-on-accent: var(--clr-ink);
+}
+
+/* Logo PNG en tinta oscura: se invierte en modo oscuro (navbar, login, /oficial). */
+:root[data-theme="dark"] img[src="/img/logo2.png"] {
+  filter: invert(1);
 }
 
 /* === OVERLAY (compartido: RestaurantForm, DishForm, ConfirmDialog) === */

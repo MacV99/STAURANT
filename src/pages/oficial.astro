@@ -144,7 +144,7 @@ const tplRestaurant: Restaurant = {
   <OfficialManage />
 
   <template id="tpl-dish-card">
-    <DishCard dish={tplDish} />
+    <DishCard dish={tplDish} typeName="..." />
   </template>
 
   <template id="tpl-restaurant-header">
@@ -388,8 +388,8 @@ const tplRestaurant: Restaurant = {
     padding: 8px 14px;
     border-radius: 999px;
     border: 1px solid var(--clr-primary);
-    background: var(--clr-primary);
-    color: var(--clr-white);
+    background: var(--clr-accent-bg);
+    color: var(--clr-on-accent);
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.3px;
@@ -404,8 +404,8 @@ const tplRestaurant: Restaurant = {
 
   @media (hover: hover) {
     .vb-btn:hover {
-      background: var(--clr-primary-dark);
-      border-color: var(--clr-primary-dark);
+      background: var(--clr-accent-bg-hover);
+      border-color: var(--clr-accent-bg);
     }
   }
 
@@ -512,9 +512,9 @@ const tplRestaurant: Restaurant = {
   }
 
   .owner-act.is-primary {
-    background: var(--clr-primary);
-    border-color: var(--clr-primary);
-    color: var(--clr-white);
+    background: var(--clr-accent-bg);
+    border-color: var(--clr-accent-bg);
+    color: var(--clr-on-accent);
   }
 
   .owner-act.is-primary i {
@@ -531,9 +531,9 @@ const tplRestaurant: Restaurant = {
     }
 
     .owner-act.is-primary:hover {
-      background: var(--clr-primary-dark);
-      border-color: var(--clr-primary-dark);
-      color: var(--clr-white);
+      background: var(--clr-accent-bg-hover);
+      border-color: var(--clr-accent-bg);
+      color: var(--clr-on-accent);
     }
   }
 
@@ -668,9 +668,9 @@ const tplRestaurant: Restaurant = {
   }
 
   .type-pill.active {
-    background: var(--clr-primary);
-    border-color: var(--clr-primary);
-    color: var(--clr-white);
+    background: var(--clr-accent-bg);
+    border-color: var(--clr-accent-bg);
+    color: var(--clr-on-accent);
   }
 
   .type-pill-label {
@@ -1037,7 +1037,10 @@ const tplRestaurant: Restaurant = {
 
     const infoEl = article.querySelector<HTMLElement>(".dish-info")!;
 
-    // Categoría y descripción ya NO se muestran en la card (solo en el modal).
+    // Categoría: pequeña, debajo del nombre. (La descripción sigue solo en el modal.)
+    const typeTagEl = article.querySelector<HTMLElement>(".dish-type-tag");
+    if (od.typeName && typeTagEl) typeTagEl.textContent = od.typeName;
+    else typeTagEl?.remove();
 
     // ── Producto genérico (Coca-Cola, agua…) ─────────────────────────────────
     // Sin calificación: no hay badge ni flujo de rating. El precio NO va en la

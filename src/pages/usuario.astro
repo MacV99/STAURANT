@@ -94,7 +94,7 @@ const tplDish: Dish = {
     <RestaurantHeader restaurant={tplRestaurant} avg={5} dishCount={0} />
   </template>
   <template id="tpl-user-dish-card">
-    <DishCard dish={tplDish} />
+    <DishCard dish={tplDish} typeName="..." />
   </template>
 
   <ConfirmDialog />
@@ -337,8 +337,8 @@ const tplDish: Dish = {
     white-space: nowrap;
     cursor: pointer;
     border: solid 1.5px var(--clr-primary);
-    background: var(--clr-primary);
-    color: var(--clr-white);
+    background: var(--clr-accent-bg);
+    color: var(--clr-on-accent);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -906,7 +906,13 @@ const tplDish: Dish = {
 
     article.querySelector("h4")!.textContent = d.name;
 
-    // La categoría ya NO se muestra en la card (solo en el modal de detalle).
+    // Categoría: pequeña, debajo del nombre.
+    const typeTagEl = article.querySelector<HTMLElement>(".dish-type-tag");
+    const typeName = d.typeId
+      ? (dishTypes.find((t) => t.id === d.typeId)?.name ?? null)
+      : null;
+    if (typeName && typeTagEl) typeTagEl.textContent = typeName;
+    else typeTagEl?.remove();
 
     // Pill global del plato (si es oficial y hay agregados)
     if (d.officialDishId) {

@@ -12,7 +12,7 @@ export default defineConfig({
         short_name: 'STAURANT',
         description: 'Tu libreta de restaurantes y platos favoritos',
         theme_color: '#2e2e2e',
-        background_color: '#fff8ec',
+        background_color: '#f7f7f7',
         display: 'standalone',
         start_url: '/',
         orientation: 'portrait-primary',

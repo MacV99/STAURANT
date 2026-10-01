@@ -26,3 +26,4 @@ pnpm-debug.log*
 # local tool state
 .netlify/
 .claude/settings.local.json
+.claude/scheduled_tasks.lock

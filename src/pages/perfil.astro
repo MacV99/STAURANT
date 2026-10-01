@@ -274,6 +274,13 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
       </div>
     </div>
 
+    <label class="theme-card flex-row" for="theme-toggle">
+      <span class="theme-label flex-row">
+        <i class="bi bi-moon-stars-fill"></i> Modo oscuro
+      </span>
+      <input type="checkbox" id="theme-toggle" class="theme-switch" role="switch" />
+    </label>
+
     <!-- Al final, lejos de "Editar perfil", para no tocarlo sin querer. -->
     <button id="btn-logout" class="btn-danger-outline">
       <i class="bi bi-box-arrow-right"></i> Cerrar sesión
@@ -366,6 +373,64 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     text-transform: none;
     cursor: pointer;
     transition: var(--transition);
+  }
+
+  /* ── Modo oscuro ── */
+  .theme-card {
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--clr-white);
+    border: solid 1px var(--clr-border);
+    border-radius: 20px;
+    padding: 16px 20px;
+    cursor: pointer;
+  }
+
+  .theme-label {
+    gap: 10px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--clr-text);
+  }
+
+  .theme-card .theme-switch {
+    position: relative;
+    flex-shrink: 0;
+    width: 46px;
+    height: 26px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: var(--clr-border2);
+    appearance: none;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .theme-card .theme-switch::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--clr-white);
+    transition: transform var(--transition);
+  }
+
+  .theme-card .theme-switch:checked {
+    background: var(--clr-accent-bg);
+  }
+
+  .theme-card .theme-switch:checked::after {
+    transform: translateX(20px);
+  }
+
+  .theme-card .theme-switch:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
   }
 
   .btn-danger-outline {
@@ -501,9 +566,9 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
 
   .btn-primary {
     width: 100%;
-    background: var(--clr-primary);
-    color: var(--clr-white);
-    border-color: var(--clr-primary);
+    background: var(--clr-accent-bg);
+    color: var(--clr-on-accent);
+    border-color: var(--clr-accent-bg);
     border-radius: 12px;
     padding: 12px;
     font-size: 0.9rem;
@@ -749,8 +814,8 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     }
 
     .btn-primary:hover {
-      background: var(--clr-primary-dark);
-      border-color: var(--clr-primary-dark);
+      background: var(--clr-accent-bg-hover);
+      border-color: var(--clr-accent-bg);
     }
 
     .btn-danger-outline:hover {
@@ -1606,6 +1671,20 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
 
       btn.disabled = false;
       btn.textContent = "Guardar cambios";
+    };
+
+    // Modo oscuro (preferencia local del dispositivo; Layout1 la aplica al cargar)
+    const themeToggle = document.getElementById("theme-toggle") as HTMLInputElement;
+    themeToggle.checked = document.documentElement.getAttribute("data-theme") === "dark";
+    themeToggle.onchange = () => {
+      const dark = themeToggle.checked;
+      if (dark) document.documentElement.setAttribute("data-theme", "dark");
+      else document.documentElement.removeAttribute("data-theme");
+      try {
+        localStorage.setItem("staurant_theme", dark ? "dark" : "light");
+      } catch {
+        /* sin almacenamiento: el cambio dura hasta recargar */
+      }
     };
 
     // Cerrar sesión

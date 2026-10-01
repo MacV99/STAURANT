@@ -29,7 +29,7 @@ pnpx astro check   # TypeScript checking (no test suite configured)
 |---|---|
 | `src/lib/data.ts` | Cache management, all CRUD functions, background sync |
 | `src/lib/supabase.ts` | Supabase client singleton |
-| `src/scripts/store.ts` | Event bus helpers + HTML card renderers |
+| `src/scripts/store.ts` | Event bus helpers + small DOM builders (rating pills/badges, overlays, comboboxes) |
 | `src/layouts/Layout1.astro` | Root layout: meta, fonts, ClientRouter (ViewTransitions), header, NoticeDialog global |
 | `src/styles/global.css` | CSS reset, variables, typography, base utilities |
 | `src/styles/project.css` | STAURANT-specific component styles |
@@ -67,10 +67,7 @@ This is necessary because buttons inside cloned template nodes can't close over 
 - **`project.css`** — Styles shared across multiple files: `.overlay`, rating badge classes, `.dish-count-pill`, `.pending-tag`, `.empty-state`, `.fab`. Only add here if used in 2+ places.
 - **Scoped `<style>` blocks** — Default for all component styles. UI components (`RestaurantCard`, `DishCard`, `RestaurantHeader`, `SortBar`) own their CSS this way.
 
-Two dynamic rendering patterns coexist — do not mix them up:
-
-- **Template cloning** — a `<template>` element is rendered by Astro at build time (preserving `data-astro-cid-*` attributes); JS clones and fills it at runtime. Scoped CSS applies automatically. Used for page-level card lists.
-- **HTML string rendering** — `renderRestaurantCard()` / `renderDishCard()` in `store.ts` return raw HTML strings for `innerHTML` injection. Scoped CSS does NOT apply; these functions rely on global class names from `project.css`. Used only when cards must be built from event handlers outside a page context.
+Dynamic card lists use **template cloning** — a `<template>` element is rendered by Astro at build time (preserving `data-astro-cid-*` attributes); JS clones and fills it at runtime, so scoped CSS applies automatically. Small DOM builders in `store.ts` (`buildRatingPill`, `paintRatingBadge`, `makeCrown`…) create elements styled by global classes from `project.css`. Elements created purely in JS (no template) do NOT get scoped CSS — style them from an `is:global` block or `project.css`.
 
 **DishForm combobox** (`src/components/DishForm.astro`) — the dish-type input is a searchable autocomplete that also creates new types on the fly. Key gotchas: uses `mousedown + e.preventDefault()` on options to prevent `blur` from closing the dropdown; forces input to UPPERCASE. The same uppercase-forcing pattern exists in `RestaurantForm.astro`. Update both if the behaviour needs to change.
 
@@ -86,6 +83,8 @@ Reglas duras (axiomas del DS): cero hex/px de marca fuera de `:root`; niveles 2/
 del primitivo con `var()`/`color-mix`/`rgba(var(--rgb-*))`, nunca repiten un hex; este archivo
 y el doc NO copian valores (evita drift). Excepciones de hex permitidas: logos externos (Google),
 botón iOS de InstallBanner, y la meta `theme-color` (sincronizar a mano con `--clr-ink`).
+
+Modo oscuro: `:root[data-theme="dark"]` en `project.css` re-define solo primitivos; `Layout1` aplica `data-theme` desde localStorage `staurant_theme` (toggle en `/perfil`). Nuevos colores: derivar de tokens, nunca `white`/`black` literales.
 
 Rating badge classes: `.badge-low` (≤4, `--clr-danger`), `.badge-mid` (5–7, `--clr-warning`), `.badge-high` (8+, `--clr-success`).
 
