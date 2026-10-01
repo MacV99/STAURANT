@@ -751,6 +751,8 @@ const tplRestaurant: Restaurant = {
     updateSortPills,
     makeCrown,
   } from "../scripts/store.ts";
+  import { wireAddressLink } from "../scripts/maps.ts";
+  import { wireShareButton, officialShareUrl } from "../scripts/share.ts";
 
   // ─── Estado del módulo ──────────────────────────────────────────────────────
 
@@ -956,6 +958,15 @@ const tplRestaurant: Restaurant = {
       citiesEl.hidden = false;
     }
 
+    // Dirección → abre en la app de mapas favorita de cada persona.
+    const addressEl = div.querySelector<HTMLAnchorElement>(".rh-address");
+    const addressTextEl = div.querySelector(".rh-address-text");
+    if (addressEl && addressTextEl && official!.address?.trim()) {
+      addressTextEl.textContent = official!.address;
+      wireAddressLink(addressEl, official!.address);
+      addressEl.hidden = false;
+    }
+
     // Logo donde antes iba el badge de nota; la calificación baja a dos pills
     // (Global = comunidad · Personal = tú), mismo estilo que la nota global.
     const stat = getOfficialRestaurantStat(official!.id);
@@ -995,26 +1006,15 @@ const tplRestaurant: Restaurant = {
     // ocultos (sin huecos). La fila entera se oculta si no hay ninguno.
     fillSocials(div, official!);
 
-    // Sin menú de editar/eliminar (no es del usuario). Con sesión, en su lugar va
-    // "Recomendar a un amigo"; anónimo → nada.
-    const menu = div.querySelector<HTMLElement>(".rh-menu");
-    if (menu && userId) {
-      const recBtn = document.createElement("button");
-      recBtn.type = "button";
-      recBtn.className = "rh-btn-menu boton2";
-      recBtn.setAttribute("aria-label", "Recomendar a un amigo");
-      recBtn.title = "Recomendar a un amigo";
-      recBtn.innerHTML = '<i class="bi bi-send"></i>';
-      recBtn.onclick = () =>
-        (window as any).recommend?.open({
-          type: "official_restaurant",
-          id: official!.id,
-          title: official!.name,
-        });
-      menu.replaceChildren(recBtn);
-    } else {
-      menu?.remove();
-    }
+    // Sin menú de editar/eliminar (no es del usuario). En su lugar, "Compartir"
+    // para todos (redes / copiar enlace); con sesión también "Amigo".
+    div.querySelector<HTMLElement>(".rh-menu")?.remove();
+    const o = official!;
+    wireShareButton(div, () => ({
+      title: o.name,
+      url: officialShareUrl(o),
+      friend: userId ? { type: "official_restaurant", id: o.id, title: o.name } : null,
+    }));
 
     return div;
   }

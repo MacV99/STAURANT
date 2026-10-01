@@ -71,9 +71,6 @@ body {
   align-items: center;
   flex-direction: column;
   background-color: var(--clr-white2);
-  background-image: radial-gradient(circle, var(--dot-texture) 1px, transparent 1px);
-  background-size: 20px 20px;
-  background-attachment: fixed;
   /* Sin el recuadro gris que iOS pinta al tocar cards y botones. */
   -webkit-tap-highlight-color: transparent;
 }
@@ -83,6 +80,19 @@ body {
     flex-direction: row;
     align-items: stretch;
   }
+}
+
+/* Fondo punteado fijo en una capa propia (position: fixed) en vez de
+   background-attachment: fixed — este último hace que Chrome deje "rayas" de
+   lado a lado al animarse elementos (barras del panel) y cuesta más al hacer scroll. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: radial-gradient(circle, var(--dot-texture) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
 
 /* === MAIN === */

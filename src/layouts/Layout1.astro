@@ -5,6 +5,8 @@ import Navbar from "../components/navbar.astro";
 import InstallBanner from "../components/InstallBanner.astro";
 import NoticeDialog from "../components/NoticeDialog.astro";
 import RecommendDialog from "../components/RecommendDialog.astro";
+import MapsChooser from "../components/MapsChooser.astro";
+import ShareDialog from "../components/ShareDialog.astro";
 import { ClientRouter } from "astro:transitions";
 
 interface Props {
@@ -72,6 +74,8 @@ const { title, bare = false } = Astro.props;
     </main>
     {!bare && <InstallBanner />}
     <RecommendDialog />
+    <MapsChooser />
+    <ShareDialog />
     <NoticeDialog />
   </body>
 </html>

@@ -456,6 +456,8 @@ const tplDish: Dish = {
     fillRestaurantName,
     updateSortPills,
   } from "../scripts/store.ts";
+  import { wireAddressLink } from "../scripts/maps.ts";
+  import { wireShareButton, personalShareUrl, officialShareUrl } from "../scripts/share.ts";
 
   // ─── Estado de módulo (persiste entre navegaciones ViewTransition) ──────────
   let profileUser: PublicUser | null = null;
@@ -866,6 +868,14 @@ const tplDish: Dish = {
       citiesEl.hidden = false;
     }
 
+    const addressEl = card.querySelector<HTMLAnchorElement>(".rh-address");
+    const addressTextEl = card.querySelector(".rh-address-text");
+    if (addressEl && addressTextEl && r.address?.trim()) {
+      addressTextEl.textContent = r.address;
+      wireAddressLink(addressEl, r.address);
+      addressEl.hidden = false;
+    }
+
     paintRatingBadge(card.querySelector(".rating-badge")!, restaurantAverage(dishes, r.id));
 
     // Pill de rating global (si es oficial y hay agregados)
@@ -887,6 +897,14 @@ const tplDish: Dish = {
 
     // Quitar el menú (editar/eliminar) y poner "Agregar a los míos" abajo a la derecha.
     card.querySelector(".rh-menu")?.remove();
+    // Compartir este restaurante (enlace a esta misma vista; "Amigo" lo recomienda).
+    wireShareButton(card, () => ({
+      title: r.name,
+      url: r.officialRestaurantId
+        ? officialShareUrl({ id: r.officialRestaurantId })
+        : personalShareUrl(new URLSearchParams(window.location.search).get("id") ?? "", r.id),
+      friend: { type: "restaurant", id: r.id, title: r.name },
+    }));
     const footer = document.createElement("div");
     footer.className = "u-header-actions flex-row";
     footer.appendChild(buildAddButton(r));

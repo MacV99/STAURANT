@@ -1,0 +1,207 @@
+<div id="share-overlay" class="overlay" aria-modal="true" role="dialog" aria-labelledby="share-title">
+  <div class="dialog-box share-box flex-column">
+    <div class="share-head flex-row">
+      <h2 id="share-title" class="share-title">Compartir</h2>
+      <button id="share-close" class="btn-icon-close boton2" aria-label="Cerrar">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <p id="share-name" class="share-name"></p>
+    <div id="share-options" class="share-options"></div>
+    <div class="share-link flex-row">
+      <span id="share-url" class="share-url"></span>
+      <button id="share-copy" class="boton share-copy" type="button">Copiar</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Por encima de formularios (200); debajo de recomendar (300), que se abre desde aquí. */
+  #share-overlay {
+    z-index: 290;
+  }
+
+  .share-box {
+    align-items: stretch;
+    gap: 14px;
+    padding: 20px 20px 22px;
+    text-align: left;
+  }
+
+  .share-head {
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .share-title {
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: var(--clr-text);
+  }
+
+  .share-name {
+    margin-top: -8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--clr-text-soft);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .share-options {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px 6px;
+    padding: 4px 0;
+  }
+
+  .share-link {
+    gap: 8px;
+    padding: 6px 6px 6px 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--clr-border);
+    background: var(--clr-white2);
+  }
+
+  .share-url {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.78rem;
+    color: var(--clr-text-soft);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .share-copy {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    font-size: 0.75rem;
+  }
+</style>
+
+<style is:global>
+  /* Las opciones las crea el JS (sin atributo scoped) → global acotado al overlay. */
+  #share-overlay .share-opt {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--clr-text);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    text-align: center;
+    cursor: pointer;
+  }
+
+  #share-overlay .share-opt-icon {
+    width: 52px;
+    height: 52px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    font-size: 1.35rem;
+    color: var(--clr-text);
+    background: var(--clr-white2);
+    border: 1px solid var(--clr-border);
+    transition: var(--transition);
+  }
+
+  #share-overlay .share-opt.is-friend .share-opt-icon {
+    background: var(--clr-accent-bg);
+    border-color: var(--clr-accent-bg);
+    color: var(--clr-on-accent);
+  }
+
+  @media (hover: hover) {
+    #share-overlay .share-opt:hover .share-opt-icon {
+      border-color: var(--clr-primary);
+    }
+  }
+</style>
+
+<script>
+  import { createOverlay } from "../scripts/store.ts";
+  import { copyText, shareLinks, type ShareTarget } from "../scripts/share.ts";
+
+  document.addEventListener("astro:page-load", () => {
+    const overlayApi = createOverlay("share-overlay");
+    if (!overlayApi) return;
+    const { open, close } = overlayApi;
+
+    const nameEl = document.getElementById("share-name")!;
+    const urlEl = document.getElementById("share-url")!;
+    const optionsEl = document.getElementById("share-options")!;
+    const copyBtn = document.getElementById("share-copy") as HTMLButtonElement;
+    document.getElementById("share-close")!.onclick = close;
+
+    function option(icon: string, label: string, onClick: () => void, extra = ""): HTMLButtonElement {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = `share-opt ${extra}`.trim();
+      btn.innerHTML = `<span class="share-opt-icon"><i class="bi ${icon}"></i></span><span></span>`;
+      btn.lastElementChild!.textContent = label;
+      btn.onclick = onClick;
+      return btn;
+    }
+
+    async function copy(btn: HTMLButtonElement, url: string, labelEl: Element) {
+      const ok = await copyText(url);
+      const prev = labelEl.textContent;
+      labelEl.textContent = ok ? "¡Copiado!" : "No se pudo";
+      btn.disabled = true;
+      setTimeout(() => {
+        labelEl.textContent = prev;
+        btn.disabled = false;
+      }, 1500);
+    }
+
+    function show(t: ShareTarget) {
+      nameEl.textContent = t.title;
+      urlEl.textContent = t.url.replace(/^https?:\/\//, "");
+      copyBtn.textContent = "Copiar";
+      copyBtn.onclick = () => copy(copyBtn, t.url, copyBtn);
+
+      const links = shareLinks(t);
+      optionsEl.innerHTML = "";
+
+      // Enviar a un amigo por el chat de recomendaciones (solo con sesión).
+      if (t.friend) {
+        const friend = t.friend;
+        optionsEl.appendChild(
+          option("bi-people-fill", "Amigo", () => {
+            close();
+            (window as any).recommend?.open(friend);
+          }, "is-friend"),
+        );
+      }
+      optionsEl.appendChild(option("bi-whatsapp", "WhatsApp", () => window.open(links.whatsapp, "_blank", "noopener")));
+      optionsEl.appendChild(option("bi-telegram", "Telegram", () => window.open(links.telegram, "_blank", "noopener")));
+      optionsEl.appendChild(option("bi-facebook", "Facebook", () => window.open(links.facebook, "_blank", "noopener")));
+      optionsEl.appendChild(option("bi-twitter-x", "X", () => window.open(links.x, "_blank", "noopener")));
+      const copyOpt = option("bi-link-45deg", "Copiar enlace", () => copy(copyOpt, t.url, copyOpt.lastElementChild!));
+      optionsEl.appendChild(copyOpt);
+
+      // Menú nativo del teléfono (Instagram, Messenger, correo…) si existe.
+      if (typeof navigator.share === "function") {
+        optionsEl.appendChild(
+          option("bi-three-dots", "Más", () => {
+            navigator.share({ title: t.title, text: links.text, url: t.url }).catch(() => {
+              /* el usuario canceló */
+            });
+          }),
+        );
+      }
+      open();
+    }
+
+    (window as any).share = { open: show, close };
+  });
+</script>

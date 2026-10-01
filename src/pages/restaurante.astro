@@ -313,13 +313,14 @@ const tplRestaurant: Restaurant = {
     deleteDish,
     deleteRestaurant,
     getRestaurantAverage,
-    mapsUrl,
     markAsVisited,
     markAsPending,
     getDishTypes,
     getOfficialDishStat,
     getOfficialRestaurantStat,
     getTopRatedDishIds,
+    getCurrentUserId,
+    getCachedOfficialRestaurant,
   } from "../lib/data.ts";
   import type { Restaurant, Dish } from "../lib/data.ts";
   import {
@@ -330,6 +331,8 @@ const tplRestaurant: Restaurant = {
     fillRestaurantName,
     updateSortPills,
   } from "../scripts/store.ts";
+  import { wireAddressLink } from "../scripts/maps.ts";
+  import { wireShareButton, officialShareUrl, personalShareUrl } from "../scripts/share.ts";
 
   // ─── Sort state (persiste en módulo entre navegaciones) ────────────────────
 
@@ -539,10 +542,9 @@ const tplRestaurant: Restaurant = {
     }
     const addressEl = div.querySelector<HTMLAnchorElement>(".rh-address");
     const addressTextEl = div.querySelector(".rh-address-text");
-    const href = mapsUrl(r.address);
-    if (addressEl && addressTextEl && href) {
+    if (addressEl && addressTextEl && r.address?.trim()) {
       addressTextEl.textContent = r.address;
-      addressEl.href = href;
+      wireAddressLink(addressEl, r.address);
       addressEl.hidden = false;
     }
     const badge = div.querySelector(".rating-badge")!;
@@ -566,18 +568,20 @@ const tplRestaurant: Restaurant = {
     } else {
       notesEl?.remove();
     }
-    div
-      .querySelector<HTMLButtonElement>(".rh-btn-recommend-rh")!
-      .addEventListener("click", () => {
-        (window as any).recommend?.open({
-          type: "restaurant",
-          id: r.id,
-          title: r.name,
-        });
-        div
-          .querySelector<HTMLElement>(".rh-menu-popup")
-          ?.classList.remove("active");
-      });
+    // Compartir: si está ligado a un oficial, se comparte la carta pública; si no,
+    // la vista de amigo de este restaurante. "Amigo" lo envía por recomendaciones.
+    wireShareButton(div, () => {
+      const official = r.officialRestaurantId
+        ? getCachedOfficialRestaurant(r.officialRestaurantId)
+        : null;
+      return {
+        title: r.name,
+        url: official
+          ? officialShareUrl(official)
+          : personalShareUrl(getCurrentUserId() ?? "", r.id),
+        friend: { type: "restaurant", id: r.id, title: r.name },
+      };
+    });
     div
       .querySelector<HTMLButtonElement>(".rh-btn-edit-rh")!
       .addEventListener("click", () => {

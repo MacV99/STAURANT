@@ -1,0 +1,121 @@
+<div id="maps-overlay" class="overlay" aria-modal="true" role="dialog" aria-labelledby="maps-title">
+  <div class="dialog-box flex-column">
+    <div class="dialog-icon">
+      <i class="bi bi-geo-alt-fill"></i>
+    </div>
+    <p id="maps-title" class="dialog-message">Abrir ubicación con</p>
+    <p id="maps-address" class="maps-address"></p>
+    <div id="maps-options" class="maps-options flex-column"></div>
+    <label class="maps-remember flex-row" for="maps-remember">
+      <input type="checkbox" id="maps-remember" />
+      <span>Recordar mi elección</span>
+    </label>
+    <div class="dialog-actions flex-row">
+      <button id="maps-cancel" class="boton2">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Por encima de formularios (200) y recomendar (300); debajo de ConfirmDialog (400). */
+  #maps-overlay {
+    z-index: 320;
+  }
+
+  .maps-address {
+    margin-top: -6px;
+    font-size: 0.8rem;
+    color: var(--clr-text-soft);
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+
+  .maps-options {
+    width: 100%;
+    gap: 8px;
+  }
+
+  .maps-remember {
+    gap: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--clr-text);
+    cursor: pointer;
+  }
+
+  .maps-remember input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--clr-primary);
+    cursor: pointer;
+  }
+</style>
+
+<style is:global>
+  /* Los botones de app los crea el JS (sin atributo scoped) → estilo global
+     acotado al overlay. */
+  #maps-overlay .maps-option {
+    width: 100%;
+    min-height: 48px;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 0 16px;
+    border: 1px solid var(--clr-border);
+    border-radius: var(--radius-md);
+    background: var(--clr-white2);
+    color: var(--clr-text);
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-transform: none;
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  #maps-overlay .maps-option i {
+    font-size: 1.15rem;
+  }
+
+  @media (hover: hover) {
+    #maps-overlay .maps-option:hover {
+      border-color: var(--clr-primary);
+    }
+  }
+</style>
+
+<script>
+  import { createOverlay } from "../scripts/store.ts";
+  import { availableMapsApps, openInMapsApp, setMapsPref } from "../scripts/maps.ts";
+
+  document.addEventListener("astro:page-load", () => {
+    const overlayApi = createOverlay("maps-overlay");
+    if (!overlayApi) return;
+    const { open, close } = overlayApi;
+
+    const addressEl = document.getElementById("maps-address")!;
+    const optionsEl = document.getElementById("maps-options")!;
+    const rememberEl = document.getElementById("maps-remember") as HTMLInputElement;
+    document.getElementById("maps-cancel")!.onclick = close;
+
+    function show(address: string) {
+      addressEl.textContent = address;
+      rememberEl.checked = false;
+      optionsEl.innerHTML = "";
+      for (const app of availableMapsApps()) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "maps-option flex-row";
+        btn.innerHTML = `<i class="bi ${app.icon}"></i><span>${app.label}</span>`;
+        btn.onclick = () => {
+          if (rememberEl.checked) setMapsPref(app.id);
+          close();
+          openInMapsApp(app.id, address);
+        };
+        optionsEl.appendChild(btn);
+      }
+      open();
+    }
+
+    (window as any).mapsChooser = { open: show, close };
+  });
+</script>

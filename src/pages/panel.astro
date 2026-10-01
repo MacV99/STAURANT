@@ -3,7 +3,12 @@
  * Panel de gestión del dueño (dashboard de estadísticas). Ruta: /panel?id=…
  * Solo accesible si el usuario es dueño del perfil oficial (official_owners); si no,
  * redirige. Los datos vienen del RPC get_official_owner_stats (agregados, sin filas
- * crudas). Las gráficas son CSS/SVG puro — sin librerías, respeta el bundle PWA.
+ * crudas). Las gráficas son CSS puro — sin librerías, respeta el bundle PWA.
+ *
+ * Estructura: KPIs → "Lo más destacado" (mejor / más votado / por mejorar) →
+ * satisfacción + distribución → actividad 30 días (barras por día) → ranking con
+ * pestañas. El ranking de "Mejores" ordena con promedio ponderado por votos
+ * (un 9.0 con 1 voto no le gana a un 8.8 con 20).
  *
  * NOTA: los elementos de las gráficas se crean con createElement en el <script>, así
  * que su CSS vive en <style is:global> (prefijado con .panel-page). El CSS scoped de
@@ -27,53 +32,77 @@ import Layout1 from "../layouts/Layout1.astro";
 
     {/* KPIs */}
     <section class="kpi-grid">
-      <div class="kpi kpi-hero flex-column">
-        <span class="kpi-num" id="kpi-avg">—</span>
-        <span class="kpi-lbl">Promedio general</span>
-        <span class="kpi-sub" id="kpi-avg-sub"></span>
+      <div class="kpi kpi-hero">
+        <div class="kpi-hero-main flex-column">
+          <span class="kpi-lbl">Promedio general</span>
+          <span class="kpi-num" id="kpi-avg">—</span>
+          <span class="kpi-sub" id="kpi-avg-sub"></span>
+        </div>
+        <div class="kpi-hero-side flex-column">
+          <span class="kpi-lbl">Satisfacción</span>
+          <span class="kpi-sat" id="kpi-sat">—</span>
+          <span class="kpi-sub">notas de 8 o más</span>
+        </div>
       </div>
       <div class="kpi flex-column">
+        <i class="bi bi-bookmark-heart kpi-icon"></i>
         <span class="kpi-num" id="kpi-members">—</span>
-        <span class="kpi-lbl">En listas</span>
+        <span class="kpi-lbl">Lo tienen en su lista</span>
       </div>
       <div class="kpi flex-column">
+        <i class="bi bi-people kpi-icon"></i>
         <span class="kpi-num" id="kpi-raters">—</span>
         <span class="kpi-lbl">Han calificado</span>
+        <span class="kpi-sub" id="kpi-raters-sub"></span>
       </div>
       <div class="kpi flex-column">
+        <i class="bi bi-star kpi-icon"></i>
         <span class="kpi-num" id="kpi-total">—</span>
         <span class="kpi-lbl">Calificaciones</span>
+        <span class="kpi-sub" id="kpi-total-sub"></span>
       </div>
       <div class="kpi flex-column">
+        <i class="bi bi-journal-text kpi-icon"></i>
         <span class="kpi-num" id="kpi-dishes">—</span>
-        <span class="kpi-lbl">Platos</span>
+        <span class="kpi-lbl">Platos calificados</span>
+        <span class="kpi-sub" id="kpi-dishes-sub"></span>
       </div>
     </section>
 
-    {/* Distribución de notas */}
+    {/* Lo más destacado */}
     <section class="panel-card flex-column">
-      <h2 class="card-title">Distribución de notas</h2>
-      <p class="card-hint">Cómo se reparten las calificaciones recibidas (1 a 10).</p>
+      <h2 class="card-title">Lo más destacado</h2>
+      <div id="highlights" class="highlights"></div>
+    </section>
+
+    {/* Satisfacción + distribución */}
+    <section class="panel-card flex-column">
+      <h2 class="card-title">Cómo te califican</h2>
+      <p class="card-hint">Reparto de todas las notas recibidas (1 a 10).</p>
+      <div id="sentiment" class="sentiment flex-column"></div>
       <div id="hist" class="hist"></div>
     </section>
 
-    {/* Tendencia temporal */}
+    {/* Actividad */}
     <section class="panel-card flex-column">
       <h2 class="card-title">Actividad · últimos 30 días</h2>
-      <p class="card-hint">Calificaciones recibidas por día.</p>
-      <div id="timeline" class="timeline"></div>
-      <div class="timeline-axis flex-row">
-        <span id="tl-start">—</span>
+      <p class="card-hint" id="act-summary">Calificaciones recibidas por día.</p>
+      <div id="activity" class="activity"></div>
+      <div class="activity-axis flex-row">
+        <span id="act-start">—</span>
         <span>Hoy</span>
       </div>
     </section>
 
-    {/* Ranking de platos */}
+    {/* Ranking */}
     <section class="panel-card flex-column">
       <h2 class="card-title flex-row">
         Ranking de platos <span id="rank-count" class="card-count"></span>
       </h2>
+      <div id="rank-tabs" class="rank-tabs flex-row" role="tablist"></div>
+      <p class="card-hint" id="rank-hint"></p>
       <div id="rank" class="rank flex-column"></div>
+      <button id="rank-more" class="boton2 rank-more" hidden>Ver todos</button>
     </section>
   </div>
 </Layout1>
@@ -84,7 +113,7 @@ import Layout1 from "../layouts/Layout1.astro";
     max-width: 760px;
     padding: 20px 16px 80px;
     align-items: stretch;
-    gap: 18px;
+    gap: 16px;
   }
 
   .back-link {
@@ -110,8 +139,7 @@ import Layout1 from "../layouts/Layout1.astro";
     font-weight: 700;
     letter-spacing: 0.8px;
     text-transform: uppercase;
-    color: var(--clr-primary);
-    opacity: 0.85;
+    color: var(--clr-text-soft);
   }
 
   .panel-title {
@@ -127,21 +155,50 @@ import Layout1 from "../layouts/Layout1.astro";
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 10px;
+    padding: 0; /* anula el padding global de <section> */
+    align-items: stretch; /* <section> global centra → recuadros de distinto alto */
   }
 
   .kpi {
+    position: relative;
     align-items: flex-start;
+    justify-content: flex-start;
     gap: 3px;
-    padding: 16px 16px;
+    padding: 16px;
     border-radius: 14px;
     background: var(--clr-white);
     border: 1px solid var(--clr-border);
   }
 
+  .kpi-icon {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    font-size: 1rem;
+    color: var(--clr-text-soft);
+  }
+
   .kpi-hero {
     grid-column: 1 / -1;
-    background: color-mix(in srgb, var(--clr-primary) 7%, var(--clr-white));
-    border-color: color-mix(in srgb, var(--clr-primary) 22%, transparent);
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .kpi-hero-main,
+  .kpi-hero-side {
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .kpi-hero-side {
+    align-items: flex-end;
+    text-align: right;
+    justify-content: center;
+    padding-left: 16px;
+    border-left: 1px solid var(--clr-border);
   }
 
   .kpi-num {
@@ -153,8 +210,15 @@ import Layout1 from "../layouts/Layout1.astro";
   }
 
   .kpi-hero .kpi-num {
-    font-size: 2.8rem;
-    color: var(--clr-primary);
+    font-size: 3rem;
+  }
+
+  .kpi-sat {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    line-height: 1;
+    color: var(--clr-success);
   }
 
   .kpi-lbl {
@@ -162,19 +226,16 @@ import Layout1 from "../layouts/Layout1.astro";
     font-weight: 700;
     letter-spacing: 0.5px;
     text-transform: uppercase;
-    color: var(--clr-text);
-    opacity: 0.5;
+    color: var(--clr-text-soft);
   }
 
   .kpi-sub {
-    font-size: 0.75rem;
+    font-size: 0.74rem;
     font-weight: 600;
-    color: var(--clr-text);
-    opacity: 0.55;
-    margin-top: 2px;
+    color: var(--clr-text-soft);
   }
 
-  /* ── Tarjetas de gráfica ── */
+  /* ── Tarjetas ── */
   .panel-card {
     align-items: stretch;
     gap: 4px;
@@ -188,12 +249,12 @@ import Layout1 from "../layouts/Layout1.astro";
     justify-content: flex-start;
     gap: 8px;
     align-items: baseline;
+    margin-bottom: 6px;
     font-size: 0.82rem;
     font-weight: 700;
     letter-spacing: 0.8px;
     text-transform: uppercase;
     color: var(--clr-text);
-    opacity: 0.75;
   }
 
   .card-count {
@@ -201,24 +262,33 @@ import Layout1 from "../layouts/Layout1.astro";
     font-weight: 600;
     letter-spacing: 0;
     text-transform: none;
-    opacity: 0.7;
+    color: var(--clr-text-soft);
   }
 
   .card-hint {
     font-size: 0.78rem;
-    color: var(--clr-text);
-    opacity: 0.5;
+    color: var(--clr-text-soft);
     margin-bottom: 10px;
   }
 
-  .timeline-axis {
+  .card-hint:empty {
+    display: none;
+  }
+
+  .activity-axis {
     justify-content: space-between;
-    margin-top: 6px;
+    margin-top: 8px;
     font-size: 0.68rem;
     font-weight: 600;
     letter-spacing: 0.3px;
-    color: var(--clr-text);
-    opacity: 0.45;
+    color: var(--clr-text-soft);
+  }
+
+  .rank-more {
+    align-self: center;
+    margin-top: 10px;
+    padding: 8px 18px;
+    font-size: 0.78rem;
   }
 
   @media (hover: hover) {
@@ -235,26 +305,144 @@ import Layout1 from "../layouts/Layout1.astro";
     .kpi-grid {
       grid-template-columns: repeat(4, 1fr);
     }
-
-    .kpi-hero {
-      grid-column: 1 / -1;
-      flex-direction: row;
-      align-items: baseline;
-      gap: 14px;
-    }
   }
 </style>
 
 <style is:global>
-  /* ── Elementos creados por JS (gráficas + ranking): CSS global prefijado ── */
+  /* ── Elementos creados por JS: CSS global prefijado con .panel-page ── */
 
-  /* Histograma (barras verticales, una por nota 1-10). */
+  /* Colores por banda (mismos cortes que los badges: ≤4 · 5–7 · 8+). */
+  .panel-page .is-low  { --band: var(--clr-danger); }
+  .panel-page .is-mid  { --band: var(--clr-warning); }
+  .panel-page .is-high { --band: var(--clr-success); }
+
+  /* Lo más destacado */
+  .panel-page .highlights {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .panel-page .hl {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--clr-white2);
+    border: 1px solid var(--clr-border);
+    min-width: 0;
+  }
+
+  .panel-page .hl-icon {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    font-size: 1.05rem;
+    color: var(--band, var(--clr-text));
+    background: color-mix(in srgb, var(--band, var(--clr-text)) 14%, transparent);
+  }
+
+  .panel-page .hl-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .panel-page .hl-lbl {
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--clr-text-soft);
+  }
+
+  .panel-page .hl-name {
+    font-size: 0.88rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--clr-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .panel-page .hl-meta {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--clr-text-soft);
+  }
+
+  .panel-page .hl-score {
+    flex-shrink: 0;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--band, var(--clr-text));
+  }
+
+  /* Satisfacción: barra apilada de 3 tramos + leyenda */
+  .panel-page .sentiment {
+    align-items: stretch; /* .flex-column centra por defecto → la barra quedaba en 0 px */
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  /* Una sola barra con gradiente de cortes duros (sin hijos recortados por
+     overflow) y animada con transform: animar width/height hacía que Chrome
+     dejara "rayas" de color de lado a lado de la pantalla. */
+  .panel-page .sent-bar {
+    height: 12px;
+    border-radius: 6px;
+    transform-origin: left center;
+    animation: panel-grow-x 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes panel-grow-x {
+    from { transform: scaleX(0); }
+  }
+
+  @keyframes panel-grow-y {
+    from { transform: scaleY(0); }
+  }
+
+  .panel-page .sent-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--clr-text-soft);
+  }
+
+  .panel-page .sent-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .panel-page .sent-legend b {
+    color: var(--clr-text);
+  }
+
+  .panel-page .sent-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--band);
+  }
+
+  /* Histograma (una columna por nota 1-10) */
   .panel-page .hist {
     display: flex;
     align-items: flex-end;
     gap: 6px;
     height: 150px;
-    padding-top: 8px;
+    padding-top: 20px; /* aire para el número sobre la barra más alta */
   }
 
   .panel-page .hist-col {
@@ -276,28 +464,25 @@ import Layout1 from "../layouts/Layout1.astro";
   }
 
   .panel-page .hist-bar {
+    position: relative;
     width: 100%;
     max-width: 34px;
-    border-radius: 6px 6px 0 0;
-    min-height: 3px;
+    height: 0;
+    min-height: 2px;
+    border-radius: 6px 6px 2px 2px;
+    background: var(--band);
+    transform-origin: bottom center;
+    animation: panel-grow-y 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* Nota sin votos: línea base neutra (no parece un dato). */
+  .panel-page .hist-bar.is-zero {
     background: var(--clr-border);
-    transition: height 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-    position: relative;
   }
 
-  .panel-page .hist-bar.is-low {
-    background: var(--clr-danger);
-  }
-  .panel-page .hist-bar.is-mid {
-    background: var(--clr-gold);
-  }
-  .panel-page .hist-bar.is-high {
-    background: var(--clr-accent-bg);
-  }
-
-  .panel-page .hist-bar .hist-val {
+  .panel-page .hist-val {
     position: absolute;
-    top: -16px;
+    top: -17px;
     left: 50%;
     transform: translateX(-50%);
     font-size: 0.7rem;
@@ -308,45 +493,78 @@ import Layout1 from "../layouts/Layout1.astro";
   .panel-page .hist-lbl {
     font-size: 0.68rem;
     font-weight: 700;
-    color: var(--clr-text);
-    opacity: 0.45;
+    color: var(--clr-text-soft);
   }
 
-  /* Tendencia (SVG area). */
-  .panel-page .timeline svg {
-    display: block;
-    width: 100%;
-    height: 90px;
-    overflow: visible;
-  }
-
-  .panel-page .timeline .tl-area {
-    fill: color-mix(in srgb, var(--clr-primary) 14%, transparent);
-  }
-
-  .panel-page .timeline .tl-line {
-    fill: none;
-    stroke: var(--clr-primary);
-    stroke-width: 2;
-    stroke-linejoin: round;
-    stroke-linecap: round;
-  }
-
-  .panel-page .timeline .tl-dot {
-    fill: var(--clr-primary);
-  }
-
-  .panel-page .timeline-empty {
-    height: 90px;
+  /* Actividad: una barra por día */
+  .panel-page .activity {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.82rem;
-    color: var(--clr-text);
-    opacity: 0.45;
+    align-items: flex-end;
+    gap: 2px;
+    height: 90px;
   }
 
-  /* Ranking de platos. */
+  .panel-page .act-day {
+    flex: 1;
+    height: 0;
+    min-height: 2px;
+    border-radius: 3px 3px 1px 1px;
+    background: var(--clr-accent-bg);
+    transform-origin: bottom center;
+    animation: panel-grow-y 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .panel-page .act-day.is-zero {
+    background: var(--clr-border);
+  }
+
+  .panel-page .act-day.is-today:not(.is-zero) {
+    background: var(--clr-success);
+  }
+
+  .panel-page .activity-empty {
+    flex: 1;
+    align-self: center;
+    text-align: center;
+    font-size: 0.82rem;
+    color: var(--clr-text-soft);
+  }
+
+  .panel-page .trend {
+    font-weight: 700;
+  }
+  .panel-page .trend.is-up { color: var(--clr-success); }
+  .panel-page .trend.is-down { color: var(--clr-danger); }
+
+  /* Ranking: pestañas */
+  .panel-page .rank-tabs {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .panel-page .rank-tab {
+    padding: 6px 12px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--clr-border);
+    background: var(--clr-white2);
+    color: var(--clr-text);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    text-transform: none;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .panel-page .rank-tab.is-active {
+    background: var(--clr-accent-bg);
+    border-color: var(--clr-accent-bg);
+    color: var(--clr-on-accent);
+  }
+
+  /* Ranking: filas */
   .panel-page .rank {
     align-items: stretch;
     gap: 8px;
@@ -363,12 +581,20 @@ import Layout1 from "../layouts/Layout1.astro";
   }
 
   .panel-page .rank-row.is-unrated {
-    opacity: 0.5;
+    opacity: 0.6;
   }
 
-  .panel-page .rank-row.is-best {
-    border-color: color-mix(in srgb, var(--clr-primary) 45%, var(--clr-border));
-    background: color-mix(in srgb, var(--clr-primary) 9%, var(--clr-white));
+  .panel-page .rank-pos {
+    flex-shrink: 0;
+    width: 26px;
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--clr-text-soft);
+  }
+
+  .panel-page .rank-pos.is-podium {
+    font-size: 1.05rem;
   }
 
   .panel-page .rank-main {
@@ -380,19 +606,15 @@ import Layout1 from "../layouts/Layout1.astro";
   }
 
   .panel-page .rank-name {
-    font-size: 0.9rem;
-    font-weight: 600;
+    font-size: 0.86rem;
+    font-weight: 700;
+    text-transform: uppercase;
     color: var(--clr-text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .panel-page .rank-medal {
-    margin-right: 5px;
-  }
-
-  /* Barra de progreso (nota/10) bajo el nombre. */
   .panel-page .rank-track {
     height: 6px;
     border-radius: 3px;
@@ -402,18 +624,11 @@ import Layout1 from "../layouts/Layout1.astro";
 
   .panel-page .rank-fill {
     height: 100%;
+    width: 0; /* el JS pone el ancho final; la entrada se anima con transform */
     border-radius: 3px;
-    width: 0;
-    transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  .panel-page .rank-fill.is-low {
-    background: var(--clr-danger);
-  }
-  .panel-page .rank-fill.is-mid {
-    background: var(--clr-gold);
-  }
-  .panel-page .rank-fill.is-high {
-    background: var(--clr-accent-bg);
+    background: var(--band, transparent);
+    transform-origin: left center;
+    animation: panel-grow-x 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   .panel-page .rank-side {
@@ -425,6 +640,9 @@ import Layout1 from "../layouts/Layout1.astro";
   }
 
   .panel-page .rank-avg {
+    /* Ancla el ::after de .badge-* (raya de color inferior). Sin esto se posicionaba
+       contra la página y dibujaba una línea de lado a lado de la pantalla. */
+    position: relative;
     min-width: 46px;
     text-align: center;
     padding: 5px 10px;
@@ -436,25 +654,46 @@ import Layout1 from "../layouts/Layout1.astro";
 
   .panel-page .rank-avg.is-empty {
     background: transparent;
-    border: 1px dashed var(--clr-border);
-    color: var(--clr-text);
-    opacity: 0.4;
+    border: 1px dashed var(--clr-border2);
+    color: var(--clr-text-soft);
   }
 
   .panel-page .rank-votes {
     font-size: 0.7rem;
     font-weight: 600;
-    color: var(--clr-text);
-    opacity: 0.55;
+    color: var(--clr-text-soft);
     white-space: nowrap;
   }
 
   .panel-page .panel-empty {
-    padding: 24px;
+    padding: 20px;
     text-align: center;
-    font-size: 0.88rem;
-    color: var(--clr-text);
-    opacity: 0.5;
+    font-size: 0.86rem;
+    color: var(--clr-text-soft);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .panel-page .sent-bar,
+    .panel-page .hist-bar,
+    .panel-page .act-day,
+    .panel-page .rank-fill {
+      animation: none;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .panel-page .highlights {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .panel-page .hl {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .panel-page .hl-body {
+      width: 100%;
+    }
   }
 </style>
 
@@ -466,10 +705,23 @@ import Layout1 from "../layouts/Layout1.astro";
     getOfficialRestaurant,
     getOfficialOwnerStats,
     type OfficialOwnerStats,
+    type OfficialOwnerDishStat,
   } from "../lib/data.ts";
 
+  type Band = "low" | "mid" | "high";
+  type RankTab = "best" | "improve" | "votes" | "unrated";
+
+  /** Votos "de confianza" del promedio ponderado: un plato con pocos votos se
+   *  acerca al promedio general hasta juntar suficientes. */
+  const CONFIDENCE_VOTES = 3;
+  const RANK_PREVIEW = 10;
+
+  // Estado del ranking (sobrevive a re-renders dentro de la página).
+  let rankTab: RankTab = "best";
+  let rankShowAll = false;
+
   /** Banda de color según la nota (mismos cortes que los badges). */
-  function band(avg: number): "low" | "mid" | "high" {
+  function band(avg: number): Band {
     if (avg <= 4) return "low";
     if (avg <= 7) return "mid";
     return "high";
@@ -480,31 +732,193 @@ import Layout1 from "../layouts/Layout1.astro";
     if (el) el.textContent = value;
   }
 
+  function plural(n: number, one: string, many: string): string {
+    return `${n} ${n === 1 ? one : many}`;
+  }
+
+  function isRated(d: OfficialOwnerDishStat): d is OfficialOwnerDishStat & { avgRating: number } {
+    return d.avgRating !== null && d.votes > 0;
+  }
+
+  /** Promedio ponderado por votos (bayesiano) para ordenar sin premiar 1 voto suelto. */
+  function weighted(d: OfficialOwnerDishStat & { avgRating: number }, global: number): number {
+    return (d.votes * d.avgRating + CONFIDENCE_VOTES * global) / (d.votes + CONFIDENCE_VOTES);
+  }
+
+  /** Grupos de satisfacción a partir del histograma 1-10. */
+  function sentimentGroups(s: OfficialOwnerStats): { low: number; mid: number; high: number; total: number } {
+    let low = 0, mid = 0, high = 0;
+    for (const d of s.distribution) {
+      const b = band(d.bucket);
+      if (b === "low") low += d.count;
+      else if (b === "mid") mid += d.count;
+      else high += d.count;
+    }
+    return { low, mid, high, total: low + mid + high };
+  }
+
+  const pct = (n: number, total: number) => (total > 0 ? Math.round((n / total) * 100) : 0);
+
   // ─── KPIs ─────────────────────────────────────────────────────────────────
   function renderKPIs(s: OfficialOwnerStats): void {
     const avgEl = document.getElementById("kpi-avg");
     if (avgEl) {
       avgEl.textContent = s.avgOverall !== null ? s.avgOverall.toFixed(1) : "—";
-      const c = s.avgOverall !== null
-        ? `var(--clr-${band(s.avgOverall) === "low" ? "danger" : "primary"})`
-        : "var(--clr-text)";
-      (avgEl as HTMLElement).style.color = c;
+      avgEl.style.color =
+        s.avgOverall !== null ? `var(--clr-${{ low: "danger", mid: "warning", high: "success" }[band(s.avgOverall)]})` : "";
     }
     setText(
       "kpi-avg-sub",
       s.totalRatings > 0
-        ? `sobre ${s.totalRatings} ${s.totalRatings === 1 ? "calificación" : "calificaciones"}`
+        ? `${plural(s.totalRatings, "calificación", "calificaciones")} de ${plural(s.raters, "persona", "personas")}`
         : "aún sin calificaciones",
     );
+
+    const g = sentimentGroups(s);
+    setText("kpi-sat", g.total > 0 ? `${pct(g.high, g.total)}%` : "—");
+
     setText("kpi-members", String(s.members));
-    const pct = s.members > 0 ? Math.round((s.raters / s.members) * 100) : 0;
-    const ratersEl = document.getElementById("kpi-raters");
-    if (ratersEl) ratersEl.textContent = s.members > 0 ? `${s.raters} · ${pct}%` : String(s.raters);
+    setText("kpi-raters", String(s.raters));
+    setText(
+      "kpi-raters-sub",
+      s.members > 0 ? `${pct(s.raters, s.members)}% de quienes lo guardaron` : "",
+    );
     setText("kpi-total", String(s.totalRatings));
-    setText("kpi-dishes", String(s.dishes.length));
+    setText(
+      "kpi-total-sub",
+      s.raters > 0 ? `${(s.totalRatings / s.raters).toFixed(1)} por persona` : "",
+    );
+    const rated = s.dishes.filter(isRated).length;
+    setText("kpi-dishes", String(rated));
+    setText("kpi-dishes-sub", `de ${plural(s.dishes.length, "plato", "platos")} en la carta`);
   }
 
-  // ─── Histograma de distribución ─────────────────────────────────────────────
+  // ─── Lo más destacado ─────────────────────────────────────────────────────
+  function highlightCard(opts: {
+    icon: string;
+    label: string;
+    name: string;
+    meta: string;
+    score?: number;
+    band?: Band;
+  }): HTMLElement {
+    const el = document.createElement("div");
+    el.className = `hl${opts.band ? ` is-${opts.band}` : ""}`;
+    el.innerHTML = `
+      <span class="hl-icon"><i class="bi ${opts.icon}"></i></span>
+      <span class="hl-body">
+        <span class="hl-lbl"></span>
+        <span class="hl-name"></span>
+        <span class="hl-meta"></span>
+      </span>
+      ${opts.score !== undefined ? `<span class="hl-score">${opts.score.toFixed(1)}</span>` : ""}`;
+    el.querySelector(".hl-lbl")!.textContent = opts.label;
+    el.querySelector(".hl-name")!.textContent = opts.name;
+    el.querySelector(".hl-meta")!.textContent = opts.meta;
+    return el;
+  }
+
+  function renderHighlights(s: OfficialOwnerStats): void {
+    const host = document.getElementById("highlights");
+    if (!host) return;
+    host.innerHTML = "";
+    const rated = s.dishes.filter(isRated);
+    if (rated.length === 0) {
+      host.innerHTML = `<div class="panel-empty">Cuando tus clientes califiquen platos, aquí verás los destacados.</div>`;
+      return;
+    }
+    const global = s.avgOverall ?? 7;
+
+    const best = [...rated].sort((a, b) => weighted(b, global) - weighted(a, global))[0];
+    host.appendChild(
+      highlightCard({
+        icon: "bi-trophy-fill",
+        label: "Mejor valorado",
+        name: best.name,
+        meta: plural(best.votes, "voto", "votos"),
+        score: best.avgRating,
+        band: band(best.avgRating),
+      }),
+    );
+
+    const most = [...rated].sort((a, b) => b.votes - a.votes || b.avgRating - a.avgRating)[0];
+    host.appendChild(
+      highlightCard({
+        icon: "bi-fire",
+        label: "El más calificado",
+        name: most.name,
+        meta: plural(most.votes, "voto", "votos"),
+        score: most.avgRating,
+        band: band(most.avgRating),
+      }),
+    );
+
+    // "Por mejorar": el peor con al menos 2 votos (1 voto suelto no es tendencia).
+    const weak = rated
+      .filter((d) => d.votes >= 2 && d.avgRating < 7)
+      .sort((a, b) => a.avgRating - b.avgRating)[0];
+    host.appendChild(
+      weak
+        ? highlightCard({
+            icon: "bi-exclamation-triangle-fill",
+            label: "Para revisar",
+            name: weak.name,
+            meta: plural(weak.votes, "voto", "votos"),
+            score: weak.avgRating,
+            band: band(weak.avgRating),
+          })
+        : highlightCard({
+            icon: "bi-hand-thumbs-up-fill",
+            label: "Para revisar",
+            name: "Todo en orden",
+            meta: "Ningún plato bajo 7 con 2+ votos",
+            band: "high",
+          }),
+    );
+  }
+
+  // ─── Satisfacción + histograma ────────────────────────────────────────────
+  function renderSentiment(s: OfficialOwnerStats): void {
+    const host = document.getElementById("sentiment");
+    if (!host) return;
+    const g = sentimentGroups(s);
+    if (g.total === 0) {
+      host.innerHTML = "";
+      return;
+    }
+    const parts: Array<[Band, number, string]> = [
+      ["high", g.high, "8 a 10"],
+      ["mid", g.mid, "5 a 7"],
+      ["low", g.low, "1 a 4"],
+    ];
+    // Barra única: gradiente con cortes duros en los % acumulados.
+    const bandVar: Record<Band, string> = {
+      high: "var(--clr-success)",
+      mid: "var(--clr-warning)",
+      low: "var(--clr-danger)",
+    };
+    let acc = 0;
+    const stops: string[] = [];
+    for (const [b, n] of parts) {
+      const from = acc;
+      acc += (n / g.total) * 100;
+      stops.push(`${bandVar[b]} ${from}% ${acc}%`);
+    }
+    const bar = document.createElement("div");
+    bar.className = "sent-bar";
+    bar.style.background = `linear-gradient(to right, ${stops.join(", ")})`;
+    const legend = document.createElement("div");
+    legend.className = "sent-legend";
+    for (const [b, n, label] of parts) {
+      const item = document.createElement("span");
+      item.className = `is-${b}`;
+      item.innerHTML = `<i class="sent-dot"></i><b>${pct(n, g.total)}%</b> ${label}`;
+      legend.appendChild(item);
+    }
+    host.innerHTML = "";
+    host.append(bar, legend);
+  }
+
   function renderHistogram(s: OfficialOwnerStats): void {
     const host = document.getElementById("hist");
     if (!host) return;
@@ -513,20 +927,18 @@ import Layout1 from "../layouts/Layout1.astro";
     s.distribution.forEach((d) => {
       const col = document.createElement("div");
       col.className = "hist-col";
+      col.title = `Nota ${d.bucket}: ${plural(d.count, "calificación", "calificaciones")}`;
 
       const wrap = document.createElement("div");
       wrap.className = "hist-bar-wrap";
       const bar = document.createElement("div");
-      bar.className = `hist-bar is-${band(d.bucket)}`;
-      // Altura relativa al máximo; 0 se queda en la línea base (min-height).
-      requestAnimationFrame(() => {
-        bar.style.height = d.count > 0 ? `${(d.count / max) * 100}%` : "0";
-      });
+      bar.className = `hist-bar is-${band(d.bucket)}${d.count === 0 ? " is-zero" : ""}`;
       if (d.count > 0) {
         const val = document.createElement("span");
         val.className = "hist-val";
         val.textContent = String(d.count);
         bar.appendChild(val);
+        bar.style.height = `${(d.count / max) * 100}%`;
       }
       wrap.appendChild(bar);
 
@@ -539,13 +951,13 @@ import Layout1 from "../layouts/Layout1.astro";
     });
   }
 
-  // ─── Tendencia temporal (SVG area, 30 días) ─────────────────────────────────
-  function renderTimeline(s: OfficialOwnerStats): void {
-    const host = document.getElementById("timeline");
+  // ─── Actividad (barras por día, 30 días) ──────────────────────────────────
+  function renderActivity(s: OfficialOwnerStats): void {
+    const host = document.getElementById("activity");
     if (!host) return;
     host.innerHTML = "";
 
-    // Eje de 30 días terminando hoy; volcamos los conteos del RPC sobre él.
+    // Eje de 30 días terminando hoy; se vuelcan los conteos del RPC sobre él.
     const days: string[] = [];
     const today = new Date();
     for (let i = 29; i >= 0; i--) {
@@ -556,108 +968,173 @@ import Layout1 from "../layouts/Layout1.astro";
     const map = new Map(s.timeline.map((t) => [t.day, t.count]));
     const counts = days.map((d) => map.get(d) ?? 0);
 
-    // Fecha de inicio del eje (etiqueta izquierda).
-    const startEl = document.getElementById("tl-start");
-    if (startEl) {
-      const d0 = new Date(days[0]);
-      startEl.textContent = d0.toLocaleDateString("es-CO", { day: "numeric", month: "short" });
-    }
+    const fmt = (iso: string) =>
+      new Date(`${iso}T12:00:00`).toLocaleDateString("es-CO", { day: "numeric", month: "short" });
+    setText("act-start", fmt(days[0]));
 
-    if (counts.every((c) => c === 0)) {
-      host.innerHTML = `<div class="timeline-empty">Sin actividad en los últimos 30 días.</div>`;
+    const total = counts.reduce((a, b) => a + b, 0);
+    const summaryEl = document.getElementById("act-summary");
+    if (total === 0) {
+      host.innerHTML = `<div class="activity-empty">Sin calificaciones en los últimos 30 días.</div>`;
+      if (summaryEl) summaryEl.textContent = "Calificaciones recibidas por día.";
       return;
     }
 
-    const W = 320, H = 80, PAD = 6;
+    // Últimos 7 días vs los 7 anteriores.
+    const last7 = counts.slice(-7).reduce((a, b) => a + b, 0);
+    const prev7 = counts.slice(-14, -7).reduce((a, b) => a + b, 0);
+    if (summaryEl) {
+      let trend = "";
+      if (prev7 > 0) {
+        const diff = Math.round(((last7 - prev7) / prev7) * 100);
+        const cls = diff > 0 ? "is-up" : diff < 0 ? "is-down" : "";
+        const arrow = diff > 0 ? "↑" : diff < 0 ? "↓" : "=";
+        trend = ` <span class="trend ${cls}">${arrow} ${Math.abs(diff)}%</span> vs. la semana anterior`;
+      } else if (last7 > 0) {
+        trend = ` <span class="trend is-up">nuevo</span> esta semana`;
+      }
+      summaryEl.innerHTML = `<b>${total}</b> en 30 días · <b>${last7}</b> esta semana${trend}`;
+    }
+
     const max = Math.max(1, ...counts);
-    const x = (i: number) => (i / (counts.length - 1)) * W;
-    const y = (c: number) => H - PAD - (c / max) * (H - PAD * 2);
-
-    const pts = counts.map((c, i) => `${x(i).toFixed(1)},${y(c).toFixed(1)}`);
-    const areaPath = `M0,${H} L${pts.join(" L")} L${W},${H} Z`;
-    const linePath = `M${pts.join(" L")}`;
-
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    svg.setAttribute("preserveAspectRatio", "none");
-    svg.innerHTML =
-      `<path class="tl-area" d="${areaPath}"></path>` +
-      `<path class="tl-line" d="${linePath}"></path>` +
-      // Punto en el último día con actividad (o el último no-cero).
-      counts
-        .map((c, i) => (c > 0 ? `<circle class="tl-dot" cx="${x(i).toFixed(1)}" cy="${y(c).toFixed(1)}" r="2.5"></circle>` : ""))
-        .join("");
-    host.appendChild(svg);
+    counts.forEach((c, i) => {
+      const bar = document.createElement("div");
+      bar.className = "act-day";
+      if (c === 0) bar.classList.add("is-zero");
+      if (i === counts.length - 1) bar.classList.add("is-today");
+      bar.title = `${fmt(days[i])}: ${plural(c, "calificación", "calificaciones")}`;
+      host.appendChild(bar);
+      if (c > 0) bar.style.height = `${(c / max) * 100}%`;
+    });
   }
 
-  // ─── Ranking de platos ──────────────────────────────────────────────────────
+  // ─── Ranking con pestañas ─────────────────────────────────────────────────
+  function rankRow(d: OfficialOwnerDishStat, pos: number | null): HTMLElement {
+    const row = document.createElement("div");
+    row.className = "rank-row";
+    const rated = isRated(d);
+    if (!rated) row.classList.add("is-unrated");
+
+    const posEl = document.createElement("span");
+    posEl.className = "rank-pos";
+    if (pos !== null && pos <= 3 && rankTab === "best") {
+      posEl.classList.add("is-podium");
+      posEl.textContent = ["🥇", "🥈", "🥉"][pos - 1];
+    } else {
+      posEl.textContent = pos !== null ? String(pos) : "·";
+    }
+
+    const main = document.createElement("div");
+    main.className = "rank-main";
+    const name = document.createElement("span");
+    name.className = "rank-name";
+    name.textContent = d.name;
+    const track = document.createElement("div");
+    track.className = "rank-track";
+    const fill = document.createElement("div");
+    fill.className = rated ? `rank-fill is-${band(d.avgRating)}` : "rank-fill";
+    if (rated) {
+      fill.style.width = `${(d.avgRating / 10) * 100}%`;
+    }
+    track.appendChild(fill);
+    main.append(name, track);
+
+    const side = document.createElement("div");
+    side.className = "rank-side";
+    const avgEl = document.createElement("span");
+    if (rated) {
+      avgEl.className = `rank-avg badge-${band(d.avgRating)}`;
+      avgEl.textContent = d.avgRating.toFixed(1);
+    } else {
+      avgEl.className = "rank-avg is-empty";
+      avgEl.textContent = "—";
+    }
+    const votes = document.createElement("span");
+    votes.className = "rank-votes";
+    votes.textContent = rated ? plural(d.votes, "voto", "votos") : "Sin calificar";
+    side.append(avgEl, votes);
+
+    row.append(posEl, main, side);
+    return row;
+  }
+
   function renderRanking(s: OfficialOwnerStats): void {
     const host = document.getElementById("rank");
-    if (!host) return;
-    const rated = s.dishes.filter((d) => d.avgRating !== null && d.votes > 0);
+    const tabsEl = document.getElementById("rank-tabs");
+    const moreBtn = document.getElementById("rank-more") as HTMLButtonElement | null;
+    if (!host || !tabsEl || !moreBtn) return;
+
+    const rated = s.dishes.filter(isRated);
+    const unrated = s.dishes.filter((d) => !isRated(d));
     setText("rank-count", `${rated.length} de ${s.dishes.length} calificados`);
 
     if (s.dishes.length === 0) {
+      tabsEl.innerHTML = "";
       host.innerHTML = `<div class="panel-empty">Aún no hay platos en la carta.</div>`;
+      moreBtn.hidden = true;
       return;
     }
-    const bestId = s.dishes.find((d) => d.avgRating !== null && d.votes > 0)?.dishId;
 
-    host.innerHTML = "";
-    s.dishes.forEach((d) => {
-      const isRated = d.avgRating !== null && d.votes > 0;
-      const row = document.createElement("div");
-      row.className = "rank-row";
-      if (!isRated) row.classList.add("is-unrated");
-      if (d.dishId === bestId) row.classList.add("is-best");
+    const global = s.avgOverall ?? 7;
+    const lists: Record<RankTab, { label: string; hint: string; items: OfficialOwnerDishStat[] }> = {
+      best: {
+        label: "Mejores",
+        hint: "Ordenado por nota y cantidad de votos: un plato con pocos votos no se adelanta solo por eso.",
+        items: [...rated].sort((a, b) => weighted(b, global) - weighted(a, global)),
+      },
+      improve: {
+        label: "Por mejorar",
+        hint: "Notas más bajas primero.",
+        items: [...rated].sort((a, b) => a.avgRating - b.avgRating || b.votes - a.votes),
+      },
+      votes: {
+        label: "Más votados",
+        hint: "Los platos que más califican tus clientes.",
+        items: [...rated].sort((a, b) => b.votes - a.votes || b.avgRating - a.avgRating),
+      },
+      unrated: {
+        label: `Sin calificar (${unrated.length})`,
+        hint: "Platos de la carta que nadie ha calificado todavía.",
+        items: unrated,
+      },
+    };
 
-      const main = document.createElement("div");
-      main.className = "rank-main";
-
-      const name = document.createElement("span");
-      name.className = "rank-name";
-      if (d.dishId === bestId) {
-        const medal = document.createElement("span");
-        medal.className = "rank-medal";
-        medal.textContent = "👑";
-        medal.title = "Mejor valorado";
-        name.appendChild(medal);
-      }
-      name.appendChild(document.createTextNode(d.name));
-
-      const track = document.createElement("div");
-      track.className = "rank-track";
-      const fill = document.createElement("div");
-      if (isRated) {
-        const avg = d.avgRating as number;
-        fill.className = `rank-fill is-${band(avg)}`;
-        requestAnimationFrame(() => { fill.style.width = `${(avg / 10) * 100}%`; });
-      } else {
-        fill.className = "rank-fill";
-      }
-      track.appendChild(fill);
-      main.append(name, track);
-
-      const side = document.createElement("div");
-      side.className = "rank-side";
-      const avgEl = document.createElement("span");
-      if (isRated) {
-        avgEl.className = `rank-avg badge-${band(d.avgRating as number)}`;
-        avgEl.textContent = (d.avgRating as number).toFixed(1);
-      } else {
-        avgEl.className = "rank-avg is-empty";
-        avgEl.textContent = "—";
-      }
-      const votes = document.createElement("span");
-      votes.className = "rank-votes";
-      votes.textContent = isRated
-        ? `${d.votes} ${d.votes === 1 ? "voto" : "votos"}`
-        : "Sin calificar";
-      side.append(avgEl, votes);
-
-      row.append(main, side);
-      host.appendChild(row);
+    // Pestañas
+    tabsEl.innerHTML = "";
+    (Object.keys(lists) as RankTab[]).forEach((key) => {
+      if (key === "unrated" && unrated.length === 0) return;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = `rank-tab${key === rankTab ? " is-active" : ""}`;
+      btn.setAttribute("role", "tab");
+      btn.setAttribute("aria-selected", String(key === rankTab));
+      btn.textContent = lists[key].label;
+      btn.onclick = () => {
+        rankTab = key;
+        rankShowAll = false;
+        renderRanking(s);
+      };
+      tabsEl.appendChild(btn);
     });
+
+    const current = lists[rankTab];
+    setText("rank-hint", current.hint);
+    host.innerHTML = "";
+    if (current.items.length === 0) {
+      host.innerHTML = `<div class="panel-empty">Nada por aquí todavía.</div>`;
+      moreBtn.hidden = true;
+      return;
+    }
+    const visible = rankShowAll ? current.items : current.items.slice(0, RANK_PREVIEW);
+    visible.forEach((d, i) => host.appendChild(rankRow(d, rankTab === "unrated" ? null : i + 1)));
+
+    const hiddenCount = current.items.length - visible.length;
+    moreBtn.hidden = hiddenCount <= 0 && !rankShowAll;
+    moreBtn.textContent = rankShowAll ? "Ver menos" : `Ver todos (${current.items.length})`;
+    moreBtn.onclick = () => {
+      rankShowAll = !rankShowAll;
+      renderRanking(s);
+    };
   }
 
   document.addEventListener("astro:page-load", async () => {
@@ -693,9 +1170,15 @@ import Layout1 from "../layouts/Layout1.astro";
       return;
     }
 
+    // Al entrar a otro panel, empezar en "Mejores" con la lista corta.
+    rankTab = "best";
+    rankShowAll = false;
+
     renderKPIs(stats);
+    renderHighlights(stats);
+    renderSentiment(stats);
     renderHistogram(stats);
-    renderTimeline(stats);
+    renderActivity(stats);
     renderRanking(stats);
   });
 </script>

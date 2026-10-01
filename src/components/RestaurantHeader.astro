@@ -51,15 +51,15 @@ const isPending = r.status === "pending";
         }
       </div>
     </div>
+    <!-- Compartir: oculto por defecto; cada página lo activa con su enlace. -->
+    <button class="rh-btn-menu rh-btn-share boton2" aria-label="Compartir" title="Compartir" hidden>
+      <i class="bi bi-share"></i>
+    </button>
     <div class="rh-menu">
       <button class="rh-btn-menu boton2" data-id={r.id} aria-label="Opciones del restaurante">
         <i class="bi bi-three-dots-vertical"></i>
       </button>
       <div class="rh-menu-popup">
-        <button class="rh-menu-item rh-btn-recommend-rh" data-id={r.id}>
-          <i class="bi bi-send"></i>
-          <span>Recomendar</span>
-        </button>
         <button class="rh-menu-item rh-btn-edit-rh" data-id={r.id}>
           <i class="bi bi-pencil-fill"></i>
           <span>Editar</span>
@@ -129,6 +129,16 @@ const isPending = r.status === "pending";
     position: relative;
     flex-shrink: 0;
     align-self: flex-start;
+  }
+
+  .rh-btn-share {
+    flex-shrink: 0;
+    align-self: flex-start;
+    margin-right: -10px; /* pegado al menú ⋮ como un solo grupo de acciones */
+  }
+
+  .rh-btn-share[hidden] {
+    display: none;
   }
 
   .rh-btn-menu {
@@ -210,7 +220,7 @@ const isPending = r.status === "pending";
     flex-shrink: 0;
   }
 
-  /* Dirección → enlace a Google Maps */
+  /* Dirección → abre en la app de mapas preferida (scripts/maps.ts) */
   .rh-address {
     display: inline-flex;
     align-items: center;

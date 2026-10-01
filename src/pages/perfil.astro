@@ -281,6 +281,13 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
       <input type="checkbox" id="theme-toggle" class="theme-switch" role="switch" />
     </label>
 
+    <label class="theme-card flex-row" for="maps-pref">
+      <span class="theme-label flex-row">
+        <i class="bi bi-geo-alt-fill"></i> Abrir ubicaciones con
+      </span>
+      <select id="maps-pref" class="maps-pref-select"></select>
+    </label>
+
     <!-- Al final, lejos de "Editar perfil", para no tocarlo sin querer. -->
     <button id="btn-logout" class="btn-danger-outline">
       <i class="bi bi-box-arrow-right"></i> Cerrar sesión
@@ -391,6 +398,20 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     font-size: 0.92rem;
     font-weight: 600;
     color: var(--clr-text);
+  }
+
+  .theme-card .maps-pref-select {
+    flex-shrink: 0;
+    width: auto;
+    margin: 0;
+    padding: 8px 12px;
+    border: 1px solid var(--clr-border2);
+    border-radius: var(--radius-pill);
+    background: var(--clr-white2);
+    color: var(--clr-text);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
   }
 
   .theme-card .theme-switch {
@@ -1087,6 +1108,7 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
 </style>
 
 <script>
+  import { availableMapsApps, getMapsPref, setMapsPref, type MapsPref } from "../scripts/maps.ts";
   import { navigate } from "astro:transitions/client";
   import { supabase } from "../lib/supabase.ts";
   import { getRatingBadgeHTML, createOverlay } from "../scripts/store.ts";
@@ -1686,6 +1708,18 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
         /* sin almacenamiento: el cambio dura hasta recargar */
       }
     };
+
+    // App de mapas para abrir direcciones (preferencia local del dispositivo)
+    const mapsPrefEl = document.getElementById("maps-pref") as HTMLSelectElement;
+    mapsPrefEl.innerHTML = "";
+    for (const [value, label] of [
+      ["ask", "Preguntar siempre"],
+      ...availableMapsApps().map((a) => [a.id, a.label]),
+    ]) {
+      mapsPrefEl.add(new Option(label, value));
+    }
+    mapsPrefEl.value = getMapsPref();
+    mapsPrefEl.onchange = () => setMapsPref(mapsPrefEl.value as MapsPref);
 
     // Cerrar sesión
     const logoutBtn = document.getElementById("btn-logout")!;

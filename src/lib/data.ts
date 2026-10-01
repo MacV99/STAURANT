@@ -425,16 +425,18 @@ function bgWrite(fn: () => unknown): void {
 
 // ─── Restaurants (síncronos — leen del caché) ──────────────────────────────────
 
-export function getRestaurants(): Restaurant[] {
-  return getCache().restaurants;
+/** Id del usuario con sesión (null antes de initCache o tras logout). */
+export function getCurrentUserId(): string | null {
+  return _userId;
 }
 
-/** URL universal de Google Maps para una dirección libre. null si vacía.
- *  Usa el esquema oficial `search/?api=1&query=` (abre app o web). */
-export function mapsUrl(address: string | null | undefined): string | null {
-  const q = address?.trim();
-  if (!q) return null;
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+/** Perfil oficial ya cacheado (mis membresías), sin ir a la red. */
+export function getCachedOfficialRestaurant(id: string): OfficialRestaurant | null {
+  return getCache().officialRestaurants.find((o) => o.id === id) ?? null;
+}
+
+export function getRestaurants(): Restaurant[] {
+  return getCache().restaurants;
 }
 
 export function getDishes(): Dish[] {
