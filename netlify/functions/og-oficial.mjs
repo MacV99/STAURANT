@@ -56,7 +56,18 @@ async function fetchLogo(logoUrl) {
 }
 
 export default async (req, context) => {
-  if (new URL(req.url).searchParams.has("ping")) return new Response("pong");
+  const stage = new URL(req.url).searchParams.get("stage");
+  if (stage) {
+    try {
+      if (stage === "import-satori") await import("satori");
+      if (stage === "import-resvg") await import("@resvg/resvg-wasm");
+      if (stage === "import") await loadRenderer();
+      if (stage === "assets") await loadAssets(new URL(req.url).origin);
+      return new Response(`ok ${stage}`);
+    } catch (err) {
+      return new Response(`fail ${stage}: ${err?.stack ?? err}`, { status: 500 });
+    }
+  }
   const url = process.env.PUBLIC_SUPABASE_URL;
   const key = process.env.PUBLIC_SUPABASE_ANON_KEY;
   const raw = decodeURIComponent(context.params.key ?? "").replace(/^@/, "").replace(/\.png$/i, "");
