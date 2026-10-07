@@ -1,14 +1,14 @@
 // ─── Imágenes de vista previa (Open Graph) 1200×630 ───────────────────────────
 // Lo que muestran WhatsApp / Facebook / X / Telegram al pegar un enlace.
 // satori dibuja el diseño a SVG (el texto queda como trazos: no depende de las
-// fuentes del servidor) y sharp lo pasa a PNG. sharp también convierte el logo
-// del restaurante (puede ser AVIF/WebP, que satori y WhatsApp no leen) a PNG.
+// fuentes del servidor) y resvg (WebAssembly, sin binarios nativos) lo pasa a PNG.
+// Recursos en public/og/: fuentes Montserrat, logo blanco y resvg.wasm.
 //
 // Lo usan: netlify/functions/og-oficial.mjs (una por restaurante, al vuelo) y
-// scripts/og-app.mjs (la imagen fija de la app → public/img/og-app.png).
+// scripts/og-app.mjs (genera public/og/logo-white.png y public/img/og-app.png).
 
 import satori from "satori";
-import sharp from "sharp";
+import { initWasm, Resvg } from "@resvg/resvg-wasm";
 
 export const OG_W = 1200;
 export const OG_H = 630;
@@ -35,7 +35,7 @@ function h(type, props, ...children) {
 }
 
 const svgUri = (svg) => `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
-const pngUri = (buf) => `data:image/png;base64,${buf.toString("base64")}`;
+const pngUri = (buf, mime = "image/png") => `data:${mime};base64,${buf.toString("base64")}`;
 
 const CHECK_BADGE = svgUri(
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill="${C.info}" d="M10.067.87a2.89 2.89 0 0 0-4.134 0l-.622.638-.89-.011a2.89 2.89 0 0 0-2.924 2.924l.01.89-.636.622a2.89 2.89 0 0 0 0 4.134l.637.622-.011.89a2.89 2.89 0 0 0 2.924 2.924l.89-.01.622.636a2.89 2.89 0 0 0 4.134 0l.622-.637.89.011a2.89 2.89 0 0 0 2.924-2.924l-.01-.89.636-.622a2.89 2.89 0 0 0 0-4.134l-.637-.622.011-.89a2.89 2.89 0 0 0-2.924-2.924l-.89.01z"/><path fill="#fff" d="M10.354 6.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7 8.793l2.646-2.647a.5.5 0 0 1 .708 0"/></svg>`,
@@ -122,14 +122,14 @@ function nameSize(name) {
 /**
  * Tarjeta de un restaurante oficial.
  * @param {{ name: string; cities: string[]; dishCount: number; avg: number | null;
- *   ratingsCount: number; logoPng: Buffer | null; brandPng: Buffer;
- *   fonts: import("satori").SatoriOptions["fonts"] }} d
+ *   ratingsCount: number; logo: { data: Buffer; mime: string } | null;
+ *   brandPng: Buffer; fonts: import("satori").SatoriOptions["fonts"] }} d
  */
 export async function renderOfficialCard(d) {
   const initial = (d.name.trim()[0] ?? "?").toUpperCase();
-  const logo = d.logoPng
+  const logo = d.logo
     ? h("img", {
-        src: pngUri(d.logoPng),
+        src: pngUri(d.logo.data, d.logo.mime),
         width: 236,
         height: 236,
         style: { borderRadius: 36, border: `3px solid ${C.border}`, objectFit: "cover" },
@@ -328,20 +328,20 @@ export async function renderAppCard(d) {
   return toPng(tree, d.fonts);
 }
 
+let wasmReady = null;
+
+/** Inicializa resvg una sola vez por proceso (`wasm` = bytes de resvg.wasm). */
+export function initRenderer(wasm) {
+  wasmReady ??= initWasm(wasm);
+  return wasmReady;
+}
+
 async function toPng(tree, fonts) {
+  if (!wasmReady) throw new Error("initRenderer(wasm) no fue llamado");
+  await wasmReady;
   const svg = await satori(tree, { width: OG_W, height: OG_H, fonts });
-  return sharp(Buffer.from(svg)).png({ compressionLevel: 9 }).toBuffer();
+  return Buffer.from(new Resvg(svg, { fitTo: { mode: "original" } }).render().asPng());
 }
 
-/** Logo oscuro de la marca → blanco (para fondo oscuro), conservando la transparencia. */
-export function whiteBrand(logoBuf) {
-  return sharp(logoBuf).negate({ alpha: false }).png().toBuffer();
-}
-
-/** Cualquier imagen (AVIF/WebP/JPG/PNG) → PNG cuadrado 472px (2× del tamaño dibujado). */
-export function squarePng(buf) {
-  return sharp(buf).resize(472, 472, { fit: "cover" }).png().toBuffer();
-}
-
-/** Pesos de Montserrat que usa el diseño (archivos .woff de @fontsource). */
+/** Pesos de Montserrat que usa el diseño (public/og/montserrat-latin-<peso>-normal.woff). */
 export const FONT_WEIGHTS = [600, 700, 800, 900];

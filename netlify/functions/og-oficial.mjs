@@ -2,17 +2,12 @@
 // vuelo: /og/oficial/<handle o id>. La referencia el <meta og:image> que inyecta
 // netlify/edge-functions/oficial-meta.ts. Diseño en netlify/lib/og-render.mjs.
 
-import {
-  renderOfficialCard,
-  whiteBrand,
-  squarePng,
-  FONT_WEIGHTS,
-} from "../lib/og-render.mjs";
+import { initRenderer, renderOfficialCard, FONT_WEIGHTS } from "../lib/og-render.mjs";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Recursos estáticos (fuentes + logo de la marca): se piden al propio sitio una
-// vez por instancia y quedan en memoria.
+// Recursos estáticos (public/og/: fuentes, logo blanco, resvg.wasm): se piden al
+// propio sitio una vez por instancia y quedan en memoria. Sin binarios nativos.
 let assets = null;
 async function loadAssets(origin) {
   if (assets) return assets;
@@ -21,12 +16,14 @@ async function loadAssets(origin) {
     if (!res.ok) throw new Error(`${path}: ${res.status}`);
     return Buffer.from(await res.arrayBuffer());
   };
-  const [brand, ...fontBufs] = await Promise.all([
-    get("/img/logo2.png"),
-    ...FONT_WEIGHTS.map((w) => get(`/fonts/montserrat-latin-${w}-normal.woff`)),
+  const [wasm, brandPng, ...fontBufs] = await Promise.all([
+    get("/og/resvg.wasm"),
+    get("/og/logo-white.png"),
+    ...FONT_WEIGHTS.map((w) => get(`/og/montserrat-latin-${w}-normal.woff`)),
   ]);
+  await initRenderer(wasm);
   assets = {
-    brandPng: await whiteBrand(brand),
+    brandPng,
     fonts: FONT_WEIGHTS.map((weight, i) => ({
       name: "Montserrat",
       weight,
@@ -35,6 +32,23 @@ async function loadAssets(origin) {
     })),
   };
   return assets;
+}
+
+/** Logo (suele ser AVIF, que satori no lee) → JPEG cuadrado vía la transformación
+ *  de imágenes de Supabase Storage. Si falla, null → placeholder con la inicial. */
+async function fetchLogo(logoUrl) {
+  try {
+    const u = new URL(logoUrl.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/"));
+    u.searchParams.set("width", "472");
+    u.searchParams.set("height", "472");
+    u.searchParams.set("resize", "cover");
+    const res = await fetch(u, { headers: { Accept: "image/png,image/jpeg" } });
+    const mime = (res.headers.get("content-type") ?? "").split(";")[0];
+    if (!res.ok || !/^image\/(png|jpeg)$/.test(mime)) return null;
+    return { data: Buffer.from(await res.arrayBuffer()), mime };
+  } catch {
+    return null;
+  }
 }
 
 export default async (req, context) => {
@@ -64,22 +78,13 @@ export default async (req, context) => {
         headers: { ...headers, "Content-Type": "application/json" },
         body: "{}",
       }),
-      o.logo_url ? fetch(o.logo_url).catch(() => null) : Promise.resolve(null),
+      o.logo_url ? fetchLogo(o.logo_url) : Promise.resolve(null),
       loadAssets(new URL(req.url).origin),
     ]);
 
     const dishCount = Number(countRes.headers.get("content-range")?.split("/")[1] ?? 0) || 0;
     const stats = statsRes.ok ? await statsRes.json() : [];
     const stat = Array.isArray(stats) ? stats.find((s) => s.official_restaurant_id === o.id) : null;
-
-    let logoPng = null;
-    if (logoRes && logoRes.ok) {
-      try {
-        logoPng = await squarePng(Buffer.from(await logoRes.arrayBuffer()));
-      } catch {
-        logoPng = null; // formato ilegible → placeholder con la inicial
-      }
-    }
 
     const cities = Array.isArray(o.cities) && o.cities.length ? o.cities : o.city ? [o.city] : [];
     const png = await renderOfficialCard({
@@ -88,7 +93,7 @@ export default async (req, context) => {
       dishCount,
       avg: stat ? Number(stat.avg_rating) : null,
       ratingsCount: stat ? Number(stat.ratings_count) : 0,
-      logoPng,
+      logo: logoRes,
       ...a,
     });
 

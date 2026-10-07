@@ -1,5 +1,6 @@
 # Funciones para la vista previa al compartir (ver netlify/lib/og-render.mjs).
 [functions]
   node_bundler = "esbuild"
-  # sharp trae binarios nativos por plataforma: se instala tal cual, sin empaquetar.
-  external_node_modules = ["sharp"]
+  # satori (harfbuzz) y resvg cargan archivos .wasm de su carpeta: se suben
+  # completos en vez de empaquetarlos, o la función falla al arrancar.
+  external_node_modules = ["satori", "@resvg/resvg-wasm"]

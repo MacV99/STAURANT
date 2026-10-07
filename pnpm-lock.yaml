@@ -11,6 +11,9 @@ importers:
       '@fontsource/montserrat':
         specifier: ^5.3.0
         version: 5.3.0
+      '@resvg/resvg-wasm':
+        specifier: ^2.6.2
+        version: 2.6.2
       '@supabase/supabase-js':
         specifier: ^2.103.3
         version: 2.103.3
@@ -26,13 +29,13 @@ importers:
       satori:
         specifier: ^0.35.1
         version: 0.35.1
-      sharp:
-        specifier: ^0.35.5
-        version: 0.35.5(@types/node@25.6.0)
     devDependencies:
       '@astrojs/check':
         specifier: ^0.9.8
         version: 0.9.8(prettier@3.8.3)(typescript@5.9.3)
+      sharp:
+        specifier: ^0.35.5
+        version: 0.35.5(@types/node@25.6.0)
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -1228,6 +1231,10 @@ packages:
 
   '@oslojs/encoding@1.1.0':
     resolution: {integrity: sha512-70wQhgYmndg4GCPxPPxPGevRKqTIJ2Nh4OkiMWmDAVYsTQ+Ta7Sq+rPevXyXGdzr30/qZBnyOalCszoMxlyldQ==}
+
+  '@resvg/resvg-wasm@2.6.2':
+    resolution: {integrity: sha512-FqALmHI8D4o6lk/LRWDnhw95z5eO+eAa6ORjVg09YRR7BkcM6oPHU9uyC0gtQG5vpFLvgpeU4+zEAz2H8APHNw==}
+    engines: {node: '>= 10'}
 
   '@rollup/plugin-babel@5.3.1':
     resolution: {integrity: sha512-WFfdLWU/xVWKeRQnKmIAQULUI7Il0gZnBIH/ZFO069wYIfPu+8zrfp/KMW0atmELoRDq8FbiP3VCss9MhCut7Q==}
@@ -4782,6 +4789,8 @@ snapshots:
       '@jridgewell/sourcemap-codec': 1.5.5
 
   '@oslojs/encoding@1.1.0': {}
+
+  '@resvg/resvg-wasm@2.6.2': {}
 
   '@rollup/plugin-babel@5.3.1(@babel/core@7.29.0)(rollup@2.80.0)':
     dependencies:
