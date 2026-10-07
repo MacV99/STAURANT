@@ -168,13 +168,6 @@ import FormModal from "./FormModal.astro";
 
   {/* Rejilla: 1 columna en móvil, 2 en desktop (ver .form-grid en project.css). */}
   <div class="form-grid">
-    <label for="opf-name" class="form-col-full">
-      <span class="label-text flex-row"
-        >Nombre <span class="required">*</span></span
-      >
-      <input type="text" id="opf-name" required placeholder="Nombre del restaurante" />
-    </label>
-
     <div class="opf-logo-field form-col-full flex-row">
       <input type="hidden" id="opf-logo-url" />
       {/* visually-hidden (no display:none): iOS/Safari no abren el selector si el
@@ -205,6 +198,13 @@ import FormModal from "./FormModal.astro";
         </div>
       </div>
     </div>
+
+    <label for="opf-name" class="form-col-full">
+      <span class="label-text flex-row"
+        >Nombre <span class="required">*</span></span
+      >
+      <input type="text" id="opf-name" required placeholder="Nombre del restaurante" />
+    </label>
 
     <div class="cc-field flex-column">
       <span class="label-text flex-row"
@@ -253,6 +253,21 @@ import FormModal from "./FormModal.astro";
         >Dirección <span class="optional">(opcional)</span></span
       >
       <input type="text" id="opf-address" placeholder="Cra 00 # 00-00" />
+    </label>
+
+    <label for="opf-maps-url" class="form-col-full">
+      <span class="label-text flex-row"
+        >Enlace de ubicación <span class="optional">(opcional)</span></span
+      >
+      <input
+        type="url"
+        inputmode="url"
+        id="opf-maps-url"
+        placeholder="https://maps.app.goo.gl/..."
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <span class="opf-hint">Pega el enlace de Google Maps de tu local. Si lo dejas vacío, se busca la dirección escrita.</span>
     </label>
 
     <fieldset class="opf-socials form-col-full">
@@ -322,8 +337,16 @@ import FormModal from "./FormModal.astro";
   #odf-notes,
   #opf-name,
   #opf-address,
+  #opf-maps-url,
   #opf-notes {
     font-size: 0.9rem;
+  }
+
+  .opf-hint {
+    font-size: 0.75rem;
+    color: var(--clr-text);
+    opacity: 0.6;
+    line-height: 1.4;
   }
 
   /* ── Producto genérico (checkbox compacto + ícono ⓘ con tooltip) ── */
@@ -831,6 +854,7 @@ import FormModal from "./FormModal.astro";
 
   /* ── Campo LOGO del perfil: miniatura cuadrada + acciones al lado. ── */
   .opf-logo-field {
+    justify-content: flex-start;
     align-items: center;
     gap: 14px;
   }
@@ -857,6 +881,8 @@ import FormModal from "./FormModal.astro";
 
   .opf-logo-preview {
     display: flex;
+    overflow: hidden;
+    border-radius: inherit;
     align-items: center;
     justify-content: center;
     width: 100%;
@@ -865,7 +891,8 @@ import FormModal from "./FormModal.astro";
     font-size: 1.5rem;
   }
 
-  .opf-logo-preview img {
+  /* La <img> se crea por JS (sin atributo de scope) → :global. */
+  .opf-logo-preview :global(img) {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -1350,6 +1377,7 @@ import FormModal from "./FormModal.astro";
     const pNameEl = document.getElementById("opf-name") as HTMLInputElement;
     const pCityEl = document.getElementById("opf-city") as HTMLInputElement;
     const pAddrEl = document.getElementById("opf-address") as HTMLInputElement;
+    const pMapsUrlEl = document.getElementById("opf-maps-url") as HTMLInputElement;
     const pPhoneEl = document.getElementById("opf-phone") as HTMLInputElement;
     const pIgEl = document.getElementById("opf-instagram") as HTMLInputElement;
     const pFbEl = document.getElementById("opf-facebook") as HTMLInputElement;
@@ -1488,6 +1516,7 @@ import FormModal from "./FormModal.astro";
       pNameEl.value = official.name;
       cityCombo.setValues(official.cities);
       pAddrEl.value = official.address ?? "";
+      pMapsUrlEl.value = official.mapsUrl ?? "";
       pPhoneEl.value = official.phone ?? "";
       pIgEl.value = official.instagram ?? "";
       pFbEl.value = official.facebook ?? "";
@@ -1523,6 +1552,7 @@ import FormModal from "./FormModal.astro";
         name,
         cities: cityCombo.getValues(),
         address: pAddrEl.value.trim() || null,
+        mapsUrl: pMapsUrlEl.value.trim() || null,
         phone: pPhoneEl.value.trim() || null,
         instagram: pIgEl.value.trim() || null,
         facebook: pFbEl.value.trim() || null,

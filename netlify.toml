@@ -1,0 +1,5 @@
+# Funciones para la vista previa al compartir (ver netlify/lib/og-render.mjs).
+[functions]
+  node_bundler = "esbuild"
+  # sharp trae binarios nativos por plataforma: se instala tal cual, sin empaquetar.
+  external_node_modules = ["sharp"]

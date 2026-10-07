@@ -25,6 +25,8 @@ function officialHandleRewrite() {
 
 // https://astro.build/config
 export default defineConfig({
+  // URL pública: base de las <meta og:*> (vista previa al compartir).
+  site: 'https://staurant.netlify.app',
   vite: {
     plugins: [officialHandleRewrite()],
   },
@@ -60,6 +62,8 @@ export default defineConfig({
         navigateFallback: null,
         // Cachear solo assets estáticos
         globPatterns: ['**/*.{css,js,html,svg,png,jpg,jpeg,ico,webp,avif,woff,woff2}'],
+        // Solo para las imágenes de vista previa al compartir (servidor): no precachear.
+        globIgnores: ['fonts/**', 'img/og-app.png'],
         runtimeCaching: [
           {
             // Supabase: siempre desde la red (auth + datos en tiempo real)

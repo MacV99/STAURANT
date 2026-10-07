@@ -92,6 +92,10 @@ Rating badge classes: `.badge-low` (≤4, `--clr-danger`), `.badge-mid` (5–7, 
 
 Configured via `@vite-pwa/astro` in `astro.config.mjs`. Static assets are Workbox-cached; Supabase API calls use `NetworkOnly` (never cached). No offline fallback — app requires network for auth/data.
 
+### Vista previa al compartir (Open Graph)
+
+Los crawlers (WhatsApp, redes) no ejecutan JS. `Layout1` trae las `<meta og:*>` genéricas (imagen fija `public/img/og-app.png`, regenerar con `node scripts/og-app.mjs`). En `/oficial/*` el edge function `netlify/edge-functions/oficial-meta.ts` las reemplaza por las del restaurante, con imagen generada al vuelo por `netlify/functions/og-oficial.mjs` (`/og/oficial/<handle>`). Diseño compartido: `netlify/lib/og-render.mjs` (satori + sharp; fuentes en `public/fonts/`). Solo funciona desplegado en Netlify, no en `pnpm dev`.
+
 ### Environment variables
 
 ```

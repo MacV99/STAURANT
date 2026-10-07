@@ -39,6 +39,9 @@ export interface OfficialRestaurant {
    *  sigue escribiendo con este valor. */
   city: string | null;
   address: string | null;
+  /** Enlace opcional de Google Maps/Waze con el pin exacto. Si existe, tocar la
+   *  dirección abre este enlace en vez de buscar el texto de `address`. */
+  mapsUrl: string | null;
   notes: string | null;
   phone: string | null; // para pedidos (se muestra como enlace WhatsApp)
   instagram: string | null; // handle o URL; vacío = sin ícono
@@ -719,6 +722,7 @@ function toOfficialRestaurant(row: Record<string, unknown>): OfficialRestaurant 
     cities,
     city: cities[0] ?? null,
     address: (row.address as string | null) ?? null,
+    mapsUrl: (row.maps_url as string | null) ?? null,
     notes: (row.notes as string | null) ?? null,
     phone: (row.phone as string | null) ?? null,
     instagram: (row.instagram as string | null) ?? null,
@@ -1213,6 +1217,7 @@ export async function updateOfficialRestaurant(
     name: string;
     cities: string[];
     address: string | null;
+    mapsUrl: string | null;
     notes: string | null;
     phone: string | null;
     instagram: string | null;
@@ -1228,10 +1233,14 @@ export async function updateOfficialRestaurant(
     dbPatch.cities = patch.cities;
     dbPatch.city = patch.cities[0] ?? null;
   }
-  // `logoUrl` (camelCase) → columna `logo_url` (snake_case). Único campo que difiere.
+  // camelCase → columnas snake_case (`logo_url`, `maps_url`).
   if (patch.logoUrl !== undefined) {
     dbPatch.logo_url = patch.logoUrl;
     delete dbPatch.logoUrl;
+  }
+  if (patch.mapsUrl !== undefined) {
+    dbPatch.maps_url = patch.mapsUrl;
+    delete dbPatch.mapsUrl;
   }
   const { data, error } = await supabase
     .from("official_restaurants")

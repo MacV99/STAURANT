@@ -67,9 +67,21 @@ export function openAddress(address: string): void {
   else openInMapsApp(pref === "ask" ? "google" : pref, address);
 }
 
-/** Convierte un <a> en enlace de ubicación. El href queda en Google Maps como
- *  respaldo (abrir en pestaña nueva / copiar enlace); el toque usa la preferencia. */
-export function wireAddressLink(el: HTMLAnchorElement, address: string): void {
+/** Convierte un <a> en enlace de ubicación. Si el dueño puso un enlace de mapa
+ *  (`mapsUrl`, pin exacto), se abre ese tal cual. Si no, el href queda en Google
+ *  Maps como respaldo (abrir en pestaña nueva / copiar enlace) y el toque usa la
+ *  preferencia buscando el texto de la dirección. */
+export function wireAddressLink(
+  el: HTMLAnchorElement,
+  address: string,
+  mapsUrl?: string | null,
+): void {
+  const custom = mapsUrl?.trim();
+  if (custom) {
+    el.href = /^https?:\/\//i.test(custom) ? custom : `https://${custom}`;
+    el.onclick = null;
+    return;
+  }
   el.href = mapsAppUrl("google", address);
   el.onclick = (e) => {
     if (e.metaKey || e.ctrlKey || e.shiftKey) return; // abrir en pestaña nueva: nativo

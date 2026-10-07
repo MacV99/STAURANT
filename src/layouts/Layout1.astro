@@ -15,6 +15,15 @@ interface Props {
 }
 
 const { title, bare = false } = Astro.props;
+
+// Vista previa al compartir (WhatsApp, redes…). Genérica de la app; en /oficial
+// la reemplaza netlify/edge-functions/oficial-meta.ts por la del restaurante.
+const site = Astro.site ?? new URL("https://staurant.netlify.app");
+const ogTitle = "STAURANT · Cada plato cuenta";
+const ogDescription =
+  "Califica cada plato, guarda tus restaurantes y compártelos con tus amigos.";
+const ogImage = new URL("/img/og-app.png", site).href;
+const ogUrl = new URL(Astro.url.pathname, site).href;
 ---
 
 <html lang="es">
@@ -32,6 +41,22 @@ const { title, bare = false } = Astro.props;
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="STAURANT" />
     <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={ogDescription} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="STAURANT" />
+    <meta property="og:locale" content="es_CO" />
+    <meta property="og:title" content={ogTitle} />
+    <meta property="og:description" content={ogDescription} />
+    <meta property="og:url" content={ogUrl} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="STAURANT · Cada plato cuenta" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={ogTitle} />
+    <meta name="twitter:description" content={ogDescription} />
+    <meta name="twitter:image" content={ogImage} />
     <meta name="mobile-web-app-capable" content="yes" />
     <!-- Fuente: <link> en el head (no @import en CSS, que encadena peticiones y
          retrasa el primer pintado). Sin itálicas: la app no las usa. -->
@@ -46,21 +71,25 @@ const { title, bare = false } = Astro.props;
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
     />
     <title>{title}</title>
-    <!-- Tema (claro/oscuro) antes de pintar, sin parpadeo. Se elige en /perfil.
-         ClientRouter reemplaza los atributos de <html> al navegar: se re-aplica
-         sobre el documento entrante en astro:before-swap. -->
+    <!-- Tema (sistema/claro/oscuro) antes de pintar, sin parpadeo. Se elige en /perfil;
+         por defecto sigue al sistema. ClientRouter reemplaza los atributos de <html>
+         al navegar: se re-aplica sobre el documento entrante en astro:before-swap. -->
     <script is:inline>
       (function () {
+        var mq = window.matchMedia("(prefers-color-scheme: dark)");
         function apply(doc) {
           var t = null;
           try { t = localStorage.getItem("staurant_theme"); } catch (e) {}
-          if (t === "dark") doc.documentElement.setAttribute("data-theme", "dark");
+          var dark = t === "dark" || (t !== "light" && mq.matches);
+          if (dark) doc.documentElement.setAttribute("data-theme", "dark");
           else doc.documentElement.removeAttribute("data-theme");
         }
         apply(document);
         if (!window.__themeSwapHooked) {
           window.__themeSwapHooked = true;
+          window.__applyTheme = function () { apply(document); };
           document.addEventListener("astro:before-swap", function (e) { apply(e.newDocument); });
+          mq.addEventListener("change", function () { apply(document); });
         }
       })();
     </script>

@@ -72,19 +72,24 @@ const isPending = r.status === "pending";
     </div>
   </div>
 
-  <span class="rh-cities" hidden>
-    <i class="bi bi-geo-alt-fill" />
-    <span class="rh-cities-list" />
-  </span>
-  <a class="rh-address" target="_blank" rel="noopener" hidden>
-    <i class="bi bi-map-fill" />
-    <span class="rh-address-text" />
-    <i class="bi bi-box-arrow-up-right rh-address-ext" />
-  </a>
-  <div class="rh-socials flex-row" hidden>
-    <a class="rh-social rh-social-wa" aria-label="Llamar" hidden>
-      <i class="bi bi-telephone-fill" />
+  <!-- Datos de contacto: una fila por dato (ícono + texto). Cada página
+       rellena y muestra solo los que tienen valor. -->
+  <div class="rh-info flex-column">
+    <span class="rh-cities rh-info-row" hidden>
+      <i class="bi bi-geo-alt-fill" />
+      <span class="rh-cities-list" />
+    </span>
+    <a class="rh-address rh-info-row" target="_blank" rel="noopener" hidden>
+      <i class="bi bi-map-fill" />
+      <span class="rh-address-text rh-info-link" />
+      <i class="bi bi-box-arrow-up-right rh-address-ext" />
     </a>
+    <a class="rh-phone rh-info-row" hidden>
+      <i class="bi bi-telephone-fill" />
+      <span class="rh-phone-text rh-info-link" />
+    </a>
+  </div>
+  <div class="rh-socials flex-row" hidden>
     <a class="rh-social rh-social-ig" target="_blank" rel="noopener" aria-label="Instagram" hidden>
       <i class="bi bi-instagram" />
     </a>
@@ -134,7 +139,11 @@ const isPending = r.status === "pending";
   .rh-btn-share {
     flex-shrink: 0;
     align-self: flex-start;
-    margin-right: -10px; /* pegado al menú ⋮ como un solo grupo de acciones */
+  }
+
+  /* Pegado al menú ⋮ como un solo grupo de acciones (solo si hay menú). */
+  .rh-btn-share:has(+ .rh-menu) {
+    margin-right: -10px;
   }
 
   .rh-btn-share[hidden] {
@@ -201,62 +210,65 @@ const isPending = r.status === "pending";
     flex-wrap: wrap;
   }
 
-  .rh-cities {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.78rem;
-    color: var(--clr-text);
-    opacity: 0.8;
+  /* Bloque de contacto separado del encabezado por una línea suave. Si no
+     hay ningún dato visible, desaparece (sin hueco). */
+  .rh-info {
+    align-items: flex-start;
+    gap: 8px;
+    padding-top: 12px;
+    margin-top: 4px;
+    border-top: 1px solid var(--clr-border);
   }
 
-  .rh-cities[hidden] {
+  .rh-info:not(:has(> :not([hidden]))) {
     display: none;
   }
 
-  .rh-cities i {
-    color: var(--clr-primary);
-    font-size: 0.78rem;
-    flex-shrink: 0;
-  }
-
-  /* Dirección → abre en la app de mapas preferida (scripts/maps.ts) */
-  .rh-address {
+  .rh-info-row {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    font-size: 0.8rem;
-    color: var(--clr-primary);
-    text-decoration: none;
-    width: fit-content;
+    gap: 10px;
     max-width: 100%;
+    font-size: 0.85rem;
+    color: var(--clr-text);
+    text-decoration: none;
   }
 
-  .rh-address[hidden] {
+  .rh-info-row[hidden] {
     display: none;
   }
 
-  .rh-address i {
-    font-size: 0.82rem;
+  .rh-info-row > i:first-child {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--clr-white2);
+    color: var(--clr-primary);
+    font-size: 0.8rem;
   }
 
-  .rh-address-text {
+  .rh-info-link {
     text-decoration: underline;
-    text-underline-offset: 2px;
+    text-decoration-color: var(--clr-border2);
+    text-underline-offset: 3px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .rh-address-ext {
-    font-size: 0.68rem !important;
-    opacity: 0.7;
+    flex-shrink: 0;
+    font-size: 0.68rem;
+    opacity: 0.6;
   }
 
   @media (hover: hover) {
-    .rh-address:hover .rh-address-text {
-      color: var(--clr-text);
+    a.rh-info-row:hover .rh-info-link {
+      text-decoration-color: currentColor;
     }
   }
 
@@ -289,19 +301,10 @@ const isPending = r.status === "pending";
     display: none;
   }
 
-  .rh-social-wa {
-    background: var(--clr-accent-bg);
-    color: var(--clr-on-accent);
-  }
-
   @media (hover: hover) {
     .rh-social:hover {
       background: var(--clr-accent-bg);
       color: var(--clr-on-accent);
-    }
-
-    .rh-social-wa:hover {
-      filter: brightness(0.92);
     }
   }
 

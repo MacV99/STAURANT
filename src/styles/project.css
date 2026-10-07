@@ -619,10 +619,10 @@
 /* === LOGO DE RESTAURANTE OFICIAL ===
    Avatar reutilizable (header /oficial, cards del inicio y de /explorar). Creado
    por JS → estilo global. Sin logo → placeholder con la inicial del nombre.
-   Base = 44px (cards); `.logo-avatar-lg` = header, donde antes iba el badge. */
+   Base = 52px (cards); `.logo-avatar-lg` = header, donde antes iba el badge. */
 .logo-avatar {
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   border-radius: var(--radius-md);
   flex-shrink: 0;
   align-self: center;
@@ -636,26 +636,26 @@
   align-items: center;
   justify-content: center;
   font-weight: 900;
-  font-size: 1.15rem;
+  font-size: 1.3rem;
   line-height: 1;
   color: var(--clr-text);
 }
 
-/* Variante grande: header /oficial (un poco más grande que el badge de 52px). */
+/* Variante grande: header /oficial. */
 .logo-avatar-lg {
-  width: 64px;
-  height: 64px;
+  width: 80px;
+  height: 80px;
   border-radius: var(--radius-lg);
 }
 
 .logo-avatar-lg.logo-avatar-placeholder {
-  font-size: 1.7rem;
+  font-size: 2rem;
 }
 
 @media (min-width: 768px) {
   .logo-avatar-lg {
-    width: 72px;
-    height: 72px;
+    width: 96px;
+    height: 96px;
   }
 }
 

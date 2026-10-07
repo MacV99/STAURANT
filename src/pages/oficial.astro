@@ -911,7 +911,6 @@ const tplRestaurant: Restaurant = {
     const row = div.querySelector<HTMLElement>(".rh-socials");
     if (!row) return;
     const links: [string, string | null][] = [
-      [".rh-social-wa", o.phone ? telUrl(o.phone) : null],
       [".rh-social-ig", o.instagram ? socialUrl("https://instagram.com/", o.instagram) : null],
       [".rh-social-fb", o.facebook ? socialUrl("https://facebook.com/", o.facebook) : null],
       [".rh-social-tt", o.tiktok ? socialUrl("https://tiktok.com/@", o.tiktok) : null],
@@ -963,8 +962,17 @@ const tplRestaurant: Restaurant = {
     const addressTextEl = div.querySelector(".rh-address-text");
     if (addressEl && addressTextEl && official!.address?.trim()) {
       addressTextEl.textContent = official!.address;
-      wireAddressLink(addressEl, official!.address);
+      wireAddressLink(addressEl, official!.address, official!.mapsUrl);
       addressEl.hidden = false;
+    }
+
+    // Teléfono → fila propia con el número visible; tocarlo llama.
+    const phoneEl = div.querySelector<HTMLAnchorElement>(".rh-phone");
+    const phoneTextEl = div.querySelector(".rh-phone-text");
+    if (phoneEl && phoneTextEl && official!.phone?.trim()) {
+      phoneTextEl.textContent = official!.phone.trim();
+      phoneEl.href = telUrl(official!.phone);
+      phoneEl.hidden = false;
     }
 
     // Logo donde antes iba el badge de nota; la calificación baja a dos pills
@@ -1002,7 +1010,7 @@ const tplRestaurant: Restaurant = {
       notesEl?.remove();
     }
 
-    // Redes + WhatsApp: se muestra SOLO el ícono con valor; los vacíos quedan
+    // Redes: se muestra SOLO el ícono con valor; los vacíos quedan
     // ocultos (sin huecos). La fila entera se oculta si no hay ninguno.
     fillSocials(div, official!);
 
