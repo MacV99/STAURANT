@@ -63,7 +63,26 @@ export default async (req, context) => {
       if (stage === "import-resvg") await import("@resvg/resvg-wasm");
       if (stage === "import") await loadRenderer();
       if (stage === "assets") await loadAssets(new URL(req.url).origin);
-      return new Response(`ok ${stage}`);
+      let info = "";
+      if (stage === "fetch-wasm" || stage === "init-fetched") {
+        const r = await fetch(new URL("/og/resvg.wasm", req.url));
+        const b = Buffer.from(await r.arrayBuffer());
+        info = `${r.status} ${r.headers.get("content-type")} ${b.length}`;
+        if (stage === "init-fetched") await (await loadRenderer()).initRenderer(b);
+      }
+      if (stage === "init-fs") {
+        const { readFile } = await import("node:fs/promises");
+        const { createRequire } = await import("node:module");
+        const path = createRequire(import.meta.url).resolve("@resvg/resvg-wasm/index_bg.wasm");
+        const b = await readFile(path);
+        info = `${path} ${b.length}`;
+        await (await loadRenderer()).initRenderer(b);
+      }
+      if (stage === "fetch-font") {
+        const r = await fetch(new URL("/og/montserrat-latin-900-normal.woff", req.url));
+        info = `${r.status} ${(await r.arrayBuffer()).byteLength}`;
+      }
+      return new Response(`ok ${stage} ${info}`);
     } catch (err) {
       return new Response(`fail ${stage}: ${err?.stack ?? err}`, { status: 500 });
     }
