@@ -56,6 +56,7 @@ async function fetchLogo(logoUrl) {
 }
 
 export default async (req, context) => {
+  if (new URL(req.url).searchParams.has("ping")) return new Response("pong");
   const url = process.env.PUBLIC_SUPABASE_URL;
   const key = process.env.PUBLIC_SUPABASE_ANON_KEY;
   const raw = decodeURIComponent(context.params.key ?? "").replace(/^@/, "").replace(/\.png$/i, "");
