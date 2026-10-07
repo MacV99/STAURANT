@@ -1,6 +1,5 @@
-# Funciones para la vista previa al compartir (ver netlify/lib/og-render.mjs).
+# Función de la vista previa al compartir (ver netlify/lib/og-render.mjs).
+# Todo va empaquetado (satori, resvg y recursos embebidos): sin binarios nativos
+# ni archivos sueltos que la función tenga que encontrar en tiempo de ejecución.
 [functions]
   node_bundler = "esbuild"
-  # satori (harfbuzz) y resvg cargan archivos .wasm de su carpeta: se suben
-  # completos en vez de empaquetarlos, o la función falla al arrancar.
-  external_node_modules = ["satori", "@resvg/resvg-wasm"]

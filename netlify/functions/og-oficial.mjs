@@ -2,37 +2,25 @@
 // vuelo: /og/oficial/<handle o id>. La referencia el <meta og:image> que inyecta
 // netlify/edge-functions/oficial-meta.ts. Diseño en netlify/lib/og-render.mjs.
 
-// Import dinámico: si el renderer no carga, se responde con la imagen genérica
-// (y el error queda en el log) en vez de un 502 sin detalle.
-let renderer = null;
-const loadRenderer = () => (renderer ??= import("../lib/og-render.mjs"));
+import { initRenderer, renderOfficialCard, FONT_WEIGHTS } from "../lib/og-render.mjs";
+// Recursos embebidos (base64, generados por scripts/og-app.mjs): en Netlify la
+// función no puede leer archivos sueltos ni pedírselos al propio sitio.
+import { BRAND_PNG, FONTS, RESVG_WASM } from "../lib/og-assets.mjs";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Recursos estáticos (public/og/: fuentes, logo blanco, resvg.wasm): se piden al
-// propio sitio una vez por instancia y quedan en memoria. Sin binarios nativos.
+// Se decodifican una vez por instancia y quedan en memoria.
 let assets = null;
-async function loadAssets(origin) {
+async function loadAssets() {
   if (assets) return assets;
-  const get = async (path) => {
-    const res = await fetch(new URL(path, origin));
-    if (!res.ok) throw new Error(`${path}: ${res.status}`);
-    return Buffer.from(await res.arrayBuffer());
-  };
-  const { FONT_WEIGHTS } = await loadRenderer();
-  const [wasm, brandPng, ...fontBufs] = await Promise.all([
-    get("/og/resvg.wasm"),
-    get("/og/logo-white.png"),
-    ...FONT_WEIGHTS.map((w) => get(`/og/montserrat-latin-${w}-normal.woff`)),
-  ]);
-  await (await loadRenderer()).initRenderer(wasm);
+  await initRenderer(Buffer.from(RESVG_WASM, "base64"));
   assets = {
-    brandPng,
-    fonts: FONT_WEIGHTS.map((weight, i) => ({
+    brandPng: Buffer.from(BRAND_PNG, "base64"),
+    fonts: FONT_WEIGHTS.map((weight) => ({
       name: "Montserrat",
       weight,
       style: "normal",
-      data: fontBufs[i],
+      data: Buffer.from(FONTS[weight], "base64"),
     })),
   };
   return assets;
@@ -56,37 +44,6 @@ async function fetchLogo(logoUrl) {
 }
 
 export default async (req, context) => {
-  const stage = new URL(req.url).searchParams.get("stage");
-  if (stage) {
-    try {
-      if (stage === "import-satori") await import("satori");
-      if (stage === "import-resvg") await import("@resvg/resvg-wasm");
-      if (stage === "import") await loadRenderer();
-      if (stage === "assets") await loadAssets(new URL(req.url).origin);
-      let info = "";
-      if (stage === "fetch-wasm" || stage === "init-fetched") {
-        const r = await fetch(new URL("/og/resvg.wasm", req.url));
-        const b = Buffer.from(await r.arrayBuffer());
-        info = `${r.status} ${r.headers.get("content-type")} ${b.length}`;
-        if (stage === "init-fetched") await (await loadRenderer()).initRenderer(b);
-      }
-      if (stage === "init-fs") {
-        const { readFile } = await import("node:fs/promises");
-        const { createRequire } = await import("node:module");
-        const path = createRequire(import.meta.url).resolve("@resvg/resvg-wasm/index_bg.wasm");
-        const b = await readFile(path);
-        info = `${path} ${b.length}`;
-        await (await loadRenderer()).initRenderer(b);
-      }
-      if (stage === "fetch-font") {
-        const r = await fetch(new URL("/og/montserrat-latin-900-normal.woff", req.url));
-        info = `${r.status} ${(await r.arrayBuffer()).byteLength}`;
-      }
-      return new Response(`ok ${stage} ${info}`);
-    } catch (err) {
-      return new Response(`fail ${stage}: ${err?.stack ?? err}`, { status: 500 });
-    }
-  }
   const url = process.env.PUBLIC_SUPABASE_URL;
   const key = process.env.PUBLIC_SUPABASE_ANON_KEY;
   const raw = decodeURIComponent(context.params.key ?? "").replace(/^@/, "").replace(/\.png$/i, "");
@@ -114,7 +71,7 @@ export default async (req, context) => {
         body: "{}",
       }),
       o.logo_url ? fetchLogo(o.logo_url) : Promise.resolve(null),
-      loadAssets(new URL(req.url).origin),
+      loadAssets(),
     ]);
 
     const dishCount = Number(countRes.headers.get("content-range")?.split("/")[1] ?? 0) || 0;
@@ -122,7 +79,6 @@ export default async (req, context) => {
     const stat = Array.isArray(stats) ? stats.find((s) => s.official_restaurant_id === o.id) : null;
 
     const cities = Array.isArray(o.cities) && o.cities.length ? o.cities : o.city ? [o.city] : [];
-    const { renderOfficialCard } = await loadRenderer();
     const png = await renderOfficialCard({
       name: o.name,
       cities: cities.map((c) => String(c).trim().toUpperCase()).filter(Boolean),

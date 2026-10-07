@@ -63,7 +63,7 @@ export default defineConfig({
         // Cachear solo assets estáticos
         globPatterns: ['**/*.{css,js,html,svg,png,jpg,jpeg,ico,webp,avif,woff,woff2}'],
         // Solo para las imágenes de vista previa al compartir (servidor): no precachear.
-        globIgnores: ['og/**', 'img/og-app.png'],
+        globIgnores: ['img/og-app.png'],
         runtimeCaching: [
           {
             // Supabase: siempre desde la red (auth + datos en tiempo real)

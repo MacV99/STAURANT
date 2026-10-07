@@ -94,7 +94,7 @@ Configured via `@vite-pwa/astro` in `astro.config.mjs`. Static assets are Workbo
 
 ### Vista previa al compartir (Open Graph)
 
-Los crawlers (WhatsApp, redes) no ejecutan JS. `Layout1` trae las `<meta og:*>` genéricas (imagen fija `public/img/og-app.png`, regenerar con `node scripts/og-app.mjs`). En `/oficial/*` el edge function `netlify/edge-functions/oficial-meta.ts` las reemplaza por las del restaurante, con imagen generada al vuelo por `netlify/functions/og-oficial.mjs` (`/og/oficial/<handle>`). Diseño compartido: `netlify/lib/og-render.mjs` (satori + resvg WebAssembly, sin binarios nativos; recursos en `public/og/`; el logo AVIF se pide como JPEG a la transformación de imágenes de Supabase). Solo funciona desplegado en Netlify, no en `pnpm dev`.
+Los crawlers (WhatsApp, redes) no ejecutan JS. `Layout1` trae las `<meta og:*>` genéricas (imagen fija `public/img/og-app.png`, regenerar con `node scripts/og-app.mjs`). En `/oficial/*` el edge function `netlify/edge-functions/oficial-meta.ts` las reemplaza por las del restaurante, con imagen generada al vuelo por `netlify/functions/og-oficial.mjs` (`/og/oficial/<handle>`). Diseño compartido: `netlify/lib/og-render.mjs` (satori 0.12 + resvg WebAssembly; sin binarios nativos ni archivos sueltos: fuentes, logo y wasm van embebidos en `netlify/lib/og-assets.mjs`, generado por `scripts/og-app.mjs`; el logo AVIF se pide como JPEG a la transformación de imágenes de Supabase). Solo funciona desplegado en Netlify, no en `pnpm dev`.
 
 ### Environment variables
 
