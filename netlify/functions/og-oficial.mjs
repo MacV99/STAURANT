@@ -2,7 +2,10 @@
 // vuelo: /og/oficial/<handle o id>. La referencia el <meta og:image> que inyecta
 // netlify/edge-functions/oficial-meta.ts. Diseño en netlify/lib/og-render.mjs.
 
-import { initRenderer, renderOfficialCard, FONT_WEIGHTS } from "../lib/og-render.mjs";
+// Import dinámico: si el renderer no carga, se responde con la imagen genérica
+// (y el error queda en el log) en vez de un 502 sin detalle.
+let renderer = null;
+const loadRenderer = () => (renderer ??= import("../lib/og-render.mjs"));
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -16,12 +19,13 @@ async function loadAssets(origin) {
     if (!res.ok) throw new Error(`${path}: ${res.status}`);
     return Buffer.from(await res.arrayBuffer());
   };
+  const { FONT_WEIGHTS } = await loadRenderer();
   const [wasm, brandPng, ...fontBufs] = await Promise.all([
     get("/og/resvg.wasm"),
     get("/og/logo-white.png"),
     ...FONT_WEIGHTS.map((w) => get(`/og/montserrat-latin-${w}-normal.woff`)),
   ]);
-  await initRenderer(wasm);
+  await (await loadRenderer()).initRenderer(wasm);
   assets = {
     brandPng,
     fonts: FONT_WEIGHTS.map((weight, i) => ({
@@ -87,6 +91,7 @@ export default async (req, context) => {
     const stat = Array.isArray(stats) ? stats.find((s) => s.official_restaurant_id === o.id) : null;
 
     const cities = Array.isArray(o.cities) && o.cities.length ? o.cities : o.city ? [o.city] : [];
+    const { renderOfficialCard } = await loadRenderer();
     const png = await renderOfficialCard({
       name: o.name,
       cities: cities.map((c) => String(c).trim().toUpperCase()).filter(Boolean),
@@ -106,6 +111,8 @@ export default async (req, context) => {
     });
   } catch (err) {
     console.error("[og-oficial]", err);
+    if (new URL(req.url).searchParams.has("debug"))
+      return new Response(String(err?.stack ?? err), { status: 500 });
     return Response.redirect(new URL("/img/og-app.png", req.url), 302);
   }
 };
