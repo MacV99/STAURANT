@@ -200,28 +200,88 @@ const tplRestaurant: Restaurant = {
     }
   }
 
-  /* ══ Ficha editorial de la carta oficial (.official-dish) ══════════════════
-     Reestiliza la DishCard reusada SOLO para /oficial. Sin foto, el espacio se
-     reparte como una ficha: eyebrow de tipo, nombre fuerte, descripción a 2
-     líneas, fila meta (precio + pill) al pie, y el badge de nota a la derecha
-     como "score". No afecta las cards personales (sin esta clase). */
+  /* ══ Header oficial en celular ═════════════════════════════════════════════
+     Logo grande a la izquierda, pills (Global / Personal / platos) apilados a
+     su derecha y el nombre debajo a todo el ancho → no se parte en 2 líneas
+     estrechas. .rh-headline con display:contents deja al nombre y a los pills
+     como celdas propias de la grilla. En desktop queda el layout de fila. */
+  @media (max-width: 767px) {
+    .rh-card.is-official .rh-top {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      grid-template-areas:
+        "logo pills share"
+        "name name name";
+      align-items: center;
+      gap: 14px 16px;
+    }
+
+    .rh-card.is-official .rh-headline {
+      display: contents;
+    }
+
+    .rh-card.is-official .logo-avatar-lg {
+      grid-area: logo;
+      width: 104px;
+      height: 104px;
+    }
+
+    .rh-card.is-official .logo-avatar-lg.logo-avatar-placeholder {
+      font-size: 2.6rem;
+    }
+
+    .rh-card.is-official .rh-pills {
+      grid-area: pills;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+    }
+
+    .rh-card.is-official .rh-btn-share {
+      grid-area: share;
+      align-self: start;
+      margin-top: -6px;
+      margin-right: -8px;
+    }
+
+    .rh-card.is-official .rh-name {
+      grid-area: name;
+      font-size: 1.3rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .rh-card.is-official .rh-name.is-long {
+      font-size: 1.1rem;
+    }
+  }
+
+  /* ══ Ficha de la carta oficial (.official-dish) ════════════════════════════
+     Reestiliza la DishCard reusada SOLO para /oficial: nombre fuerte, tipo
+     discreto, fila de notas en pills chicos (🌐 comunidad + 👤 tuya) y la
+     miniatura de la foto a la derecha (solo si el plato tiene foto). No afecta
+     las cards personales (sin esta clase). */
   .dish-card.official-dish {
     align-items: center;
     gap: 14px;
-    padding: 15px 16px;
+    min-height: 76px;
+    padding: 12px 12px 12px 16px;
     border-radius: 16px;
   }
 
-  /* Columna de contenido a la izquierda; badge de nota empujado a la derecha. */
   .dish-card.official-dish .dish-info {
     order: 0;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
   }
 
-  .dish-card.official-dish .rating-badge {
+  .dish-card.official-dish .dish-thumb {
     order: 2;
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    border: 1px solid var(--clr-border);
   }
 
   .dish-card.official-dish .owner-dish-actions,
@@ -230,28 +290,64 @@ const tplRestaurant: Restaurant = {
   }
 
   .dish-card.official-dish h4 {
-    font-size: 1.02rem;
-    font-weight: 800;
-    line-height: 1.15;
-    letter-spacing: 0.1px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.2px;
     /* Look de ficha uniforme: nombre en mayúsculas sin importar cómo se guardó
        el dato (igual que el modal .official-name). */
     text-transform: uppercase;
+    /* Máximo 2 líneas; si no cabe, termina en "…". */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
   }
 
-  /* Fila meta al pie: pill secundario del otro lente (el precio vive en el modal). */
+  .dish-card.official-dish h4.is-long {
+    font-size: 0.85rem;
+  }
+
+  /* Fila de notas al pie (el precio vive en el modal). */
   .dish-card.official-dish .od-meta {
     align-items: center;
     justify-content: flex-start;
-    gap: 8px;
-    margin-top: 8px;
+    gap: 6px;
+    margin-top: 6px;
     flex-wrap: wrap;
   }
 
-  /* Badge de nota: score a la derecha. Un pelín más grande = jerarquía clara. */
-  .dish-card.official-dish .rating-badge {
-    flex-shrink: 0;
-    transform: scale(1.06);
+  /* Pill de TU nota: mismo pill chico, con un punto del color de la nota
+     (≤4 rojo · 5-7 ámbar · ≥8 verde) en vez de la franja del badge grande. */
+  .dish-card.official-dish .od-my-pill {
+    position: relative;
+    border-radius: 20px;
+  }
+
+  .dish-card.official-dish .od-my-pill::after {
+    content: none;
+  }
+
+  .dish-card.official-dish .od-my-pill:not(.is-empty)::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--badge-accent);
+  }
+
+  /* Sin calificar: invita a tocar (tinta de marca, más visible que el gris). */
+  .dish-card.official-dish .od-my-pill.is-empty {
+    color: var(--clr-text);
+    border-color: var(--clr-border2);
+  }
+
+  /* Corona del plato estrella: en línea junto a los pills, no flotando. */
+  .dish-card.official-dish .od-meta .crown-badge {
+    position: static;
+    font-size: 0.95rem;
+    transform: none;
   }
 
   @media (hover: hover) {
@@ -743,7 +839,7 @@ const tplRestaurant: Restaurant = {
     type OfficialDish,
   } from "../lib/data.ts";
   import {
-    paintRatingBadge,
+    getRatingClass,
     buildGlobalRatingPill,
     buildRatingPill,
     buildOfficialLogo,
@@ -942,7 +1038,10 @@ const tplRestaurant: Restaurant = {
     div.classList.add("is-official");
 
     // Nombre + sello verificado
-    fillRestaurantName(div.querySelector("h1")!, official!.name, true);
+    const nameEl = div.querySelector("h1")!;
+    fillRestaurantName(nameEl, official!.name, true);
+    // Nombres largos bajan un escalón de tamaño (sin perder protagonismo).
+    nameEl.classList.toggle("is-long", official!.name.length > 18);
 
     // Conteo de platos
     const pill = div.querySelector(".dish-count-pill");
@@ -1036,12 +1135,25 @@ const tplRestaurant: Restaurant = {
     // sin tocar las cards personales que reusan .dish-card).
     article.classList.add("official-dish");
     article.setAttribute("data-id", od.id);
-    article.querySelector("h4")!.textContent = od.name;
+    const nameEl = article.querySelector("h4")!;
+    nameEl.textContent = od.name;
+    // Nombres largos: un escalón más chico para que quepan en 2 líneas.
+    nameEl.classList.toggle("is-long", od.name.length > 24);
 
-    // La foto del plato NO se muestra en la card: solo dentro del modal de
-    // detalles/calificación (DishForm.openOfficial). Se elimina el <img> siempre
-    // → cero espacio reservado, con o sin foto.
-    article.querySelector(".dish-thumb")?.remove();
+    // Miniatura a la derecha (donde antes iba el badge): solo si el plato tiene
+    // foto → de un vistazo se ve cuáles la tienen. Sin foto, no ocupa espacio.
+    const thumb = article.querySelector<HTMLImageElement>(".dish-thumb");
+    if (thumb && od.imageUrl && !od.isGeneric) {
+      thumb.src = od.imageUrl;
+      thumb.loading = "lazy";
+      thumb.decoding = "async";
+      thumb.hidden = false;
+      thumb.onerror = () => thumb.remove();
+    } else thumb?.remove();
+
+    // La nota ya no va en el badge grande: Global y Personal son pills chicos
+    // debajo del nombre.
+    article.querySelector(".rating-badge")?.remove();
 
     const infoEl = article.querySelector<HTMLElement>(".dish-info")!;
 
@@ -1051,41 +1163,29 @@ const tplRestaurant: Restaurant = {
     else typeTagEl?.remove();
 
     // ── Producto genérico (Coca-Cola, agua…) ─────────────────────────────────
-    // Sin calificación: no hay badge ni flujo de rating. El precio NO va en la
-    // card — se muestra solo dentro del modal. En modo admin cae al bloque de
-    // edición de abajo.
+    // Sin calificación ni foto. El precio NO va en la card — se muestra solo
+    // dentro del modal. En modo admin cae al bloque de edición de abajo.
     if (od.isGeneric && !adminMode) {
-      article.querySelector(".rating-badge")?.remove();
       article.querySelector(".dish-actions")?.remove();
       article.classList.add("is-rateable");
       article.addEventListener("click", () => openOfficialModal(od));
       return article;
     }
 
-    // Fila meta al pie: pill secundario del otro lente. El precio NO va en la
-    // card — se muestra solo dentro del modal de detalle (DishForm.openOfficial).
+    // Fila de notas: 🌐 comunidad + 👤 tuya (o "Calificar" si aún no).
     const stat = getOfficialDishStat(od.id);
-    const globalAvg = stat && stat.ratingsCount > 0 ? stat.avgRating : null;
     const myRating = getMyRatingFor(od.id);
     const meta = document.createElement("div");
     meta.className = "od-meta flex-row";
 
-    // Pill secundario = 🌐 nota de la comunidad (si existe).
     if (stat && stat.ratingsCount > 0)
       meta.appendChild(buildGlobalRatingPill(stat.avgRating, stat.ratingsCount));
 
-    if (meta.children.length) infoEl.appendChild(meta);
-
-    // Badge grande = TU nota. Vacío = estrella que invita a tocar y calificar.
-    const badge = article.querySelector(".rating-badge")!;
-    const badgeScore = myRating;
-
     // ── Modo ADMINISTRADOR: la card se edita, no se califica ─────────────────
-    // El badge muestra el promedio del público (informativo, sin botón) y en su
-    // lugar aparecen controles para editar / eliminar el plato de la carta. En
+    // Solo la nota del público (informativa) + controles editar / eliminar. En
     // vista visitante (adminMode=false) el dueño cae al flujo normal y califica.
     if (adminMode) {
-      paintRatingBadge(badge, globalAvg);
+      if (meta.children.length) infoEl.appendChild(meta);
       const actions = article.querySelector<HTMLElement>(".dish-actions");
       if (actions) {
         actions.className = "owner-dish-actions";
@@ -1116,13 +1216,20 @@ const tplRestaurant: Restaurant = {
       return article;
     }
 
-    paintRatingBadge(badge, badgeScore, { button: true });
+    // Pill personal: tu nota con su color, o "★ Calificar" que invita a tocar.
+    const mine = document.createElement("span");
+    if (myRating === null) {
+      mine.className = "global-rating-pill od-my-pill is-empty";
+      mine.innerHTML = `<i class="bi bi-star"></i> Calificar`;
+    } else {
+      mine.className = `global-rating-pill od-my-pill ${getRatingClass(myRating)}`;
+      mine.title = "Tu calificación";
+      mine.innerHTML = `<i class="bi bi-person-fill"></i> ${myRating}`;
+    }
+    meta.appendChild(mine);
     if (topOfficialDishIds.has(od.id))
-      badge.appendChild(makeCrown("Plato estrella de la comunidad"));
-    badge.addEventListener("click", (e) => {
-      e.stopPropagation();
-      openOfficialModal(od);
-    });
+      meta.appendChild(makeCrown("Plato estrella de la comunidad"));
+    infoEl.appendChild(meta);
 
     // Sin menú de acciones personales; tocar la card abre el detalle del plato.
     article.querySelector(".dish-actions")?.remove();
