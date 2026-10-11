@@ -120,7 +120,7 @@ reposo `--clr-white2` → hover `--clr-border`. El danger sube solo el fondo `*-
 
 | Elemento | Hover / Focus / Press |
 | -------- | --------------------- |
-| Botón/control neutro | hover = subir superficie un escalón (white→white2, white2→border), `@media hover:hover`; press `scale(0.95)`. Ej. `.city-chip`, `.owner-dish-btn`, `.cc-option`, `.pt-action` |
+| Botón/control neutro | hover = subir superficie un escalón (white→white2, white2→border), `@media hover:hover`; press `scale(0.95)`. Ej. `.filter-chip`, `.sort-trigger`, `.owner-dish-btn`, `.cc-option`, `.pt-action` |
 | Card | press `scale(0.98)`; oficial = borde dorado |
 | Badge clicable | `.badge-btn` press `scale(0.92)`, hover `brightness(.92)` |
 | Foco teclado | `:focus-visible` → `--focus-ring` (siempre visible, nunca en click de ratón) |

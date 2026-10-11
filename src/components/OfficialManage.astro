@@ -1125,8 +1125,8 @@ import FormModal from "./FormModal.astro";
     deleteOfficial,
     uploadOfficialDishImage,
     deleteOfficialDishImage,
-    getOfficialCities,
-    getCities,
+    getCityUsage,
+    getCatalogUsage,
   } from "../lib/data.ts";
   import {
     emit,
@@ -1136,6 +1136,8 @@ import FormModal from "./FormModal.astro";
     wireCreatableMultiCombobox,
     formatThousands,
     attachThousandsFormat,
+    rankComboOptions,
+    type ComboOption,
   } from "../scripts/store.ts";
 
   document.addEventListener("astro:page-load", () => {
@@ -1168,9 +1170,9 @@ import FormModal from "./FormModal.astro";
     }
     dGenericEl.onchange = () => applyGenericUI(dGenericEl.checked);
 
-    // Combobox creable de tipo/categoría. Las opciones = tipos ya usados en la
-    // carta (se pasan como `suggestions` al abrir); `typeOptions` se lee en vivo.
-    let typeOptions: string[] = [];
+    // Combobox creable de tipo/categoría. Opciones = las de esta carta (más
+    // usadas arriba) + las de todos los restaurantes; `typeOptions` se lee en vivo.
+    let typeOptions: ComboOption[] = [];
     const typeCombo = wireCreatableCombobox({
       combobox: document.getElementById("odf-type-combobox") as HTMLElement,
       input: dTypeEl,
@@ -1267,17 +1269,21 @@ import FormModal from "./FormModal.astro";
     document.getElementById("odf-close")!.onclick = closeDishModal;
     document.getElementById("odf-cancel")!.onclick = closeDishModal;
 
-    /** Sugerencias de tipo (los type_name ya usados en la carta) → alimentan el
-     *  combobox creable para evitar categorías duplicadas por typos. */
-    function fillTypeSuggestions(suggestions: string[]) {
-      typeOptions = [...new Set(suggestions)].sort((a, b) => a.localeCompare(b, "es"));
+    /** Opciones de tipo: primero las de esta carta (uso → `suggestions`) y
+     *  debajo las de todos los restaurantes (llegan async). Evita duplicados. */
+    const TYPE_LABELS = { local: "En esta carta", global: "De otros restaurantes" };
+    function fillTypeSuggestions(suggestions: Map<string, number>) {
+      typeOptions = rankComboOptions(suggestions, new Map(), TYPE_LABELS);
+      getCatalogUsage().then((u) => {
+        typeOptions = rankComboOptions(suggestions, u.types, TYPE_LABELS);
+      });
     }
 
     // URL de la imagen YA persistida en el plato (null al crear). Sirve para no
     // borrar del storage la foto original si el usuario sube otra y luego cancela.
     let originalImageUrl: string | null = null;
 
-    function openDishCreate(officialRestaurantId: string, suggestions: string[] = []) {
+    function openDishCreate(officialRestaurantId: string, suggestions: Map<string, number> = new Map()) {
       dishForm.reset();
       dErrEl.textContent = "";
       dishTitle.textContent = "Nuevo plato";
@@ -1294,7 +1300,7 @@ import FormModal from "./FormModal.astro";
       dNameEl.focus();
     }
 
-    function openDishEdit(od: OfficialDish, suggestions: string[] = []) {
+    function openDishEdit(od: OfficialDish, suggestions: Map<string, number> = new Map()) {
       dishForm.reset();
       dErrEl.textContent = "";
       dishTitle.textContent = "Editar plato";
@@ -1461,9 +1467,9 @@ import FormModal from "./FormModal.astro";
       renderLogoField(res.url);
     };
 
-    // Combobox creable MULTI de ciudades (chips). Opciones = mis ciudades
-    // personales + las de cualquier oficial, en MAYÚSCULAS (llegan async).
-    let cityOptions: string[] = [];
+    // Combobox creable MULTI de ciudades (chips). Opciones = ciudades de todos
+    // los restaurantes, las más usadas arriba (llegan async).
+    let cityOptions: ComboOption[] = [];
     const cityCombo = wireCreatableMultiCombobox({
       combobox: document.getElementById("opf-city-combobox") as HTMLElement,
       input: pCityEl,
@@ -1473,12 +1479,7 @@ import FormModal from "./FormModal.astro";
       createVerb: "Agregar",
     });
 
-    /** Ciudades existentes → opciones del combobox creable (deduplicadas en MAYÚS). */
-    function fillCitySuggestions(cities: string[]) {
-      cityOptions = [...new Set(cities.map((c) => c.trim().toUpperCase()))].sort(
-        (a, b) => a.localeCompare(b, "es"),
-      );
-    }
+    const CITY_LABELS = { local: "Tus ciudades", global: "Otras ciudades" };
 
     /** Cierra el editor descartando un logo recién subido y sin guardar (huérfano
      *  en el storage). El original nunca se toca. */
@@ -1526,14 +1527,13 @@ import FormModal from "./FormModal.astro";
       pLogoUrlEl.value = originalLogoUrl ?? "";
       renderLogoField(originalLogoUrl);
       profApi.open();
-      // Opciones = mis ciudades personales (cache, inmediatas) + las de TODOS los
-      // oficiales (async). Así aparecen ciudades como NEIVA/RIVERA que solo usé en
-      // restaurantes personales, además de las ya usadas por otros dueños.
-      const personal = getCities();
-      fillCitySuggestions(personal);
-      getOfficialCities().then((official) =>
-        fillCitySuggestions([...personal, ...official]),
-      );
+      // Opciones = mis ciudades (cache, inmediatas) + las de TODOS los
+      // restaurantes (async), cada grupo con las más usadas arriba.
+      const personal = getCityUsage();
+      cityOptions = rankComboOptions(personal, new Map(), CITY_LABELS);
+      getCatalogUsage().then((u) => {
+        cityOptions = rankComboOptions(personal, u.cities, CITY_LABELS);
+      });
     }
 
     profForm.onsubmit = async (e) => {

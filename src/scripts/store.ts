@@ -12,6 +12,16 @@ export function getRatingBadgeHTML(score: number | null): string {
   return `<span class="rating-badge ${cls}"><span class="rating-num">${score}</span></span>`;
 }
 
+/** Nombre de plato para LISTAS: abrevia palabras muy obvias solo si el nombre
+ *  es largo ("Hamburguesa doble con tocineta" → "Hamb. doble con tocineta").
+ *  El nombre completo sigue en el modal y en la búsqueda. */
+export function shortDishName(name: string): string {
+  if (name.length <= 18) return name;
+  return name.replace(/\bhamburguesa\b/gi, (w) =>
+    w[0] === w[0].toUpperCase() && w[1] === w[1].toUpperCase() ? "HAMB." : w[0] + "amb.",
+  );
+}
+
 /** Corona 👑 para destacar el mejor valorado (restaurante o plato). */
 export function makeCrown(label = "Mejor valorado"): HTMLSpanElement {
   const crown = document.createElement("span");
@@ -132,18 +142,88 @@ export function fillRestaurantName(
   el.appendChild(tailSpan);
 }
 
-/** Sincroniza el estado visual de las `.sort-pill` (activa + flecha asc/desc).
- *  Mismo cuerpo que vivía copiado en index / oficial / restaurante / usuario. */
+/** Marca la opción activa del SortBar (campo + dirección) y pone su texto
+ *  corto en el botón "Ordenar". */
 export function updateSortPills(field: string, dir: "asc" | "desc"): void {
-  document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach((btn) => {
-    const isActive = btn.dataset.field === field;
-    btn.classList.toggle("active", isActive);
-    const icon = btn.querySelector("i");
-    if (icon)
-      icon.className = isActive
-        ? `bi bi-arrow-${dir === "asc" ? "up" : "down"}`
-        : "bi bi-arrow-down-up";
+  document.querySelectorAll<HTMLElement>(".sort-bar").forEach((bar) => {
+    let activeShort = "";
+    bar.querySelectorAll<HTMLButtonElement>(".sort-opt").forEach((btn) => {
+      const isActive = btn.dataset.field === field && btn.dataset.dir === dir;
+      btn.classList.toggle("active", isActive);
+      if (isActive) activeShort = btn.dataset.short ?? "";
+    });
+    const label = bar.querySelector(".sort-trigger-label");
+    if (label && activeShort) label.textContent = activeShort;
   });
+}
+
+/** Cablea las opciones del SortBar: al tocar una, avisa `onPick` y cierra la
+ *  hoja. Usa `.onclick` → reasignar en cada page-load no acumula handlers. */
+export function wireSortBar(onPick: (field: string, dir: "asc" | "desc") => void): void {
+  document.querySelectorAll<HTMLButtonElement>(".sort-opt").forEach((btn) => {
+    btn.onclick = () => {
+      onPick(btn.dataset.field ?? "", btn.dataset.dir === "asc" ? "asc" : "desc");
+      btn.closest<HTMLDialogElement>("dialog")?.close();
+    };
+  });
+}
+
+/** Opción de una fila de chips de filtro ("" en `selected` = Todos). */
+export interface FilterChipOption {
+  value: string;
+  label: string;
+  count?: number;
+}
+
+/** Pinta una fila deslizable de chips: "Todos" + una por opción. Se oculta si
+ *  hay menos de 2 opciones (filtrar no serviría de nada). */
+export function renderFilterChips(
+  el: HTMLElement,
+  cfg: {
+    options: FilterChipOption[];
+    selected: string;
+    allLabel?: string;
+    onPick: (value: string) => void;
+  },
+): void {
+  el.innerHTML = "";
+  el.hidden = cfg.options.length < 2;
+  if (el.hidden) return;
+
+  const make = (value: string, label: string, count?: number) => {
+    const chip = document.createElement("button");
+    const active = value === cfg.selected;
+    chip.type = "button";
+    chip.className = "filter-chip" + (active ? " active" : "");
+    chip.setAttribute("aria-pressed", String(active));
+    chip.textContent = label;
+    if (count) {
+      const c = document.createElement("span");
+      c.className = "filter-chip-count";
+      c.textContent = String(count);
+      chip.appendChild(c);
+    }
+    chip.onclick = () => cfg.onPick(value);
+    el.appendChild(chip);
+    return chip;
+  };
+
+  make("", cfg.allLabel ?? "Todos");
+  cfg.options.forEach((o) => {
+    const chip = make(o.value, o.label, o.count);
+    // La activa siempre a la vista (p. ej. al volver con un filtro puesto).
+    if (o.value === cfg.selected)
+      requestAnimationFrame(() => chip.scrollIntoView({ block: "nearest", inline: "center" }));
+  });
+}
+
+/** Tras filtrar u ordenar con la barra fija ya pegada arriba, sube la página al
+ *  inicio de la lista para que se vean los primeros resultados. */
+export function keepListInView(listEl: HTMLElement | null, stickyEl: HTMLElement | null): void {
+  if (!listEl || !stickyEl) return;
+  const stickyBottom = stickyEl.getBoundingClientRect().bottom;
+  const listTop = listEl.getBoundingClientRect().top;
+  if (listTop < stickyBottom) window.scrollBy({ top: listTop - stickyBottom - 12 });
 }
 
 // ─── Event bus ─────────────────────────────────────────────────────────────────
@@ -215,6 +295,113 @@ export function createOverlay(
   return { overlay, open, close };
 }
 
+// ─── Opciones de combobox: orden por uso, grupos y búsqueda sin tildes ──────
+
+/** Opción de combobox: valor (MAYÚSCULAS), veces usada y grupo opcional. */
+export interface ComboOption {
+  value: string;
+  count?: number;
+  group?: string;
+}
+
+/** Texto comparable: MAYÚSCULAS, sin tildes ni espacios extra
+ *  ("aromática " → "AROMATICA"). Para buscar y detectar duplicados. */
+export function normalizeText(s: string): string {
+  return s.normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toUpperCase();
+}
+
+function byUse(a: [string, number], b: [string, number]): number {
+  return b[1] - a[1] || a[0].localeCompare(b[0], "es");
+}
+
+/** Arma las opciones en dos grupos: primero las del restaurante (más usadas
+ *  arriba) y debajo las de todos los restaurantes (por uso global). Una opción
+ *  de `global` que ya está en `local` (sin importar tildes) no se repite. */
+export function rankComboOptions(
+  local: Map<string, number>,
+  global: Map<string, number>,
+  labels: { local: string; global: string },
+): ComboOption[] {
+  const out: ComboOption[] = [...local]
+    .sort(byUse)
+    .map(([value, count]) => ({ value, count, group: labels.local }));
+  const seen = new Set(out.map((o) => normalizeText(o.value)));
+  [...global].sort(byUse).forEach(([value, count]) => {
+    const key = normalizeText(value);
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({ value, count, group: labels.global });
+  });
+  return out;
+}
+
+/** Cuenta valores repetidos → Map nombre → veces (ignora vacíos). */
+export function countValues(values: Iterable<string | null | undefined>): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const v of values) {
+    const k = v?.trim().toUpperCase();
+    if (k) map.set(k, (map.get(k) ?? 0) + 1);
+  }
+  return map;
+}
+
+function toComboOption(o: string | ComboOption): ComboOption {
+  return typeof o === "string" ? { value: o } : o;
+}
+
+/** Si `value` ya existe entre las opciones escrito con/sin tildes, devuelve la
+ *  versión existente ("AROMATICA" → "AROMÁTICA"); si no, el mismo `value`. */
+export function matchExistingOption(
+  options: Array<string | ComboOption>,
+  value: string,
+): string {
+  const key = normalizeText(value);
+  if (!key) return value;
+  return options.map(toComboOption).find((o) => normalizeText(o.value) === key)?.value ?? value;
+}
+
+/** Filtra (sin tildes) y pinta las opciones en `dropdown`, con título de grupo
+ *  cuando hay más de uno y el conteo de uso a la derecha. Devuelve si hubo
+ *  coincidencia exacta (sin tildes) para no ofrecer "Crear" un duplicado. */
+export function renderComboOptions(cfg: {
+  dropdown: HTMLElement;
+  options: Array<string | ComboOption>;
+  query: string;
+  optionClass: string;
+  selected?: string | null;
+  onPick: (value: string) => void;
+}): { exact: boolean } {
+  const q = normalizeText(cfg.query);
+  const opts = cfg.options.map(toComboOption);
+  const filtered = q ? opts.filter((o) => normalizeText(o.value).includes(q)) : opts;
+  const exact = !!q && opts.some((o) => normalizeText(o.value) === q);
+  const groups = new Set(filtered.map((o) => o.group ?? ""));
+  let lastGroup: string | undefined;
+
+  filtered.forEach((o) => {
+    if (groups.size > 1 && o.group && o.group !== lastGroup) {
+      const h = document.createElement("div");
+      h.className = "cc-group-label";
+      h.textContent = o.group;
+      cfg.dropdown.appendChild(h);
+    }
+    lastGroup = o.group;
+    const el = document.createElement("div");
+    el.className = cfg.optionClass + (o.value === cfg.selected ? " is-selected" : "");
+    el.textContent = o.value;
+    if (o.count) {
+      const c = document.createElement("span");
+      c.className = "cc-count";
+      c.textContent = String(o.count);
+      el.appendChild(c);
+    }
+    el.addEventListener("mousedown", (e) => e.preventDefault());
+    el.addEventListener("click", () => cfg.onPick(o.value));
+    cfg.dropdown.appendChild(el);
+  });
+  return { exact };
+}
+
 // ─── Combobox creable (single, basado en strings) ────────────────────────────
 
 /**
@@ -236,7 +423,7 @@ export function wireCreatableCombobox(cfg: {
   input: HTMLInputElement;
   dropdown: HTMLElement;
   clearBtn?: HTMLButtonElement | null;
-  getOptions: () => string[];
+  getOptions: () => Array<string | ComboOption>;
   createVerb?: string;
   emptyText?: string;
 }): { setValue: (v: string) => void; getValue: () => string; close: () => void } {
@@ -249,25 +436,21 @@ export function wireCreatableCombobox(cfg: {
   }
 
   function select(value: string): void {
-    input.value = value;
+    input.value = matchExistingOption(cfg.getOptions(), value);
     syncClear();
     close();
   }
 
   function render(query: string): void {
     const q = query.trim().toUpperCase();
-    const opts = cfg.getOptions();
-    const filtered = q ? opts.filter((o) => o.includes(q)) : opts;
-    const exact = opts.some((o) => o === q);
     dropdown.innerHTML = "";
-
-    filtered.forEach((o) => {
-      const el = document.createElement("div");
-      el.className = "cc-option" + (o === q ? " is-selected" : "");
-      el.textContent = o;
-      el.addEventListener("mousedown", (e) => e.preventDefault());
-      el.addEventListener("click", () => select(o));
-      dropdown.appendChild(el);
+    const { exact } = renderComboOptions({
+      dropdown,
+      options: cfg.getOptions(),
+      query,
+      optionClass: "cc-option",
+      selected: q,
+      onPick: select,
     });
 
     // Opción para crear una nueva (texto sin coincidencia exacta).
@@ -363,7 +546,7 @@ export function wireCreatableMultiCombobox(cfg: {
   input: HTMLInputElement;
   dropdown: HTMLElement;
   chips: HTMLElement;
-  getOptions: () => string[];
+  getOptions: () => Array<string | ComboOption>;
   createVerb?: string;
   pinIcon?: string;
 }): { getValues: () => string[]; setValues: (v: string[]) => void; flush: () => void } {
@@ -400,9 +583,9 @@ export function wireCreatableMultiCombobox(cfg: {
   }
 
   function add(value: string): void {
-    const v = value.trim().toUpperCase();
+    const v = matchExistingOption(cfg.getOptions(), value.trim().toUpperCase());
     if (!v) return;
-    if (!selected.includes(v)) selected.push(v);
+    if (!selected.some((c) => normalizeText(c) === normalizeText(v))) selected.push(v);
     renderChips();
     input.value = "";
     input.focus();
@@ -416,19 +599,20 @@ export function wireCreatableMultiCombobox(cfg: {
 
   function render(query: string): void {
     const q = query.trim().toUpperCase();
-    const pool = cfg.getOptions().filter((c) => !selected.includes(c));
-    const filtered = q ? pool.filter((c) => c.includes(q)) : pool;
-    const exact = pool.includes(q) || selected.includes(q);
+    const taken = new Set(selected.map(normalizeText));
+    const pool = cfg
+      .getOptions()
+      .map(toComboOption)
+      .filter((o) => !taken.has(normalizeText(o.value)));
     dropdown.innerHTML = "";
-
-    filtered.forEach((c) => {
-      const opt = document.createElement("div");
-      opt.className = "cc-option";
-      opt.textContent = c;
-      opt.addEventListener("mousedown", (e) => e.preventDefault());
-      opt.addEventListener("click", () => add(c));
-      dropdown.appendChild(opt);
+    const res = renderComboOptions({
+      dropdown,
+      options: pool,
+      query,
+      optionClass: "cc-option",
+      onPick: add,
     });
+    const exact = res.exact || taken.has(normalizeText(q));
 
     if (q && !exact) {
       const opt = document.createElement("div");

@@ -45,43 +45,39 @@ const tplRestaurant: Restaurant = {
         <h2 class="dishes-title">Platos</h2>
       </div>
 
-      <div class="dish-search-wrap">
-        <i class="bi bi-search dish-search-icon"></i>
-        <input
-          id="dish-search"
-          class="dish-search-input"
-          type="search"
-          placeholder="Buscar plato..."
-          autocomplete="off"
-          spellcheck="false"
-        />
-        <button
-          id="dish-search-clear"
-          class="dish-search-clear"
-          type="button"
-          aria-label="Limpiar búsqueda"
-          hidden
-        >
-          <i class="bi bi-x-circle-fill"></i>
-        </button>
-      </div>
-
-      <div class="dishes-controls flex-row">
-        <SortBar
-          pills={[
-            { field: "rating", label: "Rating" },
-            { field: "name", label: "Nombre" },
-            { field: "modified", label: "Modificación" },
-            { field: "date", label: "Creación" },
-          ]}
-        />
-        <div class="type-filter-wrap">
-          <button id="dish-type-btn" class="type-pill">
-            <span class="type-pill-label">Tipo</span>
-            <span id="dish-type-value" class="type-pill-value">Todos</span>
-            <i class="bi bi-chevron-down"></i>
+      <div class="list-toolbar texture-dotted">
+        <div class="dish-search-wrap">
+          <i class="bi bi-search dish-search-icon"></i>
+          <input
+            id="dish-search"
+            class="dish-search-input"
+            type="search"
+            placeholder="Buscar plato..."
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button
+            id="dish-search-clear"
+            class="dish-search-clear"
+            type="button"
+            aria-label="Limpiar búsqueda"
+            hidden
+          >
+            <i class="bi bi-x-circle-fill"></i>
           </button>
-          <div id="dish-type-dropdown" class="type-dropdown" hidden></div>
+        </div>
+
+        <div class="dishes-controls filter-row">
+          <SortBar
+            options={[
+              { field: "rating", dir: "desc", label: "Mejor calificados", short: "Mejor nota", icon: "bi-star-fill" },
+              { field: "rating", dir: "asc", label: "Peor calificados", short: "Peor nota", icon: "bi-star" },
+              { field: "name", dir: "asc", label: "Nombre (A–Z)", short: "A–Z", icon: "bi-sort-alpha-down" },
+              { field: "modified", dir: "desc", label: "Modificados recientemente", short: "Recientes", icon: "bi-clock-history" },
+              { field: "date", dir: "desc", label: "Agregados recientemente", short: "Nuevos", icon: "bi-calendar-plus" },
+            ]}
+          />
+          <div id="dish-type-chips" class="filter-chips" aria-label="Filtrar por tipo" hidden></div>
         </div>
       </div>
 
@@ -169,7 +165,7 @@ const tplRestaurant: Restaurant = {
     border-radius: var(--border-radius);
     border: 1.5px solid var(--clr-border);
     background: var(--clr-white);
-    font-size: 0.88rem;
+    font-size: 1rem; /* 16px: menos y el iPhone hace zoom al tocar */
     color: var(--clr-text);
     transition: border-color var(--transition);
   }
@@ -221,63 +217,11 @@ const tplRestaurant: Restaurant = {
     }
   }
 
-  .dishes-controls {
-    justify-content: flex-start;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .type-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 5px 12px;
-    border-radius: 20px;
-    border: solid 1.5px var(--clr-border);
-    background: var(--clr-white);
-    color: var(--clr-text);
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    text-transform: none;
-    cursor: pointer;
-    transition: var(--transition);
-  }
-
-  .type-pill.active {
-    background: var(--clr-accent-bg);
-    border-color: var(--clr-accent-bg);
-    color: var(--clr-on-accent);
-  }
-
-  .type-pill-label {
-    opacity: 0.5;
-  }
-
-  .type-pill-value {
-    font-weight: 700;
-  }
-
-  .type-pill i {
-    font-size: 0.65rem;
-  }
-
-  .type-filter-wrap {
-    position: relative;
-  }
-
-  .type-dropdown {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    min-width: max-content;
-    background: var(--clr-white);
-    border: 1.5px solid var(--clr-border);
-    border-radius: var(--border-radius);
-    z-index: 200;
-    max-height: 220px;
-    overflow-y: auto;
-    overscroll-behavior: contain;
+  /* Debajo de la cabecera móvil (sticky, 80px). En desktop no hay cabecera. */
+  @media (max-width: 767px) {
+    .list-toolbar {
+      top: 80px;
+    }
   }
 
   #dishes-list {
@@ -288,10 +232,6 @@ const tplRestaurant: Restaurant = {
   @media (hover: hover) {
     .back-link:hover {
       color: var(--clr-text);
-    }
-
-    .type-pill:hover {
-      border-color: var(--clr-border2);
     }
   }
 
@@ -330,6 +270,10 @@ const tplRestaurant: Restaurant = {
     buildGlobalRatingPill,
     fillRestaurantName,
     updateSortPills,
+    wireSortBar,
+    renderFilterChips,
+    keepListInView,
+    shortDishName,
   } from "../scripts/store.ts";
   import { wireAddressLink } from "../scripts/maps.ts";
   import { wireShareButton, officialShareUrl, personalShareUrl } from "../scripts/share.ts";
@@ -343,13 +287,14 @@ const tplRestaurant: Restaurant = {
   function getSortState(): { field: SortField; dir: SortDir } {
     try {
       const saved = JSON.parse(localStorage.getItem(SORT_KEY) ?? "{}");
-      return {
-        field: (saved.field as SortField) ?? "rating",
-        dir: (saved.dir as SortDir) ?? "desc",
-      };
+      // Solo combinaciones que ofrece el SortBar; otra guardada → defecto.
+      const ok = ["rating-desc", "rating-asc", "name-asc", "modified-desc", "date-desc"];
+      if (ok.includes(`${saved.field}-${saved.dir}`))
+        return { field: saved.field as SortField, dir: saved.dir as SortDir };
     } catch {
-      return { field: "rating", dir: "desc" };
+      /* valor corrupto → defecto */
     }
+    return { field: "rating", dir: "desc" };
   }
   function setSortState(s: { field: SortField; dir: SortDir }) {
     localStorage.setItem(SORT_KEY, JSON.stringify(s));
@@ -387,116 +332,38 @@ const tplRestaurant: Restaurant = {
     return sortDishes(dishes);
   }
 
-  function updateTypeSelect() {
-    const typeBtnEl = document.getElementById(
-      "dish-type-btn",
-    ) as HTMLButtonElement | null;
-    const typeValueEl = document.getElementById(
-      "dish-type-value",
-    ) as HTMLElement | null;
-    if (!typeBtnEl || !typeValueEl || !currentRestaurant) return;
-
-    const allDishes = getDishesByRestaurant(currentRestaurant.id);
-    const usedTypeIds = new Set(
-      allDishes.map((d) => d.typeId).filter((id): id is string => !!id),
-    );
-    const types = getDishTypes().filter((t) => usedTypeIds.has(t.id));
-
-    if (types.length === 0) {
-      dishTypeFilter = "";
-      typeBtnEl.hidden = true;
-      return;
-    }
-
-    typeBtnEl.hidden = false;
-    const selectedType = types.find((t) => t.id === dishTypeFilter);
-    if (!selectedType) dishTypeFilter = "";
-
-    typeValueEl.textContent = dishTypeFilter
-      ? (getDishTypes().find((t) => t.id === dishTypeFilter)?.name ?? "Todos")
-      : "Todos";
-    typeBtnEl.classList.toggle("active", !!dishTypeFilter);
-  }
-
-  function renderDishTypeDropdown() {
-    const dropdownEl = document.getElementById(
-      "dish-type-dropdown",
-    ) as HTMLElement | null;
-    if (!dropdownEl || !currentRestaurant) return;
-
-    const allDishes = getDishesByRestaurant(currentRestaurant.id);
-    const usedTypeIds = new Set(
-      allDishes.map((d) => d.typeId).filter((id): id is string => !!id),
-    );
-    const types = getDishTypes().filter((t) => usedTypeIds.has(t.id));
-
-    dropdownEl.innerHTML = "";
-
-    const noneOpt = document.createElement("div");
-    noneOpt.className = "type-option is-none";
-    noneOpt.textContent = "Todos los tipos";
-    noneOpt.addEventListener("mousedown", (e) => e.preventDefault());
-    noneOpt.addEventListener("click", () => selectDishType(null, null));
-    dropdownEl.appendChild(noneOpt);
-
-    types.forEach((t) => {
-      const opt = document.createElement("div");
-      opt.className =
-        "type-option" + (t.id === dishTypeFilter ? " is-selected" : "");
-      opt.textContent = t.name;
-      opt.addEventListener("mousedown", (e) => e.preventDefault());
-      opt.addEventListener("click", () => selectDishType(t.id, t.name));
-      dropdownEl.appendChild(opt);
+  /** Chips de tipo: solo las categorías de este restaurante, las más usadas
+   *  primero. Si el tipo elegido ya no tiene platos, vuelve a "Todos". */
+  function renderTypeChips() {
+    const el = document.getElementById("dish-type-chips");
+    if (!el || !currentRestaurant) return;
+    const useById = new Map<string, number>();
+    for (const d of getDishesByRestaurant(currentRestaurant.id))
+      if (d.typeId) useById.set(d.typeId, (useById.get(d.typeId) ?? 0) + 1);
+    const types = getDishTypes()
+      .filter((t) => useById.has(t.id))
+      .sort(
+        (a, b) =>
+          (useById.get(b.id) ?? 0) - (useById.get(a.id) ?? 0) ||
+          a.name.localeCompare(b.name, "es"),
+      );
+    if (!types.some((t) => t.id === dishTypeFilter)) dishTypeFilter = "";
+    renderFilterChips(el, {
+      selected: dishTypeFilter,
+      options: types.map((t) => ({ value: t.id, label: t.name, count: useById.get(t.id) })),
+      onPick: (id) => {
+        dishTypeFilter = id;
+        rerenderRestaurantePage();
+        scrollToDishes();
+      },
     });
-
-    if (types.length === 0) {
-      const emptyOpt = document.createElement("div");
-      emptyOpt.className = "type-option is-empty";
-      emptyOpt.textContent = "Sin tipos registrados";
-      dropdownEl.appendChild(emptyOpt);
-    }
   }
 
-  function openDishTypeDropdown() {
-    const typeBtnEl = document.getElementById(
-      "dish-type-btn",
-    ) as HTMLButtonElement | null;
-    const dropdownEl = document.getElementById(
-      "dish-type-dropdown",
-    ) as HTMLElement | null;
-    if (!typeBtnEl || !dropdownEl) return;
-
-    renderDishTypeDropdown();
-    dropdownEl.hidden = false;
-    typeBtnEl.classList.add("is-open");
-  }
-
-  function closeDishTypeDropdown() {
-    const typeBtnEl = document.getElementById(
-      "dish-type-btn",
-    ) as HTMLButtonElement | null;
-    const dropdownEl = document.getElementById(
-      "dish-type-dropdown",
-    ) as HTMLElement | null;
-    if (!typeBtnEl || !dropdownEl) return;
-
-    dropdownEl.hidden = true;
-    typeBtnEl.classList.remove("is-open");
-  }
-
-  function selectDishType(id: string | null, name: string | null) {
-    dishTypeFilter = id ?? "";
-    const typeValueEl = document.getElementById(
-      "dish-type-value",
-    ) as HTMLElement | null;
-    const typeBtnEl = document.getElementById(
-      "dish-type-btn",
-    ) as HTMLButtonElement | null;
-
-    if (typeValueEl) typeValueEl.textContent = name ?? "Todos";
-    if (typeBtnEl) typeBtnEl.classList.toggle("active", !!dishTypeFilter);
-    closeDishTypeDropdown();
-    rerenderRestaurantePage();
+  function scrollToDishes() {
+    keepListInView(
+      document.getElementById("dishes-list"),
+      document.querySelector<HTMLElement>(".list-toolbar"),
+    );
   }
 
   // ─── Restaurante activo + filtros (nivel de módulo) ──────────────────────────
@@ -632,7 +499,7 @@ const tplRestaurant: Restaurant = {
       tpl.content.cloneNode(true) as DocumentFragment
     ).querySelector("article")!;
     article.setAttribute("data-id", d.id);
-    article.querySelector("h4")!.textContent = d.name;
+    article.querySelector("h4")!.textContent = shortDishName(d.name);
     // Categoría: pequeña, debajo del nombre.
     const typeTagEl = article.querySelector<HTMLElement>(".dish-type-tag");
     const typeName = d.typeId
@@ -769,6 +636,7 @@ const tplRestaurant: Restaurant = {
     const sortBarEl = document.querySelector<HTMLElement>(".sort-bar");
     if (!headerEl || !dishesListEl || !currentRestaurant) return;
 
+    renderTypeChips(); // antes de filtrar: puede resetear un tipo ya sin platos
     const avg = getRestaurantAverage(currentRestaurant.id);
     const filtered = getFilteredSortedDishes(currentRestaurant.id);
     const total = getDishesByRestaurant(currentRestaurant.id).length;
@@ -776,7 +644,6 @@ const tplRestaurant: Restaurant = {
 
     headerEl.replaceChildren(buildHeaderElement(currentRestaurant, avg));
     renderDishes(filtered, total, dishesListEl, sortBarEl);
-    updateTypeSelect();
     popDishId = null; // el pop ya se aplicó en este render
   }
 
@@ -795,12 +662,6 @@ const tplRestaurant: Restaurant = {
       document.querySelectorAll(".menu-popup.active").forEach((p) =>
         p.classList.remove("active"),
       );
-    }
-    if (
-      !target.closest("#dish-type-btn") &&
-      !target.closest("#dish-type-dropdown")
-    ) {
-      closeDishTypeDropdown();
     }
   });
 
@@ -968,22 +829,13 @@ const tplRestaurant: Restaurant = {
 
     // ─── Cablear controles ────────────────────────────────────────────────────
 
-    document
-      .querySelectorAll<HTMLButtonElement>(".sort-pill")
-      .forEach((btn) => {
-        btn.onclick = () => {
-          const field = btn.dataset.field as SortField;
-          if (dishSort.field === field)
-            dishSort.dir = dishSort.dir === "asc" ? "desc" : "asc";
-          else {
-            dishSort.field = field;
-            dishSort.dir = field === "name" ? "asc" : "desc";
-          }
-          setSortState(dishSort);
-          updateDishSortUI();
-          rerenderRestaurantePage();
-        };
-      });
+    wireSortBar((field, dir) => {
+      dishSort = { field: field as SortField, dir };
+      setSortState(dishSort);
+      updateDishSortUI();
+      rerenderRestaurantePage();
+      scrollToDishes();
+    });
 
     const searchEl = document.getElementById(
       "dish-search",
@@ -1013,28 +865,6 @@ const tplRestaurant: Restaurant = {
         syncClear();
         rerenderRestaurantePage();
       };
-    }
-
-    // ─── Filtro por tipo ──────────────────────────────────────────────────────
-
-    const typeBtnEl = document.getElementById(
-      "dish-type-btn",
-    ) as HTMLButtonElement | null;
-    const typeDropdownEl = document.getElementById(
-      "dish-type-dropdown",
-    ) as HTMLElement | null;
-
-    if (typeBtnEl && typeDropdownEl) {
-      updateTypeSelect();
-
-      typeBtnEl.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (typeDropdownEl.hidden) {
-          openDishTypeDropdown();
-        } else {
-          closeDishTypeDropdown();
-        }
-      });
     }
 
     // ─── Fix botón Atrás del navegador ────────────────────────────────────────

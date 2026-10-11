@@ -700,8 +700,16 @@ import FormModal from "./FormModal.astro";
     getDishTypes,
     createDishType,
     rateOfficialDish,
+    getCatalogUsage,
   } from "../lib/data.ts";
-  import { emit, forceUppercase, createOverlay } from "../scripts/store.ts";
+  import {
+    emit,
+    forceUppercase,
+    createOverlay,
+    normalizeText,
+    rankComboOptions,
+    renderComboOptions,
+  } from "../scripts/store.ts";
 
   // Re-inicializar en cada navegación para que open/close siempre
   // operen sobre los elementos del DOM ACTUAL (no los del swap anterior).
@@ -820,6 +828,13 @@ import FormModal from "./FormModal.astro";
     ) as HTMLElement;
 
     let selectedTypeId: string | null = null;
+    // Uso global de categorías (todos los restaurantes). Llega async; si el
+    // desplegable está abierto se vuelve a pintar con el grupo completo.
+    let globalTypes = new Map<string, number>();
+    getCatalogUsage().then((u) => {
+      globalTypes = u.types;
+      if (!dropdownEl.hidden) renderDropdown(searchInput.value);
+    });
 
     function openDropdown() {
       if (isOfficial) return; // plato oficial: tipo bloqueado, no abrir desplegable
@@ -848,11 +863,29 @@ import FormModal from "./FormModal.astro";
       closeDropdown();
     }
 
+    /** Elige una categoría por nombre: reutiliza la mía (sin importar tildes)
+     *  o la crea (p.ej. una que solo existía en otros restaurantes). */
+    function pickTypeByName(name: string) {
+      const key = normalizeText(name);
+      const existing = getDishTypes().find((t) => normalizeText(t.name) === key);
+      const t = existing ?? createDishType(name);
+      selectType(t.id, t.name);
+    }
+
     function renderDropdown(query: string) {
       const types = getDishTypes();
       const q = query.trim().toUpperCase();
-      const filtered = q ? types.filter((t) => t.name.includes(q)) : types;
-      const exactMatch = types.some((t) => t.name === q);
+
+      // Primero las de este restaurante (más usadas arriba); debajo mis demás
+      // categorías + las de todos los restaurantes, por uso global.
+      const local = new Map<string, number>();
+      for (const d of getDishesByRestaurant(restaurantIdInput.value)) {
+        const name = d.typeId ? types.find((t) => t.id === d.typeId)?.name : null;
+        if (name) local.set(name, (local.get(name) ?? 0) + 1);
+      }
+      const others = new Map(globalTypes);
+      for (const t of types) if (!others.has(t.name)) others.set(t.name, 0);
+      const selectedName = types.find((t) => t.id === selectedTypeId)?.name ?? null;
 
       dropdownEl.innerHTML = "";
 
@@ -866,34 +899,27 @@ import FormModal from "./FormModal.astro";
         dropdownEl.appendChild(noneOpt);
       }
 
-      // Opciones existentes
-      filtered.forEach((t) => {
-        const opt = document.createElement("div");
-        opt.className =
-          "type-option" + (t.id === selectedTypeId ? " is-selected" : "");
-        opt.textContent = t.name;
-        opt.addEventListener("mousedown", (e) => e.preventDefault());
-        opt.addEventListener("click", () => selectType(t.id, t.name));
-        dropdownEl.appendChild(opt);
+      // Opciones existentes (búsqueda sin tildes)
+      const { exact: exactMatch } = renderComboOptions({
+        dropdown: dropdownEl,
+        options: rankComboOptions(local, others, {
+          local: "En este restaurante",
+          global: "Más categorías",
+        }),
+        query,
+        optionClass: "type-option",
+        selected: selectedName,
+        onPick: pickTypeByName,
       });
 
-      // Opción para crear (solo si el texto no coincide exactamente)
+      // Opción para crear (solo si el texto no coincide con ninguna)
       if (q && !exactMatch) {
         const createOpt = document.createElement("div");
         createOpt.className = "type-option is-create flex-row";
         createOpt.innerHTML = `<i class="bi bi-plus-lg"></i> Crear "<span class="create-name"></span>"`;
         createOpt.querySelector(".create-name")!.textContent = q;
         createOpt.addEventListener("mousedown", (e) => e.preventDefault());
-        createOpt.addEventListener("click", () => {
-          // Verificar que no exista ya (race condition)
-          const existing = getDishTypes().find((t) => t.name === q);
-          if (existing) {
-            selectType(existing.id, existing.name);
-          } else {
-            const newType = createDishType(q);
-            selectType(newType.id, newType.name);
-          }
-        });
+        createOpt.addEventListener("click", () => pickTypeByName(q));
         dropdownEl.appendChild(createOpt);
       }
 

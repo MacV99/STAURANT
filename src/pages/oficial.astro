@@ -96,41 +96,37 @@ const tplRestaurant: Restaurant = {
         <h2 class="dishes-title">Platos</h2>
       </div>
 
-      <div class="dish-search-wrap">
-        <i class="bi bi-search dish-search-icon"></i>
-        <input
-          id="dish-search"
-          class="dish-search-input"
-          type="search"
-          placeholder="Buscar plato..."
-          autocomplete="off"
-          spellcheck="false"
-        />
-        <button
-          id="dish-search-clear"
-          class="dish-search-clear"
-          type="button"
-          aria-label="Limpiar búsqueda"
-          hidden
-        >
-          <i class="bi bi-x-circle-fill"></i>
-        </button>
-      </div>
-
-      <div class="dishes-controls flex-row">
-        <SortBar
-          pills={[
-            { field: "rating", label: "Rating" },
-            { field: "name", label: "Nombre" },
-          ]}
-        />
-        <div class="type-filter-wrap">
-          <button id="dish-type-btn" class="type-pill">
-            <span class="type-pill-label">Tipo</span>
-            <span id="dish-type-value" class="type-pill-value">Todos</span>
-            <i class="bi bi-chevron-down"></i>
+      <div class="list-toolbar texture-dotted">
+        <div class="dish-search-wrap">
+          <i class="bi bi-search dish-search-icon"></i>
+          <input
+            id="dish-search"
+            class="dish-search-input"
+            type="search"
+            placeholder="Buscar plato..."
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button
+            id="dish-search-clear"
+            class="dish-search-clear"
+            type="button"
+            aria-label="Limpiar búsqueda"
+            hidden
+          >
+            <i class="bi bi-x-circle-fill"></i>
           </button>
-          <div id="dish-type-dropdown" class="type-dropdown" hidden></div>
+        </div>
+
+        <div class="filter-row">
+          <SortBar
+            options={[
+              { field: "rating-global", dir: "desc", label: "Mejor calificados por todos", short: "Mejor nota", icon: "bi-globe-americas" },
+              { field: "rating-me", dir: "desc", label: "Mis mejor calificados", short: "Mi nota", icon: "bi-person-fill" },
+              { field: "name", dir: "asc", label: "Nombre (A–Z)", short: "A–Z", icon: "bi-sort-alpha-down" },
+            ]}
+          />
+          <div id="dish-type-chips" class="filter-chips" aria-label="Filtrar por tipo" hidden></div>
         </div>
       </div>
 
@@ -688,7 +684,7 @@ const tplRestaurant: Restaurant = {
     border-radius: var(--border-radius);
     border: 1.5px solid var(--clr-border);
     background: var(--clr-white);
-    font-size: 0.88rem;
+    font-size: 1rem; /* 16px: menos y el iPhone hace zoom al tocar */
     color: var(--clr-text);
     transition: border-color var(--transition);
   }
@@ -740,74 +736,9 @@ const tplRestaurant: Restaurant = {
     }
   }
 
-  .dishes-controls {
-    justify-content: flex-start;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .type-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 5px 12px;
-    border-radius: 20px;
-    border: solid 1.5px var(--clr-border);
-    background: var(--clr-white);
-    color: var(--clr-text);
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    text-transform: none;
-    cursor: pointer;
-    transition: var(--transition);
-  }
-
-  .type-pill.active {
-    background: var(--clr-accent-bg);
-    border-color: var(--clr-accent-bg);
-    color: var(--clr-on-accent);
-  }
-
-  .type-pill-label {
-    opacity: 0.5;
-  }
-
-  .type-pill-value {
-    font-weight: 700;
-  }
-
-  .type-pill i {
-    font-size: 0.65rem;
-  }
-
-  .type-filter-wrap {
-    position: relative;
-  }
-
-  .type-dropdown {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    min-width: max-content;
-    background: var(--clr-white);
-    border: 1.5px solid var(--clr-border);
-    border-radius: var(--border-radius);
-    z-index: 200;
-    max-height: 220px;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
-
   #dishes-list {
     align-items: stretch;
     gap: 5px;
-  }
-
-  @media (hover: hover) {
-    .type-pill:hover {
-      border-color: var(--clr-border2);
-    }
   }
 
   @media (min-width: 768px) {
@@ -846,6 +777,10 @@ const tplRestaurant: Restaurant = {
     fillRestaurantName,
     updateSortPills,
     makeCrown,
+    shortDishName,
+    wireSortBar,
+    renderFilterChips,
+    keepListInView,
   } from "../scripts/store.ts";
   import { wireAddressLink } from "../scripts/maps.ts";
   import { wireShareButton, officialShareUrl } from "../scripts/share.ts";
@@ -1136,9 +1071,11 @@ const tplRestaurant: Restaurant = {
     article.classList.add("official-dish");
     article.setAttribute("data-id", od.id);
     const nameEl = article.querySelector("h4")!;
-    nameEl.textContent = od.name;
+    const shownName = shortDishName(od.name);
+    nameEl.textContent = shownName;
+    nameEl.title = od.name;
     // Nombres largos: un escalón más chico para que quepan en 2 líneas.
-    nameEl.classList.toggle("is-long", od.name.length > 24);
+    nameEl.classList.toggle("is-long", shownName.length > 24);
 
     // Miniatura a la derecha (donde antes iba el badge): solo si el plato tiene
     // foto → de un vistazo se ve cuáles la tienen. Sin foto, no ocupa espacio.
@@ -1197,7 +1134,7 @@ const tplRestaurant: Restaurant = {
         editBtn.innerHTML = `<i class="bi bi-pencil"></i>`;
         editBtn.addEventListener("click", (e) => {
           e.stopPropagation();
-          (window as any).officialManage?.openDishEdit(od, distinctTypeNames());
+          (window as any).officialManage?.openDishEdit(od, typeUsage());
         });
         const delBtn = document.createElement("button");
         delBtn.type = "button";
@@ -1302,7 +1239,7 @@ const tplRestaurant: Restaurant = {
           addBtn.onclick = () =>
             (window as any).officialManage?.openDishCreate(
               official!.id,
-              distinctTypeNames(),
+              typeUsage(),
             );
       }
       return;
@@ -1321,122 +1258,76 @@ const tplRestaurant: Restaurant = {
     const headerEl = document.getElementById("oficial-header");
     if (!headerEl) return;
     if (official) headerEl.replaceChildren(buildHeaderElement());
+    renderTypeChips(); // antes de filtrar: puede resetear un tipo que ya no está
     renderDishes();
-    updateTypeFilterUI();
     updateModeUI();
   }
 
   // ─── Filtro por tipo ────────────────────────────────────────────────────────
 
+  /** Categorías de esta carta → cuántos platos tiene cada una. */
+  function typeUsage(): Map<string, number> {
+    const map = new Map<string, number>();
+    for (const d of officialDishes)
+      if (d.typeName) map.set(d.typeName, (map.get(d.typeName) ?? 0) + 1);
+    return map;
+  }
+
+  /** Categorías de esta carta, las más usadas primero. */
   function distinctTypeNames(): string[] {
-    const set = new Set<string>();
-    for (const d of officialDishes) if (d.typeName) set.add(d.typeName);
-    return [...set].sort((a, b) => a.localeCompare(b));
+    return [...typeUsage()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "es"))
+      .map(([name]) => name);
   }
 
-  function updateTypeFilterUI(): void {
-    const btn = document.getElementById(
-      "dish-type-btn",
-    ) as HTMLButtonElement | null;
-    const valueEl = document.getElementById("dish-type-value");
-    if (!btn || !valueEl) return;
-    const names = distinctTypeNames();
-    if (names.length === 0) {
-      dishTypeFilter = "";
-      btn.hidden = true;
-      return;
-    }
-    btn.hidden = false;
-    if (dishTypeFilter && !names.includes(dishTypeFilter)) dishTypeFilter = "";
-    valueEl.textContent = dishTypeFilter || "Todos";
-    btn.classList.toggle("active", !!dishTypeFilter);
-  }
-
-  function renderTypeDropdown(): void {
-    const dropdownEl = document.getElementById("dish-type-dropdown");
-    if (!dropdownEl) return;
-    dropdownEl.innerHTML = "";
-
-    const noneOpt = document.createElement("div");
-    noneOpt.className = "type-option is-none";
-    noneOpt.textContent = "Todos los tipos";
-    noneOpt.addEventListener("mousedown", (e) => e.preventDefault());
-    noneOpt.addEventListener("click", () => selectType(""));
-    dropdownEl.appendChild(noneOpt);
-
-    distinctTypeNames().forEach((name) => {
-      const opt = document.createElement("div");
-      opt.className = "type-option" + (name === dishTypeFilter ? " is-selected" : "");
-      opt.textContent = name;
-      opt.addEventListener("mousedown", (e) => e.preventDefault());
-      opt.addEventListener("click", () => selectType(name));
-      dropdownEl.appendChild(opt);
+  /** Chips de tipo (las categorías más usadas primero). Si el tipo elegido ya
+   *  no está en la carta, vuelve a "Todos". */
+  function renderTypeChips(): void {
+    const el = document.getElementById("dish-type-chips");
+    if (!el) return;
+    const usage = typeUsage();
+    if (dishTypeFilter && !usage.has(dishTypeFilter)) dishTypeFilter = "";
+    renderFilterChips(el, {
+      selected: dishTypeFilter,
+      options: distinctTypeNames().map((name) => ({ value: name, label: name, count: usage.get(name) })),
+      onPick: (name) => {
+        dishTypeFilter = name;
+        renderTypeChips();
+        renderDishes();
+        scrollToDishes();
+      },
     });
   }
 
-  function selectType(name: string): void {
-    dishTypeFilter = name;
-    const valueEl = document.getElementById("dish-type-value");
-    const btn = document.getElementById("dish-type-btn");
-    if (valueEl) valueEl.textContent = name || "Todos";
-    btn?.classList.toggle("active", !!name);
-    closeTypeDropdown();
-    renderDishes();
-  }
-
-  function openTypeDropdown(): void {
-    const dropdownEl = document.getElementById("dish-type-dropdown");
-    const btn = document.getElementById("dish-type-btn");
-    if (!dropdownEl || !btn) return;
-    renderTypeDropdown();
-    dropdownEl.hidden = false;
-    btn.classList.add("is-open");
-  }
-
-  function closeTypeDropdown(): void {
-    const dropdownEl = document.getElementById("dish-type-dropdown");
-    const btn = document.getElementById("dish-type-btn");
-    dropdownEl?.setAttribute("hidden", "");
-    btn?.classList.remove("is-open");
+  function scrollToDishes(): void {
+    keepListInView(
+      document.getElementById("dishes-list"),
+      document.querySelector<HTMLElement>(".list-toolbar"),
+    );
   }
 
   // ─── Orden / búsqueda ───────────────────────────────────────────────────────
 
   function updateSortUI(): void {
-    updateSortPills(sortField, sortDir);
-    // El pill "Rating" en oficiales no muestra flecha asc/desc (el orden es fijo
-    // de mayor a menor): muestra la lente activa. Global 🌐 o Yo 👤.
-    const ratingPill = document.querySelector<HTMLButtonElement>(
-      '.sort-pill[data-field="rating"]',
-    );
-    if (ratingPill) {
-      const isGlobal = ratingLens === "global";
-      ratingPill.innerHTML = isGlobal
-        ? 'Rating <i class="bi bi-globe-americas"></i> Global'
-        : 'Rating <i class="bi bi-person-fill"></i> Yo';
-    }
+    // En oficiales el rating va siempre de mayor a menor; lo que cambia es la
+    // fuente de la nota (todos vs mía), y cada una es su propia opción.
+    updateSortPills(sortField === "rating" ? `rating-${ratingLens}` : sortField, sortDir);
   }
 
   function wireControls(): void {
     // Orden
-    document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach((btn) => {
-      btn.onclick = () => {
-        const field = btn.dataset.field as SortField;
-        if (field === "rating") {
-          // Ya activo → alterna la lente (Global ↔ Yo). Nunca invierte el orden.
-          if (sortField === "rating")
-            ratingLens = ratingLens === "global" ? "me" : "global";
-          sortField = "rating";
-          sortDir = "desc";
-        } else if (sortField === field) {
-          sortDir = sortDir === "asc" ? "desc" : "asc";
-        } else {
-          sortField = field;
-          sortDir = "asc";
-        }
-        updateSortUI();
-        renderDishes();
-      };
+    wireSortBar((field, dir) => {
+      if (field === "rating-global" || field === "rating-me") {
+        sortField = "rating";
+        ratingLens = field === "rating-me" ? "me" : "global";
+        sortDir = "desc";
+      } else {
+        sortField = field as SortField;
+        sortDir = dir;
+      }
+      updateSortUI();
+      renderDishes();
+      scrollToDishes();
     });
 
     // Búsqueda
@@ -1470,27 +1361,8 @@ const tplRestaurant: Restaurant = {
       };
     }
 
-    // Filtro por tipo
-    const typeBtn = document.getElementById("dish-type-btn");
-    const typeDropdown = document.getElementById("dish-type-dropdown");
-    if (typeBtn && typeDropdown) {
-      typeBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (typeDropdown.hidden) openTypeDropdown();
-        else closeTypeDropdown();
-      });
-    }
-
     updateSortUI();
   }
-
-  // Cerrar el filtro de tipo al tocar fuera. Registrado 1× a nivel módulo (antes
-  // se añadía uno nuevo en cada visita a la carta y se acumulaban).
-  document.addEventListener("click", (e) => {
-    const t = e.target as HTMLElement;
-    if (!t.closest("#dish-type-btn") && !t.closest("#dish-type-dropdown"))
-      closeTypeDropdown();
-  });
 
   // ─── Re-render en sincronizaciones globales ─────────────────────────────────
 
@@ -1566,7 +1438,7 @@ const tplRestaurant: Restaurant = {
       statsBtn.onclick = () => navigate(`/panel?id=${encodeURIComponent(official!.id)}`);
     if (editBtn) editBtn.onclick = () => om()?.openProfileEdit(official!);
     if (addBtn)
-      addBtn.onclick = () => om()?.openDishCreate(official!.id, distinctTypeNames());
+      addBtn.onclick = () => om()?.openDishCreate(official!.id, typeUsage());
   }
 
   // Tras crear / editar / borrar un plato desde OfficialManage: re-lee la carta.

@@ -66,10 +66,10 @@ const tplDish: Dish = {
       </div>
       <div class="usuario-sort-wrap" id="usuario-sort-wrap" hidden>
         <SortBar
-          pills={[
-            { field: "rating", label: "Rating" },
-            { field: "name", label: "Nombre" },
-            { field: "date", label: "Creación" },
+          options={[
+            { field: "rating", dir: "desc", label: "Mejor calificados", short: "Mejor nota", icon: "bi-star-fill" },
+            { field: "name", dir: "asc", label: "Nombre (A–Z)", short: "A–Z", icon: "bi-sort-alpha-down" },
+            { field: "date", dir: "desc", label: "Agregados recientemente", short: "Nuevos", icon: "bi-calendar-plus" },
           ]}
         />
       </div>
@@ -455,6 +455,8 @@ const tplDish: Dish = {
     buildGlobalRatingPill,
     fillRestaurantName,
     updateSortPills,
+    wireSortBar,
+    shortDishName,
   } from "../scripts/store.ts";
   import { wireAddressLink } from "../scripts/maps.ts";
   import { wireShareButton, personalShareUrl, officialShareUrl } from "../scripts/share.ts";
@@ -475,13 +477,13 @@ const tplDish: Dish = {
   function getSortState(): { field: SortField; dir: SortDir } {
     try {
       const saved = JSON.parse(localStorage.getItem(SORT_KEY) ?? "{}");
-      return {
-        field: (saved.field as SortField) ?? "rating",
-        dir: (saved.dir as SortDir) ?? "desc",
-      };
+      // Solo combinaciones que ofrece el SortBar; otra guardada → defecto.
+      if (["rating-desc", "name-asc", "date-desc"].includes(`${saved.field}-${saved.dir}`))
+        return { field: saved.field as SortField, dir: saved.dir as SortDir };
     } catch {
-      return { field: "rating", dir: "desc" };
+      /* valor corrupto → defecto */
     }
+    return { field: "rating", dir: "desc" };
   }
   let sortState = getSortState();
 
@@ -922,7 +924,7 @@ const tplDish: Dish = {
     ).querySelector("article")!;
     article.removeAttribute("data-id");
 
-    article.querySelector("h4")!.textContent = d.name;
+    article.querySelector("h4")!.textContent = shortDishName(d.name);
 
     // Categoría: pequeña, debajo del nombre.
     const typeTagEl = article.querySelector<HTMLElement>(".dish-type-tag");
@@ -1088,20 +1090,12 @@ const tplDish: Dish = {
 
     document.title = `${user.name || "Perfil"} · STAURANT`;
 
-    // Wire sort pills
-    document.querySelectorAll<HTMLButtonElement>(".sort-pill").forEach((btn) => {
-      btn.onclick = () => {
-        const field = btn.dataset.field as SortField;
-        if (sortState.field === field) {
-          sortState.dir = sortState.dir === "asc" ? "desc" : "asc";
-        } else {
-          sortState.field = field;
-          sortState.dir = field === "name" ? "asc" : "desc";
-        }
-        localStorage.setItem(SORT_KEY, JSON.stringify(sortState));
-        updateSortUI();
-        renderList();
-      };
+    // Orden
+    wireSortBar((field, dir) => {
+      sortState = { field: field as SortField, dir };
+      localStorage.setItem(SORT_KEY, JSON.stringify(sortState));
+      updateSortUI();
+      renderList();
     });
 
     // Wire buscador

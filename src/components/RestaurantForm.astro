@@ -332,10 +332,20 @@ import FormModal from "./FormModal.astro";
     createRestaurant,
     updateRestaurant,
     getRestaurants,
-    getCities,
+    getCityUsage,
+    getCatalogUsage,
     searchOfficialRestaurants,
   } from "../lib/data.ts";
-  import { emit, forceUppercase, createOverlay } from "../scripts/store.ts";
+  import {
+    emit,
+    forceUppercase,
+    createOverlay,
+    normalizeText,
+    rankComboOptions,
+    renderComboOptions,
+    matchExistingOption,
+    type ComboOption,
+  } from "../scripts/store.ts";
   import { navigate } from "astro:transitions/client";
 
   // Re-inicializar en cada navegación para que open/close siempre
@@ -468,10 +478,26 @@ import FormModal from "./FormModal.astro";
       });
     }
 
+    // Ciudades de todos los restaurantes con su uso (llegan async).
+    let globalCities = new Map<string, number>();
+    getCatalogUsage().then((u) => {
+      globalCities = u.cities;
+    });
+
+    function cityOptions(): ComboOption[] {
+      const taken = new Set(selectedCities.map(normalizeText));
+      return rankComboOptions(getCityUsage(), globalCities, {
+        local: "Tus ciudades",
+        global: "Otras ciudades",
+      }).filter((o) => !taken.has(normalizeText(o.value)));
+    }
+
     function addCity(value: string): void {
-      const v = value.trim().toUpperCase();
+      // Reutiliza la ciudad existente aunque se escriba sin tildes.
+      const v = matchExistingOption(cityOptions(), value.trim().toUpperCase());
       if (!v) return;
-      if (!selectedCities.includes(v)) selectedCities.push(v);
+      if (!selectedCities.some((c) => normalizeText(c) === normalizeText(v)))
+        selectedCities.push(v);
       renderCityChips();
       cityInput.value = "";
       // Cerrar el dropdown al seleccionar: así los chips ya agregados quedan
@@ -488,24 +514,21 @@ import FormModal from "./FormModal.astro";
 
     function renderCityDropdown(query: string): void {
       const q = query.trim().toUpperCase();
-      // Sugerencias = ciudades ya usadas por el usuario, menos las ya agregadas aquí.
-      const all = getCities().filter((c) => !selectedCities.includes(c));
-      const filtered = q ? all.filter((c) => c.includes(q)) : all;
-      const exactMatch = all.includes(q);
+      // Sugerencias = mis ciudades + las de todos los restaurantes (cada grupo
+      // con las más usadas arriba), menos las ya agregadas aquí. Sin tildes.
       cityDropdown.innerHTML = "";
-
-      filtered.forEach((c) => {
-        const opt = document.createElement("div");
-        opt.className = "city-option";
-        opt.textContent = c;
-        opt.addEventListener("mousedown", (e) => e.preventDefault());
-        opt.addEventListener("click", () => addCity(c));
-        cityDropdown.appendChild(opt);
+      const { exact: exactMatch } = renderComboOptions({
+        dropdown: cityDropdown,
+        options: cityOptions(),
+        query,
+        optionClass: "city-option",
+        onPick: addCity,
       });
+      const alreadyAdded = selectedCities.some((c) => normalizeText(c) === normalizeText(q));
 
       // Opción para agregar una nueva (texto que no coincide con una existente
       // ni con una ya agregada)
-      if (q && !exactMatch && !selectedCities.includes(q)) {
+      if (q && !exactMatch && !alreadyAdded) {
         const createOpt = document.createElement("div");
         createOpt.className = "city-option is-create flex-row";
         createOpt.innerHTML = `<i class="bi bi-plus-lg"></i> Agregar "<span class="create-name"></span>"`;

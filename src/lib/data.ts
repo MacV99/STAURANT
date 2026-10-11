@@ -461,6 +461,20 @@ export function getCities(): string[] {
   return [...set].sort((a, b) => a.localeCompare(b));
 }
 
+/** Ciudades del usuario con su uso (cuántos de sus restaurantes, personales +
+ *  oficiales que sigue, están en cada una). Ordena los combobox de ciudad. */
+export function getCityUsage(): Map<string, number> {
+  const cache = getCache();
+  const map = new Map<string, number>();
+  const bump = (c: string) => {
+    const k = c.trim().toUpperCase();
+    if (k) map.set(k, (map.get(k) ?? 0) + 1);
+  };
+  for (const r of cache.restaurants) r.cities.forEach(bump);
+  for (const o of cache.officialRestaurants) o.cities.forEach(bump);
+  return map;
+}
+
 export function createRestaurant(
   input: Pick<Restaurant, "name" | "notes"> & {
     officialRestaurantId?: string | null;
@@ -773,22 +787,34 @@ export async function getAllOfficialRestaurants(): Promise<OfficialRestaurant[]>
   return (data ?? []).map(toOfficialRestaurant);
 }
 
-/** Lista de ciudades ya usadas por algún oficial (para el combobox creable de
- *  ciudad en el editor de perfil). Distintas, ordenadas, sin nulos. */
-export async function getOfficialCities(): Promise<string[]> {
-  const { data, error } = await supabase
-    .from("official_restaurants")
-    .select("cities, city");
-  if (error) { console.error("[getOfficialCities]", error); return []; }
-  const set = new Set<string>();
-  for (const r of (data ?? []) as Array<{ cities: string[] | null; city: string | null }>) {
-    const list = r.cities?.length ? r.cities : r.city ? [r.city] : [];
-    for (const c of list) {
-      const v = c.trim();
-      if (v) set.add(v);
-    }
+/** Uso global (todos los restaurantes, personales + oficiales) de categorías de
+ *  plato y ciudades: nombre en MAYÚSCULAS → cantidad. Ordena y alimenta los
+ *  combobox de creación. Se pide una vez por sesión (RPC `catalog_usage`). */
+export interface CatalogUsage {
+  types: Map<string, number>;
+  cities: Map<string, number>;
+}
+
+let catalogUsagePromise: Promise<CatalogUsage> | null = null;
+
+export function getCatalogUsage(): Promise<CatalogUsage> {
+  if (!catalogUsagePromise) {
+    catalogUsagePromise = (async () => {
+      const usage: CatalogUsage = { types: new Map(), cities: new Map() };
+      const { data, error } = await supabase.rpc("catalog_usage");
+      if (error) {
+        console.error("[getCatalogUsage]", error);
+        catalogUsagePromise = null; // reintenta en la próxima apertura
+        return usage;
+      }
+      for (const r of (data ?? []) as Array<{ kind: string; name: string; uses: number }>) {
+        const map = r.kind === "city" ? usage.cities : usage.types;
+        map.set(r.name, Number(r.uses));
+      }
+      return usage;
+    })();
   }
-  return [...set].sort((a, b) => a.localeCompare(b, "es"));
+  return catalogUsagePromise;
 }
 
 /** Trae un restaurante oficial por id (detalle Explorar). */

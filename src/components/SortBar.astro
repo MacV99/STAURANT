@@ -1,80 +1,230 @@
 ---
-interface Pill {
+/**
+ * Botón "Ordenar" compacto + hoja inferior (bottom sheet) con las opciones.
+ * Cada opción es explícita (campo + dirección: "Nombre A–Z", "Mejor
+ * calificados"…): un toque elige y cierra, sin tener que adivinar si el mismo
+ * botón invierte el orden.
+ *
+ * La página cablea las opciones con `wireSortBar(onPick)` y marca la activa con
+ * `updateSortPills(field, dir)` (ambos en store.ts). `<dialog>` va en la capa
+ * superior del navegador: no lo recorta ningún contenedor sticky.
+ */
+interface SortOption {
   field: string;
+  dir: "asc" | "desc";
   label: string;
+  /** Texto corto para el botón (por defecto, `label`). */
+  short?: string;
+  icon: string;
 }
 
 interface Props {
-  pills: Pill[];
+  options: SortOption[];
 }
 
-const { pills } = Astro.props;
+const { options } = Astro.props;
 ---
 
-<div class="sort-bar flex-row">
-  <i class="bi bi-sort-down sort-icon" aria-hidden="true"></i>
-  <div class="sort-pills flex-row">
-    {
-      pills.map((p) => (
-        <button class="sort-pill" data-field={p.field}>
-          <i class="bi bi-arrow-down-up" /> {p.label}
-        </button>
-      ))
-    }
-  </div>
+<div class="sort-bar">
+  <button type="button" class="sort-trigger" aria-haspopup="dialog">
+    <i class="bi bi-arrow-down-up"></i>
+    <span class="sort-trigger-label">{options[0]?.short ?? options[0]?.label}</span>
+    <i class="bi bi-chevron-down sort-trigger-caret"></i>
+  </button>
+
+  <dialog class="sort-sheet" aria-label="Ordenar">
+    <div class="sort-sheet-box flex-column">
+      <span class="sort-sheet-grip" aria-hidden="true"></span>
+      <p class="sort-sheet-title">Ordenar por</p>
+      {
+        options.map((o) => (
+          <button
+            type="button"
+            class="sort-opt"
+            data-field={o.field}
+            data-dir={o.dir}
+            data-short={o.short ?? o.label}
+          >
+            <i class={`bi ${o.icon} sort-opt-icon`} />
+            <span class="sort-opt-label">{o.label}</span>
+            <i class="bi bi-check-lg sort-opt-check" />
+          </button>
+        ))
+      }
+    </div>
+  </dialog>
 </div>
 
 <style>
   .sort-bar {
-    justify-content: flex-start;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
+    flex-shrink: 0;
   }
 
-  .sort-bar::-webkit-scrollbar {
+  .sort-bar[hidden] {
     display: none;
   }
 
-  .sort-icon {
-    color: var(--clr-primary);
-    font-size: 0.95rem;
-    flex-shrink: 0;
-  }
-
-  .sort-pills {
-    justify-content: flex-start;
-    gap: 6px;
-    flex-wrap: nowrap;
-  }
-
-  .sort-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 5px 12px;
-    border-radius: 20px;
-    border: solid 1.5px var(--clr-border);
+  .sort-trigger {
+    gap: 5px;
+    height: 34px;
+    padding: 0 12px;
+    border-radius: var(--radius-pill);
+    border: 1.5px solid var(--clr-border);
     background: var(--clr-white);
     color: var(--clr-text);
-    font-size: 0.72rem;
+    font-size: 0.76rem;
     font-weight: 600;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
+    text-indent: 0;
     text-transform: none;
-    cursor: pointer;
-    flex-shrink: 0;
+    white-space: nowrap;
     transition: var(--transition);
   }
 
-  .sort-pill.active {
-    background: var(--clr-accent-bg);
-    border-color: var(--clr-accent-bg);
-    color: var(--clr-on-accent);
+  .sort-trigger > i {
+    font-size: 0.75rem;
   }
 
-  .sort-pill i {
-    font-size: 0.65rem;
+  .sort-trigger-caret {
+    opacity: 0.6;
+  }
+
+  /* ── Hoja inferior ─────────────────────────────────────────────── */
+  .sort-sheet {
+    width: 100%;
+    max-width: 100%;
+    margin: auto 0 0;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    background: var(--clr-white);
+    color: var(--clr-text);
+  }
+
+  .sort-sheet[open] {
+    animation: sheet-up 0.22s ease;
+  }
+
+  .sort-sheet::backdrop {
+    background: rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(4px);
+  }
+
+  @keyframes sheet-up {
+    from {
+      transform: translateY(40px);
+      opacity: 0;
+    }
+  }
+
+  .sort-sheet-box {
+    align-items: stretch;
+    gap: 2px;
+    padding: 10px 12px max(16px, env(safe-area-inset-bottom));
+  }
+
+  .sort-sheet-grip {
+    align-self: center;
+    width: 40px;
+    height: 4px;
+    margin-bottom: 8px;
+    border-radius: var(--radius-pill);
+    background: var(--clr-border);
+  }
+
+  .sort-sheet-title {
+    padding: 4px 10px 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    opacity: 0.6;
+  }
+
+  .sort-opt {
+    justify-content: flex-start;
+    gap: 12px;
+    min-height: 50px;
+    padding: 0 12px;
+    border: none;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--clr-text);
+    font-size: 0.92rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-indent: 0;
+    text-transform: none;
+    text-align: left;
+  }
+
+  .sort-opt-icon {
+    width: 20px;
+    font-size: 1rem;
+    opacity: 0.6;
+  }
+
+  .sort-opt-label {
+    flex: 1;
+  }
+
+  .sort-opt-check {
+    visibility: hidden;
+    font-size: 1.1rem;
+  }
+
+  .sort-opt.active {
+    background: var(--clr-white2);
+    font-weight: 700;
+  }
+
+  .sort-opt.active .sort-opt-icon {
+    opacity: 1;
+  }
+
+  .sort-opt.active .sort-opt-check {
+    visibility: visible;
+  }
+
+  @media (hover: hover) {
+    .sort-trigger:hover {
+      border-color: var(--clr-border2);
+      background: var(--clr-white);
+    }
+
+    .sort-opt:hover {
+      background: var(--clr-white2);
+    }
+  }
+
+  @media (min-width: 768px) {
+    /* Desktop: tarjeta centrada en vez de hoja pegada abajo. */
+    .sort-sheet {
+      max-width: 360px;
+      margin: auto;
+      border-radius: var(--radius-lg);
+    }
+
+    .sort-sheet-grip {
+      display: none;
+    }
+
+    .sort-sheet-box {
+      padding: 14px 12px;
+    }
   }
 </style>
+
+<script>
+  // Delegado 1× a nivel de documento (el módulo corre una sola vez y sobrevive
+  // a las ViewTransitions): abrir con el botón, cerrar al tocar fuera.
+  document.addEventListener("click", (e) => {
+    const t = e.target as HTMLElement;
+    const trigger = t.closest(".sort-trigger");
+    if (trigger) {
+      trigger.parentElement?.querySelector<HTMLDialogElement>(".sort-sheet")?.showModal();
+      return;
+    }
+    if (t instanceof HTMLDialogElement && t.classList.contains("sort-sheet")) t.close();
+  });
+</script>

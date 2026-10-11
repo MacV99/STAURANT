@@ -285,7 +285,8 @@ input[type="file"] {
 .boton:active,
 .boton2:active,
 .tab-btn:active,
-.sort-pill:active,
+.sort-trigger:active,
+.filter-chip:active,
 .type-pill:active,
 .menu-item:active,
 .btn-menu:active {

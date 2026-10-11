@@ -982,6 +982,114 @@
   }
 }
 
+/* === FILA DE FILTROS (inicio, restaurante, oficial, perfil de amigo) ===
+   [Ordenar ▾] fijo a la izquierda + chips deslizables (ciudad / tipo de plato).
+   Los chips los crea JS (renderFilterChips) → estilos globales aquí. */
+
+.filter-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.filter-row:has(> .sort-bar[hidden]):has(> .filter-chips[hidden]) {
+  display: none;
+}
+
+.filter-chips {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.filter-chips[hidden] {
+  display: none;
+}
+
+.filter-chips::-webkit-scrollbar {
+  display: none;
+}
+
+/* Separador entre [Ordenar] y los chips. */
+.sort-bar:not([hidden]) + .filter-chips:not([hidden]) {
+  padding-left: 8px;
+  border-left: 1px solid var(--clr-border);
+}
+
+.filter-chip {
+  flex-shrink: 0;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--clr-border);
+  background: var(--clr-white);
+  color: var(--clr-text);
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-indent: 0;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: var(--transition);
+}
+
+.filter-chip-count {
+  font-size: 0.68rem;
+  font-weight: 700;
+  opacity: 0.5;
+}
+
+.filter-chip.active {
+  background: var(--clr-accent-bg);
+  border-color: var(--clr-accent-bg);
+  color: var(--clr-on-accent);
+}
+
+.filter-chip.active .filter-chip-count {
+  opacity: 0.75;
+}
+
+@media (hover: hover) {
+  .filter-chip:not(.active):hover {
+    border-color: var(--clr-border2);
+    background: var(--clr-white);
+  }
+}
+
+/* Barra de búsqueda + filtros de la lista de platos: queda pegada arriba al
+   bajar por la carta. Fondo de página para tapar las tarjetas que pasan debajo. */
+.list-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  margin: 0 -16px;
+  padding: 10px 16px;
+}
+
+.list-toolbar:not(:has(> :not([hidden]))) {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .list-toolbar {
+    margin: 0 -24px;
+    padding: 10px 24px;
+  }
+}
+
 /* === RESPONSIVE === */
 
 @media (min-width: 768px) {
@@ -997,6 +1105,33 @@
   .rating-num {
     font-size: 1.2rem;
   }
+}
+
+/* === COMBOBOX: título de grupo + conteo de uso ===
+   Creados por JS (renderComboOptions en store.ts) en los combobox de categoría
+   y ciudad (DishForm, OfficialManage, RestaurantForm) y los filtros por tipo. */
+
+.cc-group-label {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 8px 14px 6px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--clr-text-soft);
+  background: var(--clr-white2);
+  border-bottom: 1px solid var(--clr-border);
+}
+
+.cc-count {
+  float: right;
+  margin-left: auto;
+  padding-left: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--clr-text-soft);
 }
 
 /* === SKELETON LOADING === */
