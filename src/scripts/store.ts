@@ -22,10 +22,11 @@ export function shortDishName(name: string): string {
   );
 }
 
-/** Corona 👑 para destacar el mejor valorado (restaurante o plato). */
-export function makeCrown(label = "Mejor valorado"): HTMLSpanElement {
+/** Corona 👑 para destacar el mejor valorado (restaurante o plato).
+ *  `inline` = va junto al nombre (platos); sin él flota sobre el badge. */
+export function makeCrown(label = "Mejor valorado", inline = false): HTMLSpanElement {
   const crown = document.createElement("span");
-  crown.className = "crown-badge";
+  crown.className = "crown-badge" + (inline ? " is-inline" : "");
   crown.textContent = "👑";
   crown.title = label;
   crown.setAttribute("aria-label", label);

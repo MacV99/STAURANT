@@ -499,7 +499,10 @@ const tplRestaurant: Restaurant = {
       tpl.content.cloneNode(true) as DocumentFragment
     ).querySelector("article")!;
     article.setAttribute("data-id", d.id);
-    article.querySelector("h4")!.textContent = shortDishName(d.name);
+    const nameEl = article.querySelector("h4")!;
+    nameEl.textContent = shortDishName(d.name);
+    // Corona 👑 del mejor calificado: junto al nombre.
+    if (topDishIds.has(d.id)) nameEl.appendChild(makeCrown("Plato estrella", true));
     // Categoría: pequeña, debajo del nombre.
     const typeTagEl = article.querySelector<HTMLElement>(".dish-type-tag");
     const typeName = d.typeId
@@ -519,7 +522,6 @@ const tplRestaurant: Restaurant = {
     // La descripción ya NO se muestra en la card (solo en el modal de detalle).
     const badge = article.querySelector(".rating-badge")!;
     paintRatingBadge(badge, d.rating, { button: true });
-    if (topDishIds.has(d.id)) badge.appendChild(makeCrown("Plato estrella"));
     if (d.id === popDishId) badge.classList.add("badge-pop");
     badge.addEventListener("click", (e) => {
       e.stopPropagation();

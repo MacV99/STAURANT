@@ -339,13 +339,6 @@ const tplRestaurant: Restaurant = {
     border-color: var(--clr-border2);
   }
 
-  /* Corona del plato estrella: en línea junto a los pills, no flotando. */
-  .dish-card.official-dish .od-meta .crown-badge {
-    position: static;
-    font-size: 0.95rem;
-    transform: none;
-  }
-
   @media (hover: hover) {
     /* Realce sutil al pasar el mouse (solo card calificable). */
     .dish-card.official-dish.is-rateable:hover {
@@ -1076,6 +1069,9 @@ const tplRestaurant: Restaurant = {
     nameEl.title = od.name;
     // Nombres largos: un escalón más chico para que quepan en 2 líneas.
     nameEl.classList.toggle("is-long", shownName.length > 24);
+    // Corona 👑 del mejor calificado: junto al nombre.
+    if (topOfficialDishIds.has(od.id))
+      nameEl.appendChild(makeCrown("Plato estrella de la comunidad", true));
 
     // Miniatura a la derecha (donde antes iba el badge): solo si el plato tiene
     // foto → de un vistazo se ve cuáles la tienen. Sin foto, no ocupa espacio.
@@ -1164,8 +1160,6 @@ const tplRestaurant: Restaurant = {
       mine.innerHTML = `<i class="bi bi-person-fill"></i> ${myRating}`;
     }
     meta.appendChild(mine);
-    if (topOfficialDishIds.has(od.id))
-      meta.appendChild(makeCrown("Plato estrella de la comunidad"));
     infoEl.appendChild(meta);
 
     // Sin menú de acciones personales; tocar la card abre el detalle del plato.

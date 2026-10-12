@@ -712,6 +712,23 @@
   100% { transform: rotate(20deg) scale(1); }
 }
 
+/* Variante en línea: al final del nombre del plato. */
+.crown-badge.is-inline {
+  position: static;
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 0.95em;
+  vertical-align: 0.1em;
+  transform: none;
+  animation-name: crown-pop-inline;
+}
+
+@keyframes crown-pop-inline {
+  0%   { transform: scale(0); opacity: 0; }
+  60%  { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
 /* === VERIFIED BADGE (perfil oficial) === */
 
 .verified-badge {
