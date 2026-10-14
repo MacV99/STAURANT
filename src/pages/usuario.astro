@@ -419,6 +419,7 @@ const tplDish: Dish = {
 <script>
   import { navigate } from "astro:transitions/client";
   import { supabase } from "../lib/supabase.ts";
+  import { withLoading } from "../scripts/loading";
   import {
     initCache,
     getRestaurants,
@@ -1040,8 +1041,6 @@ const tplDish: Dish = {
       return;
     }
 
-    await initCache(session.user.id);
-
     // Skeleton mientras carga
     const restEl = document.getElementById("usuario-restaurants");
     if (!profileUser || profileUser.id !== userId) searchQuery = "";
@@ -1056,14 +1055,16 @@ const tplDish: Dish = {
       restEl.replaceChildren(grid);
     }
 
-    const [user, rs, ds, dts, officials, fr] = await Promise.all([
+    await withLoading(initCache(session.user.id));
+
+    const [user, rs, ds, dts, officials, fr] = await withLoading(Promise.all([
       getPublicProfile(userId),
       getUserRestaurants(userId),
       getUserDishes(userId),
       getUserDishTypes(userId),
       getUserOfficials(userId),
       getFriendStatus(userId),
-    ]);
+    ]));
 
     if (!user) {
       const crumbEl = document.getElementById("usuario-crumb");

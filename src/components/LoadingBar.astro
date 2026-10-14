@@ -1,0 +1,59 @@
+---
+/* Barra fina de "cargando" (ver src/scripts/loading.ts). transition:persist: el mismo
+   elemento sobrevive a la navegación, así la barra no se corta al cambiar de página. */
+---
+
+<div id="loading-bar" class="loading-bar" transition:persist aria-hidden="true">
+  <span class="loading-bar-fill"></span>
+</div>
+
+<style>
+  .loading-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 300;
+    height: 3px;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition);
+  }
+
+  .loading-bar.is-active {
+    opacity: 1;
+  }
+
+  .loading-bar-fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 40%;
+    background: var(--clr-ink);
+    animation: loading-bar-slide 1.1s ease-in-out infinite;
+  }
+
+  @keyframes loading-bar-slide {
+    0% { left: -40%; }
+    100% { left: 100%; }
+  }
+</style>
+
+<script>
+  import { beginLoading } from "../scripts/loading";
+
+  // Navegación entre páginas: mientras llega la página nueva. Se termina en un
+  // setTimeout tras page-load para que la página ya haya empezado sus propias esperas
+  // (así la barra sigue sin cortes si además está trayendo datos).
+  let endNav: (() => void) | null = null;
+  document.addEventListener("astro:before-preparation", () => {
+    endNav?.();
+    endNav = beginLoading();
+  });
+  document.addEventListener("astro:page-load", () => {
+    const end = endNav;
+    endNav = null;
+    if (end) window.setTimeout(end, 0);
+  });
+</script>

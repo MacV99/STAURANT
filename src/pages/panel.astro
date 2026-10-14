@@ -699,6 +699,7 @@ import Layout1 from "../layouts/Layout1.astro";
 
 <script>
   import { supabase } from "../lib/supabase.ts";
+  import { withLoading } from "../scripts/loading";
   import {
     initCache,
     checkOfficialOwnership,
@@ -1147,18 +1148,18 @@ import Layout1 from "../layouts/Layout1.astro";
     const backEl = document.getElementById("panel-back") as HTMLAnchorElement | null;
     if (backEl) backEl.href = `/oficial?id=${encodeURIComponent(id)}`;
 
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await withLoading(supabase.auth.getSession());
     if (!session) { window.location.href = "/login"; return; }
-    await initCache(session.user.id);
+    await withLoading(initCache(session.user.id));
 
     // Solo el dueño ve el panel.
-    const owner = await checkOfficialOwnership(id);
+    const owner = await withLoading(checkOfficialOwnership(id));
     if (!owner) { window.location.href = `/oficial?id=${encodeURIComponent(id)}`; return; }
 
-    const [official, stats] = await Promise.all([
+    const [official, stats] = await withLoading(Promise.all([
       getOfficialRestaurant(id),
       getOfficialOwnerStats(id),
-    ]);
+    ]));
 
     if (official) {
       setText("panel-title", official.name);

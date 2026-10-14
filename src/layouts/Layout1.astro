@@ -7,6 +7,7 @@ import NoticeDialog from "../components/NoticeDialog.astro";
 import RecommendDialog from "../components/RecommendDialog.astro";
 import MapsChooser from "../components/MapsChooser.astro";
 import ShareDialog from "../components/ShareDialog.astro";
+import LoadingBar from "../components/LoadingBar.astro";
 import { ClientRouter } from "astro:transitions";
 
 interface Props {
@@ -97,6 +98,7 @@ const ogUrl = new URL(Astro.url.pathname, site).href;
   </head>
 
   <body>
+    <LoadingBar />
     {!bare && <Navbar />}
     <main>
       <slot />

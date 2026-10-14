@@ -267,6 +267,7 @@ import Layout1 from "../layouts/Layout1.astro";
 <script>
   import { navigate } from "astro:transitions/client";
   import { supabase } from "../lib/supabase.ts";
+  import { withLoading } from "../scripts/loading";
   import {
     initCache,
     isOfficialInMyList,
@@ -475,7 +476,7 @@ import Layout1 from "../layouts/Layout1.astro";
 
     const {
       data: { session },
-    } = await supabase.auth.getSession();
+    } = await withLoading(supabase.auth.getSession());
     if (!session) {
       window.location.href = "/login";
       return;
@@ -491,7 +492,7 @@ import Layout1 from "../layouts/Layout1.astro";
       }
     }
 
-    await initCache(session.user.id);
+    await withLoading(initCache(session.user.id));
 
     // Búsqueda
     const searchEl = document.getElementById(
@@ -507,7 +508,7 @@ import Layout1 from "../layouts/Layout1.astro";
 
     wireCityFilter();
 
-    officials = await getAllOfficialRestaurants();
+    officials = await withLoading(getAllOfficialRestaurants());
     updateCityFilterUI();
     render();
   });

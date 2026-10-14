@@ -38,7 +38,7 @@ const tplRestaurant: Restaurant = {
       <i class="bi bi-arrow-left"></i> Volver
     </a>
 
-    <div id="restaurant-header" class="restaurant-header"></div>
+    <div id="restaurant-header" class="restaurant-header"><div class="skeleton-card skeleton-header"></div></div>
 
     <div class="dishes-section flex-column">
       <div class="dishes-top flex-row">
@@ -245,6 +245,7 @@ const tplRestaurant: Restaurant = {
 <script>
   import { navigate } from "astro:transitions/client";
   import { supabase } from "../lib/supabase.ts";
+  import { withLoading } from "../scripts/loading";
   import {
     initCache,
     isCacheLoaded,
@@ -786,14 +787,6 @@ const tplRestaurant: Restaurant = {
     const headerEl = document.getElementById("restaurant-header");
     if (!headerEl) return;
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session) {
-      window.location.href = "/login";
-      return;
-    }
-
     // Inject dish skeleton cards while cache loads (first visit only)
     if (!isCacheLoaded()) {
       const dishesListEl = document.getElementById("dishes-list") as HTMLElement | null;
@@ -807,7 +800,15 @@ const tplRestaurant: Restaurant = {
       }
     }
 
-    await initCache(session.user.id);
+    const {
+      data: { session },
+    } = await withLoading(supabase.auth.getSession());
+    if (!session) {
+      window.location.href = "/login";
+      return;
+    }
+
+    await withLoading(initCache(session.user.id));
 
     const id = new URLSearchParams(window.location.search).get("id") ?? "";
     currentRestaurant = getRestaurants().find((r) => r.id === id);

@@ -443,6 +443,7 @@ import Layout1 from "../layouts/Layout1.astro";
 <script>
   import { navigate } from "astro:transitions/client";
   import { supabase } from "../lib/supabase.ts";
+  import { withLoading } from "../scripts/loading";
   import {
     initCache,
     getHomeEntries,
@@ -585,7 +586,7 @@ import Layout1 from "../layouts/Layout1.astro";
   }
 
   async function loadThread(smooth = false) {
-    thread = await getRecommendationThread(friendId);
+    thread = await withLoading(getRecommendationThread(friendId));
     renderThread();
     scrollToEnd(smooth);
     // Lo que me envió este amigo queda visto → apaga el globito del menú.
@@ -693,7 +694,7 @@ import Layout1 from "../layouts/Layout1.astro";
 
     const {
       data: { session },
-    } = await supabase.auth.getSession();
+    } = await withLoading(supabase.auth.getSession());
     if (!session) {
       window.location.href = "/login";
       return;
@@ -720,11 +721,11 @@ import Layout1 from "../layouts/Layout1.astro";
       threadEl.appendChild(sk);
     }
 
-    const [, profile, rel] = await Promise.all([
+    const [, profile, rel] = await withLoading(Promise.all([
       initCache(me),
       getPublicProfile(friendId),
       getFriendStatus(friendId),
-    ]);
+    ]));
 
     if (!profile) {
       threadEl.innerHTML = `<div class="empty-state flex-column">

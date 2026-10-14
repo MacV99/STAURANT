@@ -1166,6 +1166,11 @@
   height: 72px;
 }
 
+/* Encabezado de restaurante (/restaurante, /oficial) mientras llegan los datos. */
+.skeleton-header {
+  height: 200px;
+}
+
 @keyframes skeleton-shimmer {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }

@@ -482,6 +482,7 @@ import Layout1 from "../layouts/Layout1.astro";
 <script>
   import { navigate } from "astro:transitions/client";
   import { supabase } from "../lib/supabase.ts";
+  import { withLoading } from "../scripts/loading";
   import { initCache } from "../lib/data.ts";
   import {
     getFriends,
@@ -596,12 +597,12 @@ import Layout1 from "../layouts/Layout1.astro";
   // ─── Refresco de datos ──────────────────────────────────────────────────────
 
   async function reloadFriendsData() {
-    [friends, incoming, outgoing, unreadRecs] = await Promise.all([
+    [friends, incoming, outgoing, unreadRecs] = await withLoading(Promise.all([
       getFriends(),
       getIncomingRequests(),
       getOutgoingRequests(),
       getUnreadRecommendationCounts(),
-    ]);
+    ]));
     renderFriendsTab();
     // Aceptar/rechazar cambia el globito de "Amigos" en el menú.
     document.dispatchEvent(new CustomEvent("friends:badge-refresh"));
@@ -770,12 +771,23 @@ import Layout1 from "../layouts/Layout1.astro";
     const panel = document.getElementById("tab-amigos");
     if (!panel) return;
 
-    const { data: { session } } = await supabase.auth.getSession();
+    // Skeleton mientras cargan los amigos
+    const friendsList = document.getElementById("friends-list");
+    if (friendsList && friends.length === 0 && incoming.length === 0) {
+      friendsList.innerHTML = "";
+      for (let i = 0; i < 3; i++) {
+        const sk = document.createElement("div");
+        sk.className = "skeleton-card";
+        friendsList.appendChild(sk);
+      }
+    }
+
+    const { data: { session } } = await withLoading(supabase.auth.getSession());
     if (!session) {
       window.location.href = "/login";
       return;
     }
-    await initCache(session.user.id);
+    await withLoading(initCache(session.user.id));
 
     // Tabs
     document.querySelectorAll<HTMLButtonElement>(".ftab").forEach((btn) => {
@@ -800,17 +812,6 @@ import Layout1 from "../layouts/Layout1.astro";
 
     activateTab(getActiveTab());
     renderSearchResults();
-
-    // Skeleton mientras cargan los amigos
-    const friendsList = document.getElementById("friends-list");
-    if (friendsList && friends.length === 0 && incoming.length === 0) {
-      friendsList.innerHTML = "";
-      for (let i = 0; i < 3; i++) {
-        const sk = document.createElement("div");
-        sk.className = "skeleton-card";
-        friendsList.appendChild(sk);
-      }
-    }
 
     await reloadFriendsData();
   });

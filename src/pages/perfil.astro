@@ -1075,6 +1075,7 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
   import { availableMapsApps, getMapsPref, setMapsPref, type MapsPref } from "../scripts/maps.ts";
   import { navigate } from "astro:transitions/client";
   import { supabase } from "../lib/supabase.ts";
+  import { withLoading } from "../scripts/loading";
   import { getRatingBadgeHTML, createOverlay } from "../scripts/store.ts";
   import {
     clearCache,
@@ -1281,13 +1282,13 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     const emailEl = document.getElementById("profile-email");
     if (!emailEl) return;
 
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await withLoading(supabase.auth.getSession());
     if (!session) { window.location.href = "/login"; return; }
 
-    const [, { data: profile }] = await Promise.all([
+    const [, { data: profile }] = await withLoading(Promise.all([
       initCache(session.user.id),
       supabase.from("profiles").select("name, username").eq("id", session.user.id).single(),
-    ]);
+    ]));
 
 
     const user = session.user;

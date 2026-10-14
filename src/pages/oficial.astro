@@ -52,7 +52,7 @@ const tplRestaurant: Restaurant = {
       </a>
     </div>
 
-    <div id="oficial-header" class="restaurant-header"></div>
+    <div id="oficial-header" class="restaurant-header"><div class="skeleton-card skeleton-header"></div></div>
 
     {/* Banner de vista visitante: SOLO para el dueño mientras NO está en modo
         admin. El dueño ve su restaurante EXACTAMENTE como un visitante (puede
@@ -434,6 +434,11 @@ const tplRestaurant: Restaurant = {
     width: 100%;
   }
 
+  /* El encabezado oficial es más alto (logo + pills): el bloque gris lo imita. */
+  .skeleton-header {
+    height: 360px;
+  }
+
   /* ── Banner de vista visitante (dueño, modo NO admin) ───────────────────── */
   .visitor-banner {
     justify-content: space-between;
@@ -744,6 +749,7 @@ const tplRestaurant: Restaurant = {
 <script>
   import { navigate } from "astro:transitions/client";
   import { supabase } from "../lib/supabase.ts";
+  import { withLoading } from "../scripts/loading";
   import {
     initCache,
     getOfficialRestaurant,
@@ -1479,9 +1485,15 @@ const tplRestaurant: Restaurant = {
       return;
     }
 
-    // Skeleton mientras carga
+    // Skeleton mientras carga. También al entrar a OTRA carta: el módulo conserva la
+    // anterior y se veían sus platos hasta que llegaban los nuevos.
+    const sameOfficial =
+      official !== null &&
+      (idParam
+        ? official.id === idParam
+        : (official.handle ?? "").toLowerCase() === handleParam);
     const listEl = document.getElementById("dishes-list");
-    if (listEl && officialDishes.length === 0) {
+    if (listEl && (officialDishes.length === 0 || !sameOfficial)) {
       listEl.innerHTML = "";
       for (let i = 0; i < 4; i++) {
         const sk = document.createElement("div");
@@ -1490,22 +1502,22 @@ const tplRestaurant: Restaurant = {
       }
     }
 
-    const authed = await ensureAuthState();
+    const authed = await withLoading(ensureAuthState());
     // Anónimo: initCache no corre (no dispara stats), pedimos stats directo.
     if (!authed) void fetchOfficialStats();
 
     // Resolver el perfil: por id (legacy) o por handle (URL personalizada). Sin
     // id no conocemos aún el uuid, así que la carta se pide después con official.id.
-    official = idParam
-      ? await getOfficialRestaurant(idParam)
-      : await getOfficialByHandle(handleParam);
+    official = await withLoading(
+      idParam ? getOfficialRestaurant(idParam) : getOfficialByHandle(handleParam),
+    );
 
     if (!official) {
       window.location.href = "/explorar";
       return;
     }
 
-    officialDishes = await getOfficialDishes(official.id);
+    officialDishes = await withLoading(getOfficialDishes(official.id));
 
     // Canonicalizar la barra de direcciones a la URL personalizada. Así cualquier
     // entrada por ?id= se "asciende" a /oficial/@handle, y lo que el usuario copie
@@ -1543,7 +1555,7 @@ const tplRestaurant: Restaurant = {
 
     // ¿Soy dueño de este perfil? (fila en official_owners). Debe resolverse ANTES
     // de renderAll para saber si mostrar el interruptor de modo administrador.
-    isOwner = authed ? await checkOfficialOwnership(official.id) : false;
+    isOwner = authed ? await withLoading(checkOfficialOwnership(official.id)) : false;
     // Cada entrada arranca en vista visitante: el dueño ve su restaurante como los
     // demás y activa gestión manualmente. (El módulo persiste entre ViewTransitions.)
     adminMode = false;

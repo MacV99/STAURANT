@@ -203,6 +203,7 @@ const tplRestaurant: Restaurant = {
 <script>
   import { navigate } from "astro:transitions/client";
   import { supabase } from "../lib/supabase.ts";
+  import { withLoading } from "../scripts/loading";
   import {
     initCache,
     isCacheLoaded,
@@ -626,13 +627,13 @@ const tplRestaurant: Restaurant = {
 
     const {
       data: { session },
-    } = await supabase.auth.getSession();
+    } = await withLoading(supabase.auth.getSession());
     if (!session) {
       window.location.href = "/login";
       return;
     }
 
-    await initCache(session.user.id);
+    await withLoading(initCache(session.user.id));
 
     wireSortBar((field, dir) => {
       sortState = { field: field as SortField, dir };
