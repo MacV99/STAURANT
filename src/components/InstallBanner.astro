@@ -370,6 +370,8 @@
   (window as any).pwaInstall = { trigger: triggerInstall };
 
   document.addEventListener("astro:page-load", () => {
+    // Páginas "bare" (p.ej. login) no montan el banner pero sí cargan este script.
+    if (!document.getElementById("install-banner")) return;
     updateBanner();
     updateProfileCard();
 

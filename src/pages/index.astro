@@ -60,7 +60,7 @@ const tplRestaurant: Restaurant = {
       </div>
     </div>
 
-    <div id="tab-visitados" class="tab-content" role="tabpanel" hidden></div>
+    <div id="tab-todos" class="tab-content" role="tabpanel" hidden></div>
     <div id="tab-pendientes" class="tab-content" role="tabpanel" hidden></div>
   </div>
 
@@ -298,12 +298,17 @@ const tplRestaurant: Restaurant = {
     });
   }
 
-  function getActiveTab(): "visitados" | "pendientes" {
-    return (
-      (new URLSearchParams(window.location.search).get("tab") as
-        | "visitados"
-        | "pendientes") ?? "visitados"
-    );
+  function getActiveTab(): "todos" | "pendientes" {
+    // Cualquier otro valor (incluido el viejo "visitados") cae en "todos".
+    return new URLSearchParams(window.location.search).get("tab") === "pendientes"
+      ? "pendientes"
+      : "todos";
+  }
+
+  /** Entradas que muestra cada pestaña: "todos" = todas, "pendientes" = solo pendientes. */
+  function entriesInTab(tab: "todos" | "pendientes"): HomeEntry[] {
+    const all = getHomeEntries();
+    return tab === "pendientes" ? all.filter((e) => e.status === "pending") : all;
   }
 
   // ─── Sort UI ──────────────────────────────────────────────────────────────
@@ -314,7 +319,7 @@ const tplRestaurant: Restaurant = {
 
   // ─── Construye un elemento <article> clonando el template del componente ────
 
-  function buildHomeCardElement(e: HomeEntry, isTop: boolean): Element {
+  function buildHomeCardElement(e: HomeEntry, isTop: boolean, markPending: boolean): Element {
     const tpl = document.getElementById(
       "tpl-restaurant-card",
     ) as HTMLTemplateElement;
@@ -366,6 +371,16 @@ const tplRestaurant: Restaurant = {
       }
     }
 
+    // En "Todos", marca los pendientes para distinguirlos de un vistazo.
+    if (markPending && e.status === "pending") {
+      const tag = document.createElement("span");
+      tag.className = "pending-tag";
+      tag.innerHTML = '<i class="bi bi-bookmark-fill"></i> Pendiente';
+      // Sin platos, el "0 platos" sobra: la marquita ocupa su lugar.
+      if (pill && e.dishCount === 0) pill.replaceWith(tag);
+      else article.querySelector(".card-body")!.appendChild(tag);
+    }
+
     const badge = article.querySelector(".rating-badge")!;
     paintRatingBadge(badge, e.avg);
     if (isTop) badge.appendChild(makeCrown("Tu mejor valorado"));
@@ -375,10 +390,10 @@ const tplRestaurant: Restaurant = {
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
-  function renderList(status: "visited" | "pending", container: HTMLElement) {
+  function renderList(status: "all" | "pending", container: HTMLElement) {
     const q = searchQuery.toLowerCase().trim();
     const all = getHomeEntries().filter((e) => {
-      if (e.status !== status) return false;
+      if (status === "pending" && e.status !== "pending") return false;
       if (cityFilter && !e.cities.includes(cityFilter)) return false;
       if (!q) return true;
       return e.searchText.includes(q);
@@ -404,13 +419,13 @@ const tplRestaurant: Restaurant = {
       } else if (cityFilter) {
         container.innerHTML = `<div class="empty-state flex-column">
              <i class="bi bi-geo-alt"></i>
-             <p>Sin restaurantes ${status === "visited" ? "visitados" : "pendientes"} en <strong>${escapeHtml(cityFilter)}</strong>.</p>
+             <p>Sin restaurantes ${status === "pending" ? "pendientes " : ""}en <strong>${escapeHtml(cityFilter)}</strong>.</p>
            </div>`;
       } else {
         container.innerHTML = `<div class="empty-state flex-column">
-             <i class="bi bi-${status === "visited" ? "journal-check" : "bookmark"}"></i>
-             <p>${status === "visited" ? "Aún no has registrado restaurantes visitados." : "No tienes restaurantes pendientes."}</p>
-             ${status === "visited" ? '<p class="empty-hint">Agrega uno con el botón <strong>+</strong></p>' : ""}
+             <i class="bi bi-${status === "all" ? "journal-check" : "bookmark"}"></i>
+             <p>${status === "all" ? "Aún no has registrado restaurantes." : "No tienes restaurantes pendientes."}</p>
+             ${status === "all" ? '<p class="empty-hint">Agrega uno con el botón <strong>+</strong></p>' : ""}
            </div>`;
       }
       return;
@@ -423,7 +438,7 @@ const tplRestaurant: Restaurant = {
     if (!q) grid.classList.add("stagger-in");
     const topIds = getTopEntryIds(getHomeEntries());
     sorted.forEach((e) => {
-      const card = buildHomeCardElement(e, topIds.has(e.id));
+      const card = buildHomeCardElement(e, topIds.has(e.id), status === "all");
       card.addEventListener("click", () => navigate(e.href));
       grid.appendChild(card);
     });
@@ -442,8 +457,8 @@ const tplRestaurant: Restaurant = {
   function updateCounts() {
     const all = getHomeEntries();
     bumpCount(
-      document.getElementById("count-visitados"),
-      String(all.filter((e) => e.status === "visited").length),
+      document.getElementById("count-todos"),
+      String(all.length),
     );
     bumpCount(
       document.getElementById("count-pendientes"),
@@ -454,10 +469,8 @@ const tplRestaurant: Restaurant = {
   function updateSortBarVisibility() {
     const sortBarEl = document.querySelector<HTMLElement>(".sort-bar");
     if (!sortBarEl) return;
-    const isVisitados = getActiveTab() === "visitados";
-    const status = isVisitados ? "visited" : "pending";
-    sortBarEl.hidden =
-      getHomeEntries().filter((e) => e.status === status).length < 2;
+    const isTodos = getActiveTab() === "todos";
+    sortBarEl.hidden = entriesInTab(getActiveTab()).length < 2;
 
     // El pill de rating no aplica a pendientes (no tienen calificación).
     // Usamos style.display en vez de hidden para evitar que el display:inline-flex
@@ -465,7 +478,7 @@ const tplRestaurant: Restaurant = {
     const ratingPill = sortBarEl.querySelector<HTMLElement>(
       '[data-field="rating"]',
     );
-    if (ratingPill) ratingPill.style.display = isVisitados ? "" : "none";
+    if (ratingPill) ratingPill.style.display = isTodos ? "" : "none";
   }
 
   // ─── City filter UI ─────────────────────────────────────────────────────────
@@ -478,8 +491,7 @@ const tplRestaurant: Restaurant = {
     if (cityFilter && !cities.includes(cityFilter)) cityFilter = null;
 
     // Cuántos restaurantes de la pestaña activa hay en cada ciudad.
-    const status = getActiveTab() === "visitados" ? "visited" : "pending";
-    const inTab = getHomeEntries().filter((e) => e.status === status);
+    const inTab = entriesInTab(getActiveTab());
     renderFilterChips(el, {
       allLabel: "Todas",
       selected: cityFilter ?? "",
@@ -497,7 +509,7 @@ const tplRestaurant: Restaurant = {
   }
 
   function scrollToListTop() {
-    const tab = getActiveTab() === "visitados" ? "tab-visitados" : "tab-pendientes";
+    const tab = getActiveTab() === "todos" ? "tab-todos" : "tab-pendientes";
     keepListInView(
       document.getElementById(tab),
       document.querySelector<HTMLElement>(".page-top-sticky"),
@@ -507,10 +519,10 @@ const tplRestaurant: Restaurant = {
   // Re-renderiza solo las listas (no los chips de ciudad, que no dependen de la
   // búsqueda ni del sort) — se llama en cada tecla del buscador.
   function renderLists() {
-    const tv = document.getElementById("tab-visitados") as HTMLElement | null;
+    const tv = document.getElementById("tab-todos") as HTMLElement | null;
     const tp = document.getElementById("tab-pendientes") as HTMLElement | null;
     if (!tv || !tp) return;
-    renderList("visited", tv);
+    renderList("all", tv);
     renderList("pending", tp);
     updateCounts();
     updateSortBarVisibility();
@@ -521,11 +533,11 @@ const tplRestaurant: Restaurant = {
     renderLists();
   }
 
-  function activateTab(tab: "visitados" | "pendientes") {
-    const tv = document.getElementById("tab-visitados") as HTMLElement | null;
+  function activateTab(tab: "todos" | "pendientes") {
+    const tv = document.getElementById("tab-todos") as HTMLElement | null;
     const tp = document.getElementById("tab-pendientes") as HTMLElement | null;
     if (!tv || !tp) return;
-    tv.hidden = tab !== "visitados";
+    tv.hidden = tab !== "todos";
     tp.hidden = tab !== "pendientes";
     document.querySelectorAll<HTMLButtonElement>(".tab-btn").forEach((btn) => {
       const active = btn.dataset.tab === tab;
@@ -539,10 +551,8 @@ const tplRestaurant: Restaurant = {
 
   // ─── Listeners permanentes a nivel de módulo ──────────────────────────────
 
-  document.addEventListener("restaurant:created", () => {
-    renderBoth();
-    activateTab("pendientes");
-  });
+  // Se queda en la pestaña actual: el nuevo (pendiente) sale en ambas.
+  document.addEventListener("restaurant:created", () => renderBoth());
   document.addEventListener("restaurant:updated", () => renderBoth());
   document.addEventListener("restaurant:visited", () => renderBoth());
   document.addEventListener("cache:synced", () => renderBoth());
@@ -554,35 +564,33 @@ const tplRestaurant: Restaurant = {
   // ─── PRE-RENDER en astro:after-swap ─────────────────────────────────────────
 
   document.addEventListener("astro:after-swap", () => {
-    const tabVisitadosEl = document.getElementById(
-      "tab-visitados",
+    const tabTodosEl = document.getElementById(
+      "tab-todos",
     ) as HTMLElement | null;
     const tabPendientesEl = document.getElementById(
       "tab-pendientes",
     ) as HTMLElement | null;
-    if (!tabVisitadosEl || !isCacheLoaded()) return;
+    if (!tabTodosEl || !isCacheLoaded()) return;
 
     const activeTab = getActiveTab();
 
     renderCityFilter();
-    renderList("visited", tabVisitadosEl);
+    renderList("all", tabTodosEl);
     if (tabPendientesEl) renderList("pending", tabPendientesEl);
 
-    tabVisitadosEl.hidden = activeTab !== "visitados";
+    tabTodosEl.hidden = activeTab !== "todos";
     if (tabPendientesEl) tabPendientesEl.hidden = activeTab !== "pendientes";
 
     const sortBarEl = document.querySelector<HTMLElement>(".sort-bar");
     if (sortBarEl) {
-      const status = activeTab === "visitados" ? "visited" : "pending";
-      sortBarEl.hidden =
-        getHomeEntries().filter((e) => e.status === status).length < 2;
+      sortBarEl.hidden = entriesInTab(activeTab).length < 2;
     }
 
     const all = getHomeEntries();
-    const cv = document.getElementById("count-visitados");
+    const cv = document.getElementById("count-todos");
     const cp = document.getElementById("count-pendientes");
     if (cv)
-      cv.textContent = String(all.filter((e) => e.status === "visited").length);
+      cv.textContent = String(all.length);
     if (cp)
       cp.textContent = String(all.filter((e) => e.status === "pending").length);
 
@@ -598,13 +606,13 @@ const tplRestaurant: Restaurant = {
   // ─── Init por cada navegación (ViewTransitions + carga directa) ─────────────
 
   document.addEventListener("astro:page-load", async () => {
-    const tabVisitadosEl = document.getElementById("tab-visitados");
-    if (!tabVisitadosEl) return;
+    const tabTodosEl = document.getElementById("tab-todos");
+    if (!tabTodosEl) return;
 
     // Tarjetas grises de "cargando" ANTES de cualquier espera (primera visita):
-    // antes se veía un instante la lista vacía con "0" visitados.
+    // antes se veía un instante la lista vacía con "0".
     if (!isCacheLoaded()) {
-      for (const id of ["count-visitados", "count-pendientes"]) {
+      for (const id of ["count-todos", "count-pendientes"]) {
         const el = document.getElementById(id);
         if (el) el.textContent = "–";
       }
@@ -619,9 +627,9 @@ const tplRestaurant: Restaurant = {
         }
         return grid;
       };
-      const tv = document.getElementById("tab-visitados") as HTMLElement | null;
+      const tv = document.getElementById("tab-todos") as HTMLElement | null;
       const tp = document.getElementById("tab-pendientes") as HTMLElement | null;
-      if (tv) { tv.innerHTML = ""; tv.appendChild(skeletonGrid()); tv.hidden = activeTab !== "visitados"; }
+      if (tv) { tv.innerHTML = ""; tv.appendChild(skeletonGrid()); tv.hidden = activeTab !== "todos"; }
       if (tp) { tp.innerHTML = ""; tp.appendChild(skeletonGrid()); tp.hidden = activeTab !== "pendientes"; }
     }
 
@@ -645,7 +653,7 @@ const tplRestaurant: Restaurant = {
 
     document.querySelectorAll<HTMLButtonElement>(".tab-btn").forEach((btn) => {
       btn.onclick = () =>
-        activateTab(btn.dataset.tab as "visitados" | "pendientes");
+        activateTab(btn.dataset.tab as "todos" | "pendientes");
     });
 
     const searchEl = document.getElementById(

@@ -476,7 +476,8 @@ const tplRestaurant: Restaurant = {
       });
 
     // ─── Setup menú popup ─────────────────────────────────────────────────────
-    const btnMenu = div.querySelector<HTMLButtonElement>(".rh-btn-menu")!;
+    // ".rh-menu" delante: el botón de compartir también lleva .rh-btn-menu.
+    const btnMenu = div.querySelector<HTMLButtonElement>(".rh-menu .rh-btn-menu")!;
     const menuPopup = div.querySelector<HTMLElement>(".rh-menu-popup")!;
 
     btnMenu.addEventListener("click", (e) => {
@@ -676,11 +677,11 @@ const tplRestaurant: Restaurant = {
         const updated = markAsVisited(currentRestaurant.id);
         if (updated) {
           currentRestaurant = updated;
-          // Actualizar backLink para que "Volver" lleve a visitados
+          // Actualizar backLink para que "Volver" lleve a todos
           const bl = document.getElementById(
             "back-link",
           ) as HTMLAnchorElement | null;
-          if (bl) bl.href = "/?tab=visitados";
+          if (bl) bl.href = "/?tab=todos";
           emit("restaurant:visited", updated);
         }
       }
@@ -708,7 +709,7 @@ const tplRestaurant: Restaurant = {
         const bl = document.getElementById(
           "back-link",
         ) as HTMLAnchorElement | null;
-        if (bl) bl.href = "/?tab=visitados";
+        if (bl) bl.href = "/?tab=todos";
         emit("restaurant:visited", updated);
       }
     } catch (err) {
@@ -818,7 +819,7 @@ const tplRestaurant: Restaurant = {
 
     const backLink = document.getElementById("back-link") as HTMLAnchorElement;
     if (backLink)
-      backLink.href = `/?tab=${currentRestaurant?.status === "pending" ? "pendientes" : "visitados"}`;
+      backLink.href = `/?tab=${currentRestaurant?.status === "pending" ? "pendientes" : "todos"}`;
     if (!currentRestaurant) {
       window.location.href = "/";
       return;
