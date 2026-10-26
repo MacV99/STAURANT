@@ -12,6 +12,25 @@ export function getRatingBadgeHTML(score: number | null): string {
   return `<span class="rating-badge ${cls}"><span class="rating-num">${score}</span></span>`;
 }
 
+/** Promedio ponderado (bayesiano) para ORDENAR platos de un mismo restaurante:
+ *  un plato con pocos votos se acerca a la nota normal del restaurante hasta
+ *  juntar suficientes. "Suficientes" = votos típicos (mediana, mín. 1) de los
+ *  platos de ESE restaurante; nota normal = promedio de todas sus notas.
+ *  Solo ordena: la nota que se muestra sigue siendo la real. */
+export function makeWeightedScorer(
+  stats: Array<{ avg: number; votes: number }>,
+): (avg: number, votes: number) => number {
+  const rated = stats.filter((s) => s.votes > 0);
+  const totalVotes = rated.reduce((n, s) => n + s.votes, 0);
+  if (totalVotes === 0) return (avg) => avg;
+  const mean = rated.reduce((n, s) => n + s.avg * s.votes, 0) / totalVotes;
+  const sorted = rated.map((s) => s.votes).sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  const m = Math.max(1, median);
+  return (avg, votes) => (votes * avg + m * mean) / (votes + m);
+}
+
 /** Nombre de plato para LISTAS: abrevia palabras muy obvias solo si el nombre
  *  es largo ("Hamburguesa doble con tocineta" → "Hamb. doble con tocineta").
  *  El nombre completo sigue en el modal y en la búsqueda. */

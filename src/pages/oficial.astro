@@ -780,6 +780,7 @@ const tplRestaurant: Restaurant = {
     wireSortBar,
     renderFilterChips,
     keepListInView,
+    makeWeightedScorer,
   } from "../scripts/store.ts";
   import { wireAddressLink } from "../scripts/maps.ts";
   import { wireShareButton, officialShareUrl } from "../scripts/share.ts";
@@ -808,13 +809,15 @@ const tplRestaurant: Restaurant = {
   type RatingLens = "global" | "me";
   let ratingLens: RatingLens = "global";
   let dishSearch = "";
+  // Orden global ponderado por votos de esta carta. Recalculado antes de cada render.
+  let globalScorer: (avg: number, votes: number) => number = (avg) => avg;
 
   /** Nota de un plato oficial según la lente activa (global vs mía). -1 = sin
    *  nota, para que caiga al fondo del ranking descendente. */
   function dishRatingScore(officialDishId: string): number {
     if (ratingLens === "global") {
       const stat = getOfficialDishStat(officialDishId);
-      return stat && stat.ratingsCount > 0 ? stat.avgRating : -1;
+      return stat && stat.ratingsCount > 0 ? globalScorer(stat.avgRating, stat.ratingsCount) : -1;
     }
     return getMyRatingFor(officialDishId) ?? -1;
   }
@@ -1211,6 +1214,12 @@ const tplRestaurant: Restaurant = {
 
     if (sortBarEl) sortBarEl.hidden = officialDishes.length < 2;
 
+    globalScorer = makeWeightedScorer(
+      officialDishes.map((od) => {
+        const stat = getOfficialDishStat(od.id);
+        return { avg: stat?.avgRating ?? 0, votes: stat?.ratingsCount ?? 0 };
+      }),
+    );
     topOfficialDishIds = computeTopMyOfficialDishIds();
     const filtered = getFilteredSortedDishes();
     if (filtered.length === 0) {

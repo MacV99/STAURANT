@@ -708,13 +708,11 @@ import Layout1 from "../layouts/Layout1.astro";
     type OfficialOwnerStats,
     type OfficialOwnerDishStat,
   } from "../lib/data.ts";
+  import { makeWeightedScorer } from "../scripts/store.ts";
 
   type Band = "low" | "mid" | "high";
   type RankTab = "best" | "improve" | "votes" | "unrated";
 
-  /** Votos "de confianza" del promedio ponderado: un plato con pocos votos se
-   *  acerca al promedio general hasta juntar suficientes. */
-  const CONFIDENCE_VOTES = 3;
   const RANK_PREVIEW = 10;
 
   // Estado del ranking (sobrevive a re-renders dentro de la página).
@@ -741,9 +739,10 @@ import Layout1 from "../layouts/Layout1.astro";
     return d.avgRating !== null && d.votes > 0;
   }
 
-  /** Promedio ponderado por votos (bayesiano) para ordenar sin premiar 1 voto suelto. */
-  function weighted(d: OfficialOwnerDishStat & { avgRating: number }, global: number): number {
-    return (d.votes * d.avgRating + CONFIDENCE_VOTES * global) / (d.votes + CONFIDENCE_VOTES);
+  /** Mejores primero por promedio ponderado (bayesiano): no premia 1 voto suelto. */
+  function bestFirst<T extends OfficialOwnerDishStat & { avgRating: number }>(rated: T[]): T[] {
+    const score = makeWeightedScorer(rated.map((d) => ({ avg: d.avgRating, votes: d.votes })));
+    return [...rated].sort((a, b) => score(b.avgRating, b.votes) - score(a.avgRating, a.votes));
   }
 
   /** Grupos de satisfacción a partir del histograma 1-10. */
@@ -828,9 +827,7 @@ import Layout1 from "../layouts/Layout1.astro";
       host.innerHTML = `<div class="panel-empty">Cuando tus clientes califiquen platos, aquí verás los destacados.</div>`;
       return;
     }
-    const global = s.avgOverall ?? 7;
-
-    const best = [...rated].sort((a, b) => weighted(b, global) - weighted(a, global))[0];
+    const best = bestFirst(rated)[0];
     host.appendChild(
       highlightCard({
         icon: "bi-trophy-fill",
@@ -1076,12 +1073,11 @@ import Layout1 from "../layouts/Layout1.astro";
       return;
     }
 
-    const global = s.avgOverall ?? 7;
     const lists: Record<RankTab, { label: string; hint: string; items: OfficialOwnerDishStat[] }> = {
       best: {
         label: "Mejores",
         hint: "Ordenado por nota y cantidad de votos: un plato con pocos votos no se adelanta solo por eso.",
-        items: [...rated].sort((a, b) => weighted(b, global) - weighted(a, global)),
+        items: bestFirst(rated),
       },
       improve: {
         label: "Por mejorar",
