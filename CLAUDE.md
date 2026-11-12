@@ -8,19 +8,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 pnpm run dev        # Dev server at localhost:4321
 pnpm run build      # Production build → ./dist/
 pnpm run preview    # Preview built site
-pnpx astro check   # TypeScript checking (no test suite configured)
+pnpm astro check    # TypeScript checking (no test suite configured)
 ```
+
+## Where it runs (careful)
+
+- **Production:** Netlify, `https://staurant.netlify.app` (repo `MacV99/STAURANT`).
+- **Database:** Supabase project `mglmteepqukeljbltarb`. There is NO local/test DB: `.env` points to
+  production, so `pnpm run dev` reads and writes **real user data**.
+- **Supabase MCP:** use `daa78ba0…` with that `project_id`. `d6dd1872…` is Cava and `460c90ad…`
+  is another org's project ("Main") — neither is STAURANT.
+- **Schema changes:** keep a copy in `supabase/migrations/` (numbered `000N_*.sql`).
 
 ## Architecture
 
-**STAURANT** is an Astro 5 PWA for tracking restaurants and dishes. It uses Supabase for auth + data, with a client-side cache layer for near-instant UI updates.
+**STAURANT** is an Astro 5 PWA for tracking restaurants and dishes. It uses Supabase for auth + data, with a client-side cache layer for near-instant UI updates. Besides personal restaurants there are **official** restaurants (shared profile + per-user ratings, managed by their owners) and a social layer (friends, recommendations).
 
 ### Data flow
 
 1. **Auth check** on every page load via `supabase.auth.getSession()` (reads localStorage — synchronous).
-2. **`initCache(userId)`** in `src/lib/data.ts` loads all user data from Supabase on first page load, stores in `localStorage` under `staurant_cache_v2`.
+2. **`initCache(userId)`** in `src/lib/data.ts` loads all user data from Supabase on first page load, stores in `localStorage` under `staurant_cache_v5` (bump the version when the cache shape changes).
 3. **All subsequent reads** hit the cache synchronously — zero latency.
-4. **Writes** update the cache immediately, then fire a background `bgSync()` call to Supabase without blocking the UI (optimistic updates).
+4. **Writes** update the cache immediately, then fire a background `bgWrite()` call to Supabase without blocking the UI (optimistic updates; see the end of this file).
 5. **Custom events** (`restaurant:created`, `dish:updated`, etc.) decouple the data layer from UI — handlers live in page `<script>` blocks and re-render HTML directly.
 
 ### Key files
@@ -28,6 +37,7 @@ pnpx astro check   # TypeScript checking (no test suite configured)
 | File | Role |
 |---|---|
 | `src/lib/data.ts` | Cache management, all CRUD functions, background sync |
+| `src/lib/social.ts` | Friends, other users' profiles, recommendations (reads that skip the local cache) |
 | `src/lib/supabase.ts` | Supabase client singleton |
 | `src/scripts/store.ts` | Event bus helpers + small DOM builders (rating pills/badges, overlays, comboboxes) |
 | `src/layouts/Layout1.astro` | Root layout: meta, fonts, ClientRouter (ViewTransitions), header, NoticeDialog global |
@@ -38,8 +48,12 @@ pnpx astro check   # TypeScript checking (no test suite configured)
 
 - `src/pages/index.astro` — Restaurant list with visited/pending tabs and sort controls
 - `src/pages/restaurante.astro` — Restaurant detail + dish management (`?id=…`)
-- `src/pages/login.astro` — Auth (login + register tab switcher)
-- `src/pages/perfil.astro` — User profile + logout
+- `src/pages/oficial.astro` — Official restaurant menu (`?id=…` or `/oficial/@handle` via `public/_redirects`). Public: anonymous users browse; rating opens `AuthModal` inline. Owners/superadmin get edit mode (`OfficialManage.astro`).
+- `src/pages/panel.astro` — Owner stats dashboard for an official restaurant (`?id=…`)
+- `src/pages/explorar.astro` — Browse official restaurants
+- `src/pages/amigos.astro` / `usuario.astro` — Friends list / a friend's public profile
+- `src/pages/login.astro` + `auth/callback.astro` — Auth (login + register; Google OAuth return)
+- `src/pages/perfil.astro` — User profile, theme, logout; official-restaurant requests (superadmin inbox)
 - `src/pages/recomendaciones.astro` — "Chat" sin texto con un amigo (`?amigo=…`): solo recomendaciones de platos/restaurantes. Se envían desde `RecommendDialog` (montado en `Layout1`, `window.recommend.open({type,id,title,subtitle})`). Tabla `recommendations` guarda solo tipo+id; nombre/nota/enlace se resuelven al leer (`social.ts`). RLS: solo a amigos y solo lo propio.
 
 ### Interactivity pattern
@@ -107,7 +121,11 @@ Both are public (`PUBLIC_` prefix) and safe to expose in the browser bundle.
 
 ### TypeScript
 
-Extends `astro/tsconfigs/strict`. No `any` types; null checks enforced. Run `npx astro check` to verify before committing.
+Extends `astro/tsconfigs/strict`. Avoid `any` (only the `window as any` modal APIs above); null checks enforced. Run `pnpm astro check` to verify before committing.
+
+### UI rules
+
+Never use native `alert()` / `confirm()` / `prompt()`: use `window.confirmDialog.show(msg, onConfirm)` and `window.noticeDialog.show(msg, { variant })`.
 
 ### bgSync y callbacks asíncronos
 
