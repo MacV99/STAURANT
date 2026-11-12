@@ -27,3 +27,6 @@ pnpm-debug.log*
 .netlify/
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
+
+# videos promocionales (van por fuera de git)
+videos/
