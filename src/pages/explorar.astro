@@ -370,7 +370,7 @@ import Layout1 from "../layouts/Layout1.astro";
       return;
     }
 
-    listEl.innerHTML = "";
+    listEl.replaceChildren();
     const frag = document.createDocumentFragment();
     filtered.forEach((o) => frag.appendChild(buildCard(o)));
     listEl.appendChild(frag);
@@ -401,7 +401,7 @@ import Layout1 from "../layouts/Layout1.astro";
   function renderCityDropdown(): void {
     const dropdownEl = document.getElementById("explore-city-dropdown");
     if (!dropdownEl) return;
-    dropdownEl.innerHTML = "";
+    dropdownEl.replaceChildren();
 
     const noneOpt = document.createElement("div");
     noneOpt.className = "type-option is-none";
@@ -484,7 +484,7 @@ import Layout1 from "../layouts/Layout1.astro";
 
     // Skeletons mientras carga
     if (officials.length === 0) {
-      listEl.innerHTML = "";
+      listEl.replaceChildren();
       for (let i = 0; i < 5; i++) {
         const sk = document.createElement("div");
         sk.className = "skeleton-card";

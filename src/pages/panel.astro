@@ -742,7 +742,7 @@ import Layout1 from "../layouts/Layout1.astro";
   /** Mejores primero por promedio ponderado (bayesiano): no premia 1 voto suelto. */
   function bestFirst<T extends OfficialOwnerDishStat & { avgRating: number }>(rated: T[]): T[] {
     const score = makeWeightedScorer(rated.map((d) => ({ avg: d.avgRating, votes: d.votes })));
-    return [...rated].sort((a, b) => score(b.avgRating, b.votes) - score(a.avgRating, a.votes));
+    return rated.toSorted((a, b) => score(b.avgRating, b.votes) - score(a.avgRating, a.votes));
   }
 
   /** Grupos de satisfacción a partir del histograma 1-10. */
@@ -821,7 +821,7 @@ import Layout1 from "../layouts/Layout1.astro";
   function renderHighlights(s: OfficialOwnerStats): void {
     const host = document.getElementById("highlights");
     if (!host) return;
-    host.innerHTML = "";
+    host.replaceChildren();
     const rated = s.dishes.filter(isRated);
     if (rated.length === 0) {
       host.innerHTML = `<div class="panel-empty">Cuando tus clientes califiquen platos, aquí verás los destacados.</div>`;
@@ -839,7 +839,7 @@ import Layout1 from "../layouts/Layout1.astro";
       }),
     );
 
-    const most = [...rated].sort((a, b) => b.votes - a.votes || b.avgRating - a.avgRating)[0];
+    const most = rated.toSorted((a, b) => b.votes - a.votes || b.avgRating - a.avgRating)[0];
     host.appendChild(
       highlightCard({
         icon: "bi-fire",
@@ -881,7 +881,7 @@ import Layout1 from "../layouts/Layout1.astro";
     if (!host) return;
     const g = sentimentGroups(s);
     if (g.total === 0) {
-      host.innerHTML = "";
+      host.replaceChildren();
       return;
     }
     const parts: Array<[Band, number, string]> = [
@@ -913,14 +913,14 @@ import Layout1 from "../layouts/Layout1.astro";
       item.innerHTML = `<i class="sent-dot"></i><b>${pct(n, g.total)}%</b> ${label}`;
       legend.appendChild(item);
     }
-    host.innerHTML = "";
+    host.replaceChildren();
     host.append(bar, legend);
   }
 
   function renderHistogram(s: OfficialOwnerStats): void {
     const host = document.getElementById("hist");
     if (!host) return;
-    host.innerHTML = "";
+    host.replaceChildren();
     const max = Math.max(1, ...s.distribution.map((d) => d.count));
     s.distribution.forEach((d) => {
       const col = document.createElement("div");
@@ -953,7 +953,7 @@ import Layout1 from "../layouts/Layout1.astro";
   function renderActivity(s: OfficialOwnerStats): void {
     const host = document.getElementById("activity");
     if (!host) return;
-    host.innerHTML = "";
+    host.replaceChildren();
 
     // Eje de 30 días terminando hoy; se vuelcan los conteos del RPC sobre él.
     const days: string[] = [];
@@ -1067,7 +1067,7 @@ import Layout1 from "../layouts/Layout1.astro";
     setText("rank-count", `${rated.length} de ${s.dishes.length} calificados`);
 
     if (s.dishes.length === 0) {
-      tabsEl.innerHTML = "";
+      tabsEl.replaceChildren();
       host.innerHTML = `<div class="panel-empty">Aún no hay platos en la carta.</div>`;
       moreBtn.hidden = true;
       return;
@@ -1082,12 +1082,12 @@ import Layout1 from "../layouts/Layout1.astro";
       improve: {
         label: "Por mejorar",
         hint: "Notas más bajas primero.",
-        items: [...rated].sort((a, b) => a.avgRating - b.avgRating || b.votes - a.votes),
+        items: rated.toSorted((a, b) => a.avgRating - b.avgRating || b.votes - a.votes),
       },
       votes: {
         label: "Más votados",
         hint: "Los platos que más califican tus clientes.",
-        items: [...rated].sort((a, b) => b.votes - a.votes || b.avgRating - a.avgRating),
+        items: rated.toSorted((a, b) => b.votes - a.votes || b.avgRating - a.avgRating),
       },
       unrated: {
         label: `Sin calificar (${unrated.length})`,
@@ -1097,7 +1097,7 @@ import Layout1 from "../layouts/Layout1.astro";
     };
 
     // Pestañas
-    tabsEl.innerHTML = "";
+    tabsEl.replaceChildren();
     (Object.keys(lists) as RankTab[]).forEach((key) => {
       if (key === "unrated" && unrated.length === 0) return;
       const btn = document.createElement("button");
@@ -1116,7 +1116,7 @@ import Layout1 from "../layouts/Layout1.astro";
 
     const current = lists[rankTab];
     setText("rank-hint", current.hint);
-    host.innerHTML = "";
+    host.replaceChildren();
     if (current.items.length === 0) {
       host.innerHTML = `<div class="panel-empty">Nada por aquí todavía.</div>`;
       moreBtn.hidden = true;

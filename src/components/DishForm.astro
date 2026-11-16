@@ -718,7 +718,7 @@ import FormModal from "./FormModal.astro";
       onClose: () => closeDropdown(),
     });
     if (!overlayApi) return; // no está en esta página
-    const { overlay, close } = overlayApi;
+    const { open: openOverlay, close } = overlayApi;
 
     const form = document.getElementById("dish-form") as HTMLFormElement;
     const titleEl = document.getElementById("dish-form-title")!;
@@ -887,7 +887,7 @@ import FormModal from "./FormModal.astro";
       for (const t of types) if (!others.has(t.name)) others.set(t.name, 0);
       const selectedName = types.find((t) => t.id === selectedTypeId)?.name ?? null;
 
-      dropdownEl.innerHTML = "";
+      dropdownEl.replaceChildren();
 
       // Opción "ninguno" para deseleccionar (solo cuando hay algo seleccionado)
       if (selectedTypeId) {
@@ -1043,7 +1043,7 @@ import FormModal from "./FormModal.astro";
         setRecommend(null);
       }
 
-      overlay.classList.add("is-open");
+      openOverlay();
       requestAnimationFrame(() =>
         initDrumForValue(parseFloat(ratingInput.value)),
       );
@@ -1169,7 +1169,7 @@ import FormModal from "./FormModal.astro";
           : null,
       );
 
-      overlay.classList.add("is-open");
+      openOverlay();
       requestAnimationFrame(() =>
         initDrumForValue(parseFloat(ratingInput.value)),
       );
@@ -1233,7 +1233,7 @@ import FormModal from "./FormModal.astro";
     function buildDrum() {
       if (drumBuilt) return;
       drumBuilt = true;
-      drumTrackEl.innerHTML = "";
+      drumTrackEl.replaceChildren();
       drumItems.length = 0;
 
       for (let i = 0; i < NUM_ITEMS; i++) {

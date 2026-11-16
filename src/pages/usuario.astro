@@ -729,7 +729,7 @@ const tplDish: Dish = {
   // ─── Lista de restaurantes ──────────────────────────────────────────────────
 
   function sortRestaurants(list: Restaurant[]): Restaurant[] {
-    return [...list].sort((a, b) => {
+    return list.toSorted((a, b) => {
       let cmp = 0;
       if (sortState.field === "name") {
         cmp = a.name.localeCompare(b.name);
@@ -833,7 +833,7 @@ const tplDish: Dish = {
     }
 
     const sorted = sortRestaurants(filtered);
-    listEl.innerHTML = "";
+    listEl.replaceChildren();
     const grid = document.createElement("div");
     grid.className = "cards-grid";
     sorted.forEach((r) => grid.appendChild(buildRestaurantCard(r)));
@@ -952,7 +952,7 @@ const tplDish: Dish = {
     // Reemplazar el menú por "Agregar a los míos"
     const actions = article.querySelector(".dish-actions");
     if (actions) {
-      actions.innerHTML = "";
+      actions.replaceChildren();
       actions.appendChild(buildAddButton(r, d));
     }
     return article;
@@ -978,7 +978,7 @@ const tplDish: Dish = {
       return;
     }
 
-    listEl.innerHTML = "";
+    listEl.replaceChildren();
     list.forEach((d) => listEl.appendChild(buildDetailDishCard(restaurant, d)));
   }
 

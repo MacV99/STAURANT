@@ -1408,7 +1408,7 @@ import FormModal from "./FormModal.astro";
     function renderLogoField(url: string | null) {
       pLogoLoadingEl.hidden = true;
       if (url) {
-        pLogoPreviewEl.innerHTML = "";
+        pLogoPreviewEl.replaceChildren();
         const img = document.createElement("img");
         img.alt = "";
         img.onerror = () => renderLogoField(null);
@@ -1440,7 +1440,7 @@ import FormModal from "./FormModal.astro";
       const prev = pLogoUrlEl.value || null;
       // Preview local inmediato; el spinner se superpone mientras sube.
       const localUrl = URL.createObjectURL(file);
-      pLogoPreviewEl.innerHTML = "";
+      pLogoPreviewEl.replaceChildren();
       const localImg = document.createElement("img");
       localImg.alt = "";
       localImg.src = localUrl;

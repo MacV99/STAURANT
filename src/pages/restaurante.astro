@@ -303,7 +303,7 @@ const tplRestaurant: Restaurant = {
   let dishSort = getSortState();
 
   function sortDishes(dishes: ReturnType<typeof getDishesByRestaurant>) {
-    return [...dishes].sort((a, b) => {
+    return dishes.toSorted((a, b) => {
       let cmp = 0;
       if (dishSort.field === "name") cmp = a.name.localeCompare(b.name);
       else if (dishSort.field === "rating") {
@@ -625,7 +625,7 @@ const tplRestaurant: Restaurant = {
            </div>`;
       return;
     }
-    dishesListEl.innerHTML = "";
+    dishesListEl.replaceChildren();
     // Stagger solo sin filtros activos (evita parpadeo al buscar/filtrar).
     dishesListEl.classList.toggle("stagger-in", !dishSearch && !dishTypeFilter);
     filtered.forEach((d) => dishesListEl.appendChild(buildDishCardElement(d)));
@@ -792,7 +792,7 @@ const tplRestaurant: Restaurant = {
     if (!isCacheLoaded()) {
       const dishesListEl = document.getElementById("dishes-list") as HTMLElement | null;
       if (dishesListEl) {
-        dishesListEl.innerHTML = "";
+        dishesListEl.replaceChildren();
         for (let i = 0; i < 4; i++) {
           const sk = document.createElement("div");
           sk.className = "skeleton-card skeleton-dish";

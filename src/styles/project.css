@@ -91,15 +91,25 @@
   filter: invert(1);
 }
 
-/* === OVERLAY (compartido: RestaurantForm, DishForm, ConfirmDialog) === */
+/* === OVERLAY (compartido: todos los modales) ===
+   Es un <dialog> nativo abierto con showModal() (ver createOverlay en store.ts).
+   El <dialog> ocupa TODA la pantalla y hace de fondo; la caja va dentro.
+   Sin z-index: la capa superior del navegador apila por orden de apertura. */
 
 .overlay {
-  display: none;
+  /* Anula el estilo por defecto del <dialog> (caja centrada con borde). */
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  color: inherit;
+
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(6px);
-  z-index: 200;
   align-items: flex-start;
   justify-content: center;
   /* Mobile: pegado arriba con aire cómodo + safe-area (notch / barra). */
@@ -109,8 +119,17 @@
   overscroll-behavior: contain;
 }
 
-.overlay.is-open {
+/* display solo con [open]: ponerlo siempre rompería el estado cerrado. */
+.overlay[open] {
   display: flex;
+}
+
+/* El fondo visible es el propio .overlay; ::backdrop solo evita que el scroll
+   pase a la página de atrás. */
+.overlay::backdrop {
+  background: transparent;
+  overflow: hidden;
+  overscroll-behavior: contain;
 }
 
 @media (min-width: 768px) {
@@ -1203,8 +1222,8 @@
 /* a partir de la 9ª entran juntas (delay 0) para no alargar la espera */
 
 /* === APERTURA DE MODAL (overlay + caja) ========================
-   El overlay pasa de display:none a flex con .is-open; la animación
-   corre al añadir la clase. */
+   El <dialog> pasa de display:none a flex al abrirse ([open]); la
+   animación corre en ese momento. */
 
 @keyframes overlay-fade-in {
   from { opacity: 0; }
@@ -1217,12 +1236,12 @@
   }
 }
 
-.overlay.is-open {
+.overlay[open] {
   animation: overlay-fade-in 0.18s ease;
 }
 
-.overlay.is-open .form-box,
-.overlay.is-open .dialog-box {
+.overlay[open] .form-box,
+.overlay[open] .dialog-box {
   animation: box-pop-in 0.26s var(--transition-bounce) both;
 }
 

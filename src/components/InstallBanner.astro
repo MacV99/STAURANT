@@ -17,7 +17,7 @@
 </div>
 
 <!-- iOS instructions modal -->
-<div id="ios-install-overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="ios-modal-title">
+<dialog id="ios-install-overlay" class="overlay" aria-labelledby="ios-modal-title">
   <div class="ios-install-modal flex-column">
     <div class="ios-modal-header flex-row">
       <div class="ios-modal-title-group flex-column">
@@ -52,7 +52,7 @@
     </div>
     <p class="ios-modal-hint"><i class="bi bi-info-circle"></i> Abre esta página en Safari si no ves la opción</p>
   </div>
-</div>
+</dialog>
 
 
 <style>
@@ -245,8 +245,12 @@
 </style>
 
 <script>
+  import { createOverlay } from "../scripts/store.ts";
+
   // Module-level — persists across ViewTransitions
   let deferredPrompt: Event | null = null;
+  // Referencias frescas en cada astro:page-load (ver abajo).
+  let iosModal: ReturnType<typeof createOverlay> = null;
   const DISMISSED_KEY = "staurant_banner_dismissed";
 
   window.addEventListener("beforeinstallprompt", (e) => {
@@ -276,11 +280,11 @@
   }
 
   function showIOSModal(): void {
-    document.getElementById("ios-install-overlay")?.classList.add("is-open");
+    iosModal?.open();
   }
 
   function hideIOSModal(): void {
-    document.getElementById("ios-install-overlay")?.classList.remove("is-open");
+    iosModal?.close();
   }
 
   async function triggerInstall(): Promise<void> {
@@ -370,6 +374,9 @@
   (window as any).pwaInstall = { trigger: triggerInstall };
 
   document.addEventListener("astro:page-load", () => {
+    // Antes del return: en páginas sin banner queda null (nada viejo).
+    // createOverlay ya cablea el cierre por click en el fondo.
+    iosModal = createOverlay("ios-install-overlay");
     // Páginas "bare" (p.ej. login) no montan el banner pero sí cargan este script.
     if (!document.getElementById("install-banner")) return;
     updateBanner();
@@ -383,13 +390,5 @@
     };
 
     document.getElementById("ios-modal-close")!.onclick = hideIOSModal;
-
-    const iosOverlay = document.getElementById("ios-install-overlay");
-    if (iosOverlay) {
-      iosOverlay.onclick = (e) => {
-        if (e.target === iosOverlay) hideIOSModal();
-      };
-    }
-
   });
 </script>

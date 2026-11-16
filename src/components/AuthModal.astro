@@ -13,7 +13,7 @@
  */
 ---
 
-<div id="auth-modal-overlay" class="overlay" aria-modal="true" role="dialog">
+<dialog id="auth-modal-overlay" class="overlay" aria-labelledby="auth-modal-title">
   <div class="form-box auth-modal-box flex-column" style="max-width:400px">
     <div class="form-header flex-row">
       <h2 id="auth-modal-title">Inicia sesión para calificar</h2>
@@ -80,7 +80,7 @@
       <button type="submit" class="btn-primary" id="am-btn-register">Crear cuenta</button>
     </form>
   </div>
-</div>
+</dialog>
 
 <style>
   .auth-modal-box {
@@ -266,7 +266,7 @@
   document.addEventListener("astro:page-load", () => {
     const overlayApi = createOverlay("auth-modal-overlay");
     if (!overlayApi) return; // no está en esta página
-    const { overlay, close } = overlayApi;
+    const { open: openOverlay, close } = overlayApi;
 
     const titleEl = document.getElementById("auth-modal-title")!;
     const closeBtn = document.getElementById("auth-modal-close")!;
@@ -396,7 +396,7 @@
       formRegister.reset();
       btnGoogle.disabled = false;
       showTab("login");
-      overlay.classList.add("is-open");
+      openOverlay();
     }
 
     (window as any).authModal = { open, close };

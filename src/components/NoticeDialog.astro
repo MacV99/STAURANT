@@ -1,24 +1,19 @@
-<div id="notice-overlay" class="overlay" aria-modal="true" role="dialog">
+<dialog id="notice-overlay" class="overlay" aria-labelledby="notice-message">
   <div class="dialog-box flex-column">
     <div id="notice-icon" class="dialog-icon">
       <i class="bi bi-info-circle-fill"></i>
     </div>
     <p id="notice-message" class="dialog-message">—</p>
     <div class="dialog-actions flex-row">
-      <button id="notice-ok" class="boton">Entendido</button>
+      <button id="notice-ok" class="boton" autofocus>Entendido</button>
     </div>
   </div>
-</div>
+</dialog>
 
 <style>
   /* Estructura compartida en project.css (.dialog-box …). Sin acción doble:
-     un único botón que ocupa todo el ancho vía .dialog-actions (flex:1). */
-
-  /* Un aviso debe verse aunque haya otro modal abierto (formularios 200,
-     recomendar 300). ConfirmDialog (400) sigue siendo la última palabra. */
-  #notice-overlay {
-    z-index: 350;
-  }
+     un único botón que ocupa todo el ancho vía .dialog-actions (flex:1).
+     Se ve encima de otro modal abierto por abrirse después (capa superior). */
 </style>
 
 <script>

@@ -100,6 +100,11 @@ export function buildOfficialLogo(
   if (!logoUrl) return placeholder();
   const img = document.createElement("img");
   img.className = base;
+  img.decoding = "async";
+  // Header /oficial (lg): es la imagen principal de la página → prioridad alta.
+  // Cards (inicio, /explorar): listas largas → solo se bajan al acercarse.
+  if (extraClass.includes("logo-avatar-lg")) img.fetchPriority = "high";
+  else img.loading = "lazy";
   img.src = logoUrl;
   img.alt = name;
   img.onerror = () => img.replaceWith(placeholder());
@@ -206,7 +211,7 @@ export function renderFilterChips(
     onPick: (value: string) => void;
   },
 ): void {
-  el.innerHTML = "";
+  el.replaceChildren();
   el.hidden = cfg.options.length < 2;
   if (el.hidden) return;
 
@@ -279,6 +284,13 @@ export function on(
  * Fuerza el contenido del input a MAYÚSCULAS preservando la posición del caret.
  * Reemplaza el patrón copy-paste que vivía en RestaurantForm y DishForm.
  */
+/** true mientras un teclado de composición (chino, japonés, coreano…) arma una
+ *  palabra: ese Enter elige el carácter, no debe confirmar ni enviar nada.
+ *  keyCode 229 cubre a Safari, que marca isComposing en false en ese Enter. */
+export function isImeComposing(e: KeyboardEvent): boolean {
+  return e.isComposing || e.keyCode === 229;
+}
+
 export function forceUppercase(el: HTMLInputElement): void {
   const pos = el.selectionStart;
   el.value = el.value.toUpperCase();
@@ -286,8 +298,13 @@ export function forceUppercase(el: HTMLInputElement): void {
 }
 
 /**
- * Cablea el ciclo de vida compartido de un overlay modal (`.overlay` + `.is-open`):
- * click fuera cierra. Devuelve `open`/`close` listos para usar. Llamar dentro de
+ * Cablea el ciclo de vida compartido de un modal `<dialog class="overlay">`.
+ * El navegador da: capa superior (siempre encima, el último abierto gana), Esc y
+ * gesto "atrás" cierran, foco atrapado dentro y devuelto al botón que lo abrió.
+ * Aquí se agrega: click en el fondo cierra (el <dialog> ocupa toda la pantalla y
+ * la caja va dentro, así que `e.target === overlay` = click fuera de la caja).
+ *
+ * `onClose` corre con CUALQUIER cierre (botón, Esc, fondo). Llamar dentro de
  * `astro:page-load` para tomar referencias frescas al DOM actual.
  *
  * Devuelve `null` si el overlay no existe en la página actual.
@@ -295,16 +312,21 @@ export function forceUppercase(el: HTMLInputElement): void {
 export function createOverlay(
   overlayId: string,
   opts: { onClose?: () => void } = {}
-): { overlay: HTMLElement; open: () => void; close: () => void } | null {
+): { overlay: HTMLDialogElement; open: () => void; close: () => void } | null {
   const overlay = document.getElementById(overlayId);
-  if (!overlay) return null;
+  if (!(overlay instanceof HTMLDialogElement)) return null;
 
   const open = (): void => {
-    overlay.classList.add("is-open");
+    if (!overlay.open) overlay.showModal();
   };
   const close = (): void => {
-    overlay.classList.remove("is-open");
-    opts.onClose?.();
+    if (overlay.open) overlay.close();
+  };
+
+  // El evento `close` llega en una tarea aparte: si el modal se re-abrió entre
+  // medio (close() + open() seguidos), no limpiar el estado del nuevo.
+  overlay.onclose = () => {
+    if (!overlay.open) opts.onClose?.();
   };
 
   // .onclick evita acumulación de listeners si el módulo re-ejecuta
@@ -463,7 +485,7 @@ export function wireCreatableCombobox(cfg: {
 
   function render(query: string): void {
     const q = query.trim().toUpperCase();
-    dropdown.innerHTML = "";
+    dropdown.replaceChildren();
     const { exact } = renderComboOptions({
       dropdown,
       options: cfg.getOptions(),
@@ -523,6 +545,7 @@ export function wireCreatableCombobox(cfg: {
   });
   // Enter confirma el texto escrito en vez de enviar el formulario.
   input.addEventListener("keydown", (e) => {
+    if (isImeComposing(e)) return;
     if (e.key === "Enter" && !dropdown.hidden) {
       e.preventDefault();
       select(input.value.trim());
@@ -575,7 +598,7 @@ export function wireCreatableMultiCombobox(cfg: {
   let selected: string[] = [];
 
   function renderChips(): void {
-    chips.innerHTML = "";
+    chips.replaceChildren();
     chips.hidden = selected.length === 0;
     if (selected.length === 0) return;
 
@@ -624,7 +647,7 @@ export function wireCreatableMultiCombobox(cfg: {
       .getOptions()
       .map(toComboOption)
       .filter((o) => !taken.has(normalizeText(o.value)));
-    dropdown.innerHTML = "";
+    dropdown.replaceChildren();
     const res = renderComboOptions({
       dropdown,
       options: pool,
@@ -674,6 +697,7 @@ export function wireCreatableMultiCombobox(cfg: {
     }, 150);
   });
   input.addEventListener("keydown", (e) => {
+    if (isImeComposing(e)) return;
     if (e.key === "Enter") {
       e.preventDefault();
       add(input.value);

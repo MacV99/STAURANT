@@ -33,10 +33,10 @@ import Layout1 from "../layouts/Layout1.astro";
   </div>
 
   <!-- ── Selector: ¿qué le recomiendas? (mis restaurantes y platos) ── -->
-  <div id="chat-pick-overlay" class="overlay" aria-modal="true" role="dialog">
+  <dialog id="chat-pick-overlay" class="overlay" aria-labelledby="chat-pick-title">
     <div class="form-box form-box--sheet flex-column chat-pick-box">
       <div class="form-header flex-row">
-        <h2>¿Qué le recomiendas?</h2>
+        <h2 id="chat-pick-title">¿Qué le recomiendas?</h2>
         <button
           id="chat-pick-close"
           class="btn-close btn-icon-close boton2"
@@ -65,7 +65,7 @@ import Layout1 from "../layouts/Layout1.astro";
         <div id="chat-pick-list" class="chat-pick-list flex-column"></div>
       </div>
     </div>
-  </div>
+  </dialog>
 </Layout1>
 
 <style>
@@ -555,7 +555,7 @@ import Layout1 from "../layouts/Layout1.astro";
   function renderThread() {
     const el = document.getElementById("chat-thread");
     if (!el) return;
-    el.innerHTML = "";
+    el.replaceChildren();
     if (thread.length === 0) {
       el.innerHTML = `<div class="empty-state flex-column">
           <i class="bi bi-chat-heart"></i>
@@ -647,7 +647,7 @@ import Layout1 from "../layouts/Layout1.astro";
     const items = pickItems().filter(
       (i) => !q || i.title.toLowerCase().includes(q) || i.sub.toLowerCase().includes(q),
     );
-    listEl.innerHTML = "";
+    listEl.replaceChildren();
     if (items.length === 0) {
       const empty = document.createElement("div");
       empty.className = "empty-state flex-column";
@@ -711,7 +711,7 @@ import Layout1 from "../layouts/Layout1.astro";
       history.length > 1 ? history.back() : navigate("/amigos");
 
     // Skeleton mientras carga
-    threadEl.innerHTML = "";
+    threadEl.replaceChildren();
     for (let i = 0; i < 3; i++) {
       const sk = document.createElement("div");
       sk.className = "skeleton-card";

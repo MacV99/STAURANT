@@ -1,4 +1,4 @@
-<div id="share-overlay" class="overlay" aria-modal="true" role="dialog" aria-labelledby="share-title">
+<dialog id="share-overlay" class="overlay" aria-labelledby="share-title">
   <div class="dialog-box share-box flex-column">
     <div class="share-head flex-row">
       <h2 id="share-title" class="share-title">Compartir</h2>
@@ -13,14 +13,9 @@
       <button id="share-copy" class="boton share-copy" type="button">Copiar</button>
     </div>
   </div>
-</div>
+</dialog>
 
 <style>
-  /* Por encima de formularios (200); debajo de recomendar (300), que se abre desde aquí. */
-  #share-overlay {
-    z-index: 290;
-  }
-
   .share-box {
     align-items: stretch;
     gap: 14px;
@@ -174,7 +169,7 @@
       copyBtn.onclick = () => copy(copyBtn, t.url, copyBtn);
 
       const links = shareLinks(t);
-      optionsEl.innerHTML = "";
+      optionsEl.replaceChildren();
 
       // Enviar a un amigo por el chat de recomendaciones (solo con sesión).
       if (t.friend) {

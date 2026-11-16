@@ -283,7 +283,7 @@ const tplRestaurant: Restaurant = {
   }
 
   function sortEntries(list: HomeEntry[]) {
-    return [...list].sort((a, b) => {
+    return list.toSorted((a, b) => {
       let cmp = 0;
       if (sortState.field === "name") {
         cmp = a.name.localeCompare(b.name);
@@ -431,7 +431,7 @@ const tplRestaurant: Restaurant = {
       return;
     }
 
-    container.innerHTML = "";
+    container.replaceChildren();
     const grid = document.createElement("div");
     grid.className = "cards-grid";
     // Stagger solo en render normal; durante búsqueda se omite para no parpadear.
@@ -629,8 +629,8 @@ const tplRestaurant: Restaurant = {
       };
       const tv = document.getElementById("tab-todos") as HTMLElement | null;
       const tp = document.getElementById("tab-pendientes") as HTMLElement | null;
-      if (tv) { tv.innerHTML = ""; tv.appendChild(skeletonGrid()); tv.hidden = activeTab !== "todos"; }
-      if (tp) { tp.innerHTML = ""; tp.appendChild(skeletonGrid()); tp.hidden = activeTab !== "pendientes"; }
+      if (tv) { tv.replaceChildren(skeletonGrid()); tv.hidden = activeTab !== "todos"; }
+      if (tp) { tp.replaceChildren(skeletonGrid()); tp.hidden = activeTab !== "pendientes"; }
     }
 
     const {

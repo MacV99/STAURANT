@@ -1,25 +1,21 @@
-<div id="confirm-overlay" class="overlay" aria-modal="true" role="dialog">
+<dialog id="confirm-overlay" class="overlay" aria-labelledby="confirm-message">
   <div class="dialog-box flex-column">
     <div class="dialog-icon is-error">
       <i class="bi bi-exclamation-triangle-fill"></i>
     </div>
     <p id="confirm-message" class="dialog-message">¿Estás seguro?</p>
     <div class="dialog-actions flex-row">
-      <button id="confirm-cancel" class="boton2">Cancelar</button>
+      {/* autofocus en la acción segura: Enter por accidente no borra nada. */}
+      <button id="confirm-cancel" class="boton2" autofocus>Cancelar</button>
       <button id="confirm-ok" class="boton btn-danger">Eliminar</button>
     </div>
   </div>
-</div>
+</dialog>
 
 <style>
   /* Estructura y espaciado viven en project.css (.dialog-box …), compartidos
-     con NoticeDialog. Aquí solo el matiz propio: el botón de confirmar. */
-
-  /* El confirm es la última palabra: debe quedar SIEMPRE por encima de cualquier
-     otro modal abierto (p. ej. "Editar restaurante"), que comparten z-index 200. */
-  #confirm-overlay {
-    z-index: 400;
-  }
+     con NoticeDialog. Aquí solo el matiz propio: el botón de confirmar.
+     Queda encima de otros modales solo por abrirse después (capa superior). */
 
   #confirm-cancel {
     background: var(--clr-white2);

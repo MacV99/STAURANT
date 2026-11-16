@@ -1,4 +1,4 @@
-<div id="maps-overlay" class="overlay" aria-modal="true" role="dialog" aria-labelledby="maps-title">
+<dialog id="maps-overlay" class="overlay" aria-labelledby="maps-title">
   <div class="dialog-box flex-column">
     <div class="dialog-icon">
       <i class="bi bi-geo-alt-fill"></i>
@@ -14,14 +14,9 @@
       <button id="maps-cancel" class="boton2">Cancelar</button>
     </div>
   </div>
-</div>
+</dialog>
 
 <style>
-  /* Por encima de formularios (200) y recomendar (300); debajo de ConfirmDialog (400). */
-  #maps-overlay {
-    z-index: 320;
-  }
-
   .maps-address {
     margin-top: -6px;
     font-size: 0.8rem;
@@ -101,7 +96,7 @@
     function show(address: string) {
       addressEl.textContent = address;
       rememberEl.checked = false;
-      optionsEl.innerHTML = "";
+      optionsEl.replaceChildren();
       for (const app of availableMapsApps()) {
         const btn = document.createElement("button");
         btn.type = "button";

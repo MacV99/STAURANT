@@ -344,6 +344,7 @@ import FormModal from "./FormModal.astro";
     rankComboOptions,
     renderComboOptions,
     matchExistingOption,
+    isImeComposing,
     type ComboOption,
   } from "../scripts/store.ts";
   import { navigate } from "astro:transitions/client";
@@ -355,7 +356,7 @@ import FormModal from "./FormModal.astro";
       onClose: () => hideDropdown(),
     });
     if (!overlayApi) return; // no está en esta página
-    const { overlay, close } = overlayApi;
+    const { open: openOverlay, close } = overlayApi;
 
     const form       = document.getElementById("restaurant-form") as HTMLFormElement;
     const titleEl    = document.getElementById("restaurant-form-title")!;
@@ -382,7 +383,7 @@ import FormModal from "./FormModal.astro";
     }
 
     function renderResults(results: OfficialRestaurant[]): void {
-      dropdownEl.innerHTML = "";
+      dropdownEl.replaceChildren();
       if (results.length === 0) {
         hideDropdown();
         return;
@@ -414,7 +415,7 @@ import FormModal from "./FormModal.astro";
     }
 
     function renderLoading(): void {
-      dropdownEl.innerHTML = "";
+      dropdownEl.replaceChildren();
       const loading = document.createElement("div");
       loading.className = "name-option is-loading";
       loading.textContent = "Buscando...";
@@ -450,7 +451,7 @@ import FormModal from "./FormModal.astro";
     // ─── Combobox de ciudades (multi: se van agregando como chips) ────────────
 
     function renderCityChips(): void {
-      cityChipsEl.innerHTML = "";
+      cityChipsEl.replaceChildren();
       cityChipsEl.hidden = selectedCities.length === 0;
       if (selectedCities.length === 0) return;
 
@@ -516,7 +517,7 @@ import FormModal from "./FormModal.astro";
       const q = query.trim().toUpperCase();
       // Sugerencias = mis ciudades + las de todos los restaurantes (cada grupo
       // con las más usadas arriba), menos las ya agregadas aquí. Sin tildes.
-      cityDropdown.innerHTML = "";
+      cityDropdown.replaceChildren();
       const { exact: exactMatch } = renderComboOptions({
         dropdown: cityDropdown,
         options: cityOptions(),
@@ -566,6 +567,7 @@ import FormModal from "./FormModal.astro";
     };
     // Enter agrega la ciudad escrita en vez de enviar el formulario.
     cityInput.addEventListener("keydown", (e) => {
+      if (isImeComposing(e)) return;
       if (e.key === "Enter") {
         e.preventDefault();
         addCity(cityInput.value);
@@ -590,7 +592,7 @@ import FormModal from "./FormModal.astro";
         titleEl.textContent = "Nuevo restaurante";
         idInput.value = "";
       }
-      overlay.classList.add("is-open");
+      openOverlay();
     }
 
     // .onclick evita acumulación de listeners si el módulo re-ejecuta

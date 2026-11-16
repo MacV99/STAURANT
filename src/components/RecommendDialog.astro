@@ -7,7 +7,7 @@
  */
 ---
 
-<div id="recommend-overlay" class="overlay" aria-modal="true" role="dialog">
+<dialog id="recommend-overlay" class="overlay" aria-labelledby="recommend-title">
   <div class="form-box form-box--sheet flex-column rec-box">
     <div class="form-header flex-row">
       <h2 id="recommend-title">Recomendar</h2>
@@ -34,14 +34,9 @@
       <div id="recommend-friends" class="rec-friends flex-column"></div>
     </div>
   </div>
-</div>
+</dialog>
 
 <style>
-  /* Por encima de otros modales (p. ej. se abre desde el de calificar). */
-  #recommend-overlay {
-    z-index: 300;
-  }
-
   .rec-box {
     max-width: 420px;
   }
@@ -276,7 +271,7 @@
     }
 
     function renderFriends() {
-      listEl.innerHTML = "";
+      listEl.replaceChildren();
       if (!friendsCache) {
         for (let i = 0; i < 3; i++) {
           const sk = document.createElement("div");

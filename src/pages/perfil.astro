@@ -23,7 +23,7 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     </div>
 
     <!-- Modal editar perfil -->
-    <div class="overlay" id="edit-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <dialog class="overlay" id="edit-overlay" aria-labelledby="modal-title">
       <div class="modal-card flex-column">
         <div class="modal-header flex-row">
           <h2 class="modal-title" id="modal-title">Editar perfil</h2>
@@ -106,10 +106,10 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
           <button type="submit" class="btn-primary">Guardar cambios</button>
         </form>
       </div>
-    </div>
+    </dialog>
 
     <!-- Modal: solicitar restaurante oficial -->
-    <div class="overlay" id="request-overlay" role="dialog" aria-modal="true" aria-labelledby="req-title">
+    <dialog class="overlay" id="request-overlay" aria-labelledby="req-title">
       <div class="modal-card flex-column">
         <div class="modal-header flex-row">
           <h2 class="modal-title" id="req-title">Solicitar restaurante oficial</h2>
@@ -127,10 +127,10 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
           <button type="submit" class="btn-primary">Enviar solicitud</button>
         </form>
       </div>
-    </div>
+    </dialog>
 
     <!-- Modal: bandeja de solicitudes pendientes (superadmin) -->
-    <div class="overlay" id="inbox-overlay" role="dialog" aria-modal="true" aria-labelledby="inbox-title">
+    <dialog class="overlay" id="inbox-overlay" aria-labelledby="inbox-title">
       <div class="modal-card flex-column">
         <div class="modal-header flex-row">
           <h2 class="modal-title" id="inbox-title">Solicitudes pendientes</h2>
@@ -142,10 +142,10 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
           <p class="top3-empty">Cargando…</p>
         </div>
       </div>
-    </div>
+    </dialog>
 
     <!-- Modal: crear oficial para un usuario (superadmin) -->
-    <div class="overlay" id="assign-overlay" role="dialog" aria-modal="true" aria-labelledby="assign-title">
+    <dialog class="overlay" id="assign-overlay" aria-labelledby="assign-title">
       <div class="modal-card flex-column">
         <div class="modal-header flex-row">
           <h2 class="modal-title" id="assign-title">Crear oficial para un usuario</h2>
@@ -174,7 +174,7 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
           <button type="submit" class="btn-primary">Crear y asignar</button>
         </form>
       </div>
-    </div>
+    </dialog>
 
     <!-- Mi restaurante: acceso a gestión (solo si el usuario es dueño de un oficial) -->
     <a id="my-restaurant-card" class="dash-card mgmt-card flex-row" href="#" hidden>
@@ -1683,7 +1683,7 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
 
     // App de mapas para abrir direcciones (preferencia local del dispositivo)
     const mapsPrefEl = document.getElementById("maps-pref") as HTMLSelectElement;
-    mapsPrefEl.innerHTML = "";
+    mapsPrefEl.replaceChildren();
     for (const [value, label] of [
       ["ask", "Preguntar siempre"],
       ...availableMapsApps().map((a) => [a.id, a.label]),

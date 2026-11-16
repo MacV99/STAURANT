@@ -621,7 +621,7 @@ import Layout1 from "../layouts/Layout1.astro";
     // Solicitudes recibidas
     reqSection.hidden = incoming.length === 0;
     reqCount.textContent = String(incoming.length);
-    reqList.innerHTML = "";
+    reqList.replaceChildren();
     incoming.forEach((req) => {
       const actions = actionsWrap();
       const accept = iconBtn("ur-btn-primary", "bi-check-lg", "Aceptar", async () => {
@@ -642,7 +642,7 @@ import Layout1 from "../layouts/Layout1.astro";
     // Mis amigos
     tabCount.textContent = String(friends.length);
 
-    friendsList.innerHTML = "";
+    friendsList.replaceChildren();
     if (friends.length === 0) {
       friendsList.innerHTML = `<div class="empty-state flex-column">
            <i class="bi bi-people"></i>
@@ -652,7 +652,7 @@ import Layout1 from "../layouts/Layout1.astro";
       return;
     }
     // Primero los amigos con recomendaciones sin ver.
-    const sorted = [...friends].sort(
+    const sorted = friends.toSorted(
       (a, b) => (unreadRecs.get(b.id) ?? 0) - (unreadRecs.get(a.id) ?? 0),
     );
     sorted.forEach((f) => {
@@ -731,7 +731,7 @@ import Layout1 from "../layouts/Layout1.astro";
       return;
     }
 
-    listEl.innerHTML = "";
+    listEl.replaceChildren();
     searchResults.forEach((u) => {
       listEl.appendChild(userRow(u, searchActionFor(u)));
     });
@@ -774,7 +774,7 @@ import Layout1 from "../layouts/Layout1.astro";
     // Skeleton mientras cargan los amigos
     const friendsList = document.getElementById("friends-list");
     if (friendsList && friends.length === 0 && incoming.length === 0) {
-      friendsList.innerHTML = "";
+      friendsList.replaceChildren();
       for (let i = 0; i < 3; i++) {
         const sk = document.createElement("div");
         sk.className = "skeleton-card";

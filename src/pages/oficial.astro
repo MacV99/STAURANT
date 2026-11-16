@@ -45,7 +45,7 @@ const tplRestaurant: Restaurant = {
 
     <div id="public-topbar" class="public-topbar flex-row" hidden>
       <a href="/" class="pt-brand flex-row" aria-label="STAURANT">
-        <img src="/img/logo2.png" alt="STAURANT" class="pt-logo" />
+        <img src="/img/logo2.png" alt="STAURANT" class="pt-logo" width="1800" height="542" />
       </a>
       <a id="login-link" href="/login" class="pt-action flex-row">
         <i class="bi bi-box-arrow-in-right"></i> Iniciar sesión
@@ -1131,7 +1131,7 @@ const tplRestaurant: Restaurant = {
       const actions = article.querySelector<HTMLElement>(".dish-actions");
       if (actions) {
         actions.className = "owner-dish-actions";
-        actions.innerHTML = "";
+        actions.replaceChildren();
         const editBtn = document.createElement("button");
         editBtn.type = "button";
         editBtn.className = "owner-dish-btn";
@@ -1191,7 +1191,7 @@ const tplRestaurant: Restaurant = {
       );
     }
     if (dishTypeFilter) ds = ds.filter((d) => (d.typeName ?? "") === dishTypeFilter);
-    return [...ds].sort((a, b) => {
+    return ds.toSorted((a, b) => {
       if (sortField === "name") {
         const cmp = a.name.localeCompare(b.name);
         return sortDir === "asc" ? cmp : -cmp;
@@ -1254,7 +1254,7 @@ const tplRestaurant: Restaurant = {
       return;
     }
 
-    listEl.innerHTML = "";
+    listEl.replaceChildren();
     listEl.classList.toggle("stagger-in", !dishSearch && !dishTypeFilter);
     filtered.forEach((od) => listEl.appendChild(buildDishCardElement(od)));
   }
@@ -1503,7 +1503,7 @@ const tplRestaurant: Restaurant = {
         : (official.handle ?? "").toLowerCase() === handleParam);
     const listEl = document.getElementById("dishes-list");
     if (listEl && (officialDishes.length === 0 || !sameOfficial)) {
-      listEl.innerHTML = "";
+      listEl.replaceChildren();
       for (let i = 0; i < 4; i++) {
         const sk = document.createElement("div");
         sk.className = "skeleton-card skeleton-dish";
