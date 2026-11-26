@@ -116,6 +116,12 @@ import Layout1 from "../layouts/Layout1.astro";
           >Crear cuenta</button
         >
       </form>
+
+      <!-- Visible en ambas pestañas: "Continuar con Google" también crea cuenta. -->
+      <p class="legal-note">
+        Al continuar aceptas los <a href="/terminos">Términos</a> y la
+        <a href="/privacidad">Política de privacidad</a>.
+      </p>
     </div>
   </div>
 </Layout1>
@@ -258,6 +264,20 @@ import Layout1 from "../layouts/Layout1.astro";
     font-size: 0.85rem;
     color: var(--clr-danger);
     text-align: center;
+  }
+
+  .legal-note {
+    color: var(--clr-text-soft);
+    font-size: 0.75rem;
+    line-height: 1.5;
+    text-align: center;
+  }
+
+  .legal-note a {
+    color: var(--clr-text);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
 
   /* Sin error no ocupa espacio (antes dejaba un hueco vacío bajo las pestañas). */

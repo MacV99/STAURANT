@@ -1,0 +1,119 @@
+---
+import LegalPage from "../components/LegalPage.astro";
+
+const CONTACT = "staurant99@gmail.com";
+---
+
+<LegalPage title="Términos y condiciones" updated="25 de noviembre de 2026">
+  <h2>1. Qué es STAURANT</h2>
+  <p>
+    STAURANT es una aplicación web (también instalable como app) para guardar los
+    restaurantes que visitas o quieres visitar, calificar cada plato, conectar con
+    amigos y recomendarles lugares y platos. También permite que los dueños de un
+    restaurante administren un perfil oficial con su carta. El servicio lo presta
+    MacV, desde Colombia.
+  </p>
+  <p>
+    Al crear una cuenta o usar STAURANT aceptas estos términos y la
+    <a href="/privacidad">Política de privacidad</a>. Si no estás de acuerdo, no
+    uses el servicio.
+  </p>
+
+  <h2>2. Tu cuenta</h2>
+  <ul>
+    <li>Puedes registrarte con correo y contraseña o con tu cuenta de Google.</li>
+    <li>Debes tener al menos 14 años para usar STAURANT.</li>
+    <li>
+      Eres responsable de lo que pase en tu cuenta y de mantener tu contraseña en
+      secreto. Si crees que alguien entró sin permiso, escríbenos.
+    </li>
+    <li>
+      Usa un nombre y un nombre de usuario que no suplanten a otra persona ni a una
+      marca.
+    </li>
+  </ul>
+
+  <h2>3. Tu contenido</h2>
+  <p>
+    Los restaurantes, platos, calificaciones, notas y recomendaciones que agregas
+    son tuyos. Nos das permiso para guardarlos y mostrarlos dentro de la app según
+    cómo la uses (por ejemplo, a tus amigos o, si calificas un restaurante oficial,
+    en sus estadísticas). Ese permiso termina cuando borras el contenido o tu cuenta.
+  </p>
+  <p>Al publicar contenido te comprometes a que:</p>
+  <ul>
+    <li>Tus calificaciones y notas reflejan tu experiencia real.</li>
+    <li>
+      No es ofensivo, discriminatorio, ilegal, ni contiene datos personales de otras
+      personas.
+    </li>
+    <li>No infringe derechos de autor o marcas de terceros (por ejemplo, fotos ajenas).</li>
+  </ul>
+  <p>
+    Podemos ocultar o eliminar contenido que incumpla estas reglas y, si el
+    incumplimiento es grave o repetido, suspender la cuenta.
+  </p>
+
+  <h2>4. Restaurantes oficiales</h2>
+  <p>
+    Un restaurante puede solicitar un perfil oficial. Antes de aprobarlo
+    verificamos que quien lo solicita lo representa. El dueño es responsable de que
+    la información publicada (nombre, carta, precios, fotos, horarios, ubicación y
+    datos de contacto) sea correcta y de tener derecho a usar las imágenes y la
+    marca. Podemos retirar un perfil oficial si la información es falsa o engañosa.
+  </p>
+  <p>
+    Los dueños ven estadísticas de las calificaciones que reciben sus platos. No
+    pueden modificar ni borrar las calificaciones de los usuarios.
+  </p>
+
+  <h2>5. Uso permitido</h2>
+  <p>No está permitido:</p>
+  <ul>
+    <li>Crear cuentas falsas o calificar de forma masiva para inflar o hundir un restaurante.</li>
+    <li>Usar la app para enviar spam o acosar a otros usuarios.</li>
+    <li>
+      Intentar acceder a datos de otras personas, saltarse las medidas de seguridad o
+      extraer información de forma automatizada.
+    </li>
+    <li>Usar STAURANT para cualquier actividad ilegal.</li>
+  </ul>
+
+  <h2>6. Disponibilidad del servicio</h2>
+  <p>
+    STAURANT se ofrece gratis y "tal como está". Hacemos lo posible por que
+    funcione bien, pero no garantizamos que esté siempre disponible ni libre de
+    errores. Podemos cambiar, agregar o quitar funciones. La información de los
+    restaurantes (precios, horarios, ubicación) la aportan usuarios y dueños, y
+    puede no estar al día: confírmala con el restaurante.
+  </p>
+
+  <h2>7. Responsabilidad</h2>
+  <p>
+    En la medida que lo permita la ley, MacV no responde por daños indirectos
+    derivados del uso de la app, por el contenido publicado por usuarios o
+    restaurantes, ni por la experiencia que tengas en un restaurante. Nada de esto
+    limita los derechos que te da la ley colombiana como consumidor.
+  </p>
+
+  <h2>8. Cerrar tu cuenta</h2>
+  <p>
+    Puedes dejar de usar STAURANT cuando quieras. Para borrar tu cuenta y tus datos
+    escríbenos a <a href={`mailto:${CONTACT}`}>{CONTACT}</a> desde el correo con el
+    que te registraste; el detalle está en la
+    <a href="/privacidad#eliminar">Política de privacidad</a>.
+  </p>
+
+  <h2>9. Cambios a estos términos</h2>
+  <p>
+    Si cambiamos estos términos actualizaremos la fecha de arriba y, si el cambio es
+    importante, te avisaremos dentro de la app. Seguir usando STAURANT después del
+    cambio significa que lo aceptas.
+  </p>
+
+  <h2>10. Ley aplicable y contacto</h2>
+  <p>
+    Estos términos se rigen por las leyes de la República de Colombia. Para
+    cualquier duda escríbenos a <a href={`mailto:${CONTACT}`}>{CONTACT}</a>.
+  </p>
+</LegalPage>

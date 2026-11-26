@@ -55,6 +55,7 @@ pnpm astro check    # TypeScript checking (no test suite configured)
 - `src/pages/login.astro` + `auth/callback.astro` — Auth (login + register; Google OAuth return)
 - `src/pages/perfil.astro` — User profile, theme, logout; official-restaurant requests (superadmin inbox)
 - `src/pages/recomendaciones.astro` — "Chat" sin texto con un amigo (`?amigo=…`): solo recomendaciones de platos/restaurantes. Se envían desde `RecommendDialog` (montado en `Layout1`, `window.recommend.open({type,id,title,subtitle})`). Tabla `recommendations` guarda solo tipo+id; nombre/nota/enlace se resuelven al leer (`social.ts`). RLS: solo a amigos y solo lo propio.
+- `src/pages/terminos.astro` / `privacidad.astro` — Páginas legales públicas (marco común `LegalPage.astro`, sin navbar). Enlazadas desde login, `AuthModal` y `/perfil`; `/privacidad#eliminar` explica cómo borrar la cuenta (URL para Google OAuth / Meta). Si cambian los datos que guarda la app, actualizar el texto y la fecha.
 
 ### Interactivity pattern
 

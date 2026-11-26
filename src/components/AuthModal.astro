@@ -79,6 +79,11 @@
       </label>
       <button type="submit" class="btn-primary" id="am-btn-register">Crear cuenta</button>
     </form>
+
+    <p class="legal-note">
+      Al continuar aceptas los <a href="/terminos" target="_blank" rel="noopener">Términos</a>
+      y la <a href="/privacidad" target="_blank" rel="noopener">Política de privacidad</a>.
+    </p>
   </div>
 </dialog>
 
@@ -176,6 +181,20 @@
 
   .auth-error.is-info {
     color: var(--clr-primary);
+  }
+
+  .legal-note {
+    color: var(--clr-text-soft);
+    font-size: 0.75rem;
+    line-height: 1.5;
+    text-align: center;
+  }
+
+  .legal-note a {
+    color: var(--clr-text);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
 
   .social-section {

@@ -1,0 +1,161 @@
+---
+import LegalPage from "../components/LegalPage.astro";
+
+const CONTACT = "staurant99@gmail.com";
+---
+
+<LegalPage title="Política de privacidad" updated="25 de noviembre de 2026">
+  <h2>1. Quién es responsable</h2>
+  <p>
+    El responsable del tratamiento de tus datos en STAURANT es MacV, en Colombia.
+    Puedes contactarnos en <a href={`mailto:${CONTACT}`}>{CONTACT}</a>. Esta
+    política cumple la Ley 1581 de 2012 de protección de datos personales y sus
+    normas reglamentarias.
+  </p>
+
+  <h2>2. Qué datos recogemos</h2>
+  <ul>
+    <li>
+      <strong>Datos de tu cuenta:</strong> correo electrónico, nombre, nombre de
+      usuario y contraseña (guardada cifrada; nunca la vemos). Si entras con Google,
+      Google nos comparte tu nombre, tu correo y tu foto de perfil.
+    </li>
+    <li>
+      <strong>Lo que agregas a la app:</strong> restaurantes (nombre, ciudad,
+      dirección, enlace de mapas, notas, si ya fuiste o está pendiente), platos,
+      tipos de plato, calificaciones y notas.
+    </li>
+    <li>
+      <strong>Actividad social:</strong> solicitudes de amistad, amigos y las
+      recomendaciones que envías o recibes.
+    </li>
+    <li>
+      <strong>Restaurantes oficiales:</strong> si administras uno, la información
+      del perfil (carta, precios, fotos, logo, ubicación y contacto) y los datos de
+      la solicitud que envías para obtenerlo.
+    </li>
+    <li>
+      <strong>Datos en tu dispositivo:</strong> la app guarda en el almacenamiento
+      local del navegador tu sesión, una copia de tus datos para que cargue al
+      instante y tus preferencias (tema, app de mapas). No usamos cookies de
+      publicidad.
+    </li>
+  </ul>
+  <p>
+    No pedimos tu ubicación, tus contactos, ni acceso a la cámara (las fotos de
+    platos oficiales las elige el dueño desde sus archivos). No usamos herramientas
+    de analítica ni de publicidad.
+  </p>
+
+  <h2>3. Para qué los usamos</h2>
+  <ul>
+    <li>Crear y mantener tu cuenta e iniciar sesión.</li>
+    <li>Guardar y mostrarte tus restaurantes, platos y calificaciones.</li>
+    <li>Permitir que tus amigos te encuentren, vean tu perfil y te envíen recomendaciones.</li>
+    <li>
+      Calcular el promedio de los platos de restaurantes oficiales y mostrar
+      estadísticas a sus dueños.
+    </li>
+    <li>Responder tus mensajes, dar soporte y proteger el servicio contra abusos.</li>
+  </ul>
+  <p>No vendemos ni alquilamos tus datos, y no los usamos para publicidad.</p>
+
+  <h2>4. Quién puede ver tu información</h2>
+  <ul>
+    <li>
+      <strong>Otros usuarios registrados</strong> pueden buscarte por tu nombre o
+      nombre de usuario y ver tu perfil, con los restaurantes que marcaste como
+      visitados y las calificaciones y notas de tus platos. Los restaurantes
+      pendientes no se muestran.
+    </li>
+    <li>
+      <strong>Tus amigos</strong> pueden enviarte recomendaciones; cada recomendación
+      la ven solo quien la envía y quien la recibe.
+    </li>
+    <li>
+      <strong>Los dueños de un restaurante oficial</strong> ven estadísticas de las
+      calificaciones que reciben sus platos.
+    </li>
+    <li>
+      <strong>Cualquier persona</strong>, incluso sin cuenta, puede ver los perfiles
+      de restaurantes oficiales y su carta.
+    </li>
+    <li>Tu correo electrónico y tu contraseña no se muestran a nadie.</li>
+  </ul>
+
+  <h2>5. Proveedores que nos ayudan</h2>
+  <p>
+    Para funcionar usamos proveedores que tratan datos en nuestro nombre, con sus
+    propias medidas de seguridad. Algunos están fuera de Colombia, por lo que tus
+    datos pueden guardarse en otros países:
+  </p>
+  <ul>
+    <li><strong>Supabase:</strong> base de datos, inicio de sesión y almacenamiento de fotos.</li>
+    <li><strong>Netlify:</strong> aloja y sirve la página web.</li>
+    <li><strong>Google:</strong> inicio de sesión con Google, si lo eliges, y las fuentes tipográficas.</li>
+    <li><strong>jsDelivr:</strong> sirve los íconos de la interfaz.</li>
+  </ul>
+  <p>
+    Solo compartiremos datos con autoridades cuando una ley o una orden judicial lo
+    exija.
+  </p>
+
+  <h2>6. Cuánto tiempo los guardamos</h2>
+  <p>
+    Guardamos tus datos mientras tengas la cuenta. Cuando la borras, eliminamos tu
+    perfil y tu contenido en un plazo máximo de 30 días, salvo que una ley nos
+    obligue a conservar algo por más tiempo. Las estadísticas agregadas de
+    restaurantes oficiales, que no te identifican, pueden mantenerse.
+  </p>
+
+  <h2>7. Tus derechos</h2>
+  <p>Como titular de tus datos puedes, en cualquier momento:</p>
+  <ul>
+    <li>Conocer, actualizar y corregir tus datos (la mayoría puedes editarlos tú mismo en la app).</li>
+    <li>Pedir una copia de la información que tenemos sobre ti.</li>
+    <li>Revocar tu autorización y pedir que borremos tus datos.</li>
+    <li>
+      Presentar quejas ante la Superintendencia de Industria y Comercio (SIC) si
+      consideras que no respetamos tus derechos.
+    </li>
+  </ul>
+  <p>
+    Escríbenos a <a href={`mailto:${CONTACT}`}>{CONTACT}</a>. Respondemos consultas en
+    máximo 10 días hábiles y reclamos en máximo 15 días hábiles, como indica la ley.
+  </p>
+
+  <h2 id="eliminar">8. Cómo borrar tu cuenta y tus datos</h2>
+  <p>
+    Envía un correo a <a href={`mailto:${CONTACT}`}>{CONTACT}</a> desde la dirección
+    con la que te registraste, con el asunto <strong>"Eliminar mi cuenta"</strong>.
+    Borraremos tu cuenta, tus restaurantes, platos, calificaciones, amistades y
+    recomendaciones, y te confirmaremos por correo cuando esté hecho. Si entraste
+    con Google, también puedes quitarle el acceso a STAURANT desde la configuración
+    de tu cuenta de Google.
+  </p>
+  <p>
+    Para borrar los datos guardados en tu dispositivo, cierra sesión y borra los
+    datos del sitio en tu navegador o desinstala la app.
+  </p>
+
+  <h2>9. Seguridad</h2>
+  <p>
+    Toda la comunicación viaja cifrada (HTTPS). La base de datos aplica reglas de
+    acceso para que cada usuario solo pueda leer y modificar lo que le corresponde.
+    Aun así, ningún sistema es infalible: si detectamos un incidente que afecte tus
+    datos, te avisaremos.
+  </p>
+
+  <h2>10. Menores de edad</h2>
+  <p>
+    STAURANT no está dirigido a menores de 14 años. Si eres padre, madre o tutor y
+    crees que un menor nos dio sus datos, escríbenos y los borraremos.
+  </p>
+
+  <h2>11. Cambios a esta política</h2>
+  <p>
+    Si cambiamos esta política actualizaremos la fecha de arriba y, si el cambio es
+    importante, te avisaremos dentro de la app. Consulta también los
+    <a href="/terminos">Términos y condiciones</a>.
+  </p>
+</LegalPage>

@@ -296,6 +296,12 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     <button id="btn-logout" class="btn-danger-outline">
       <i class="bi bi-box-arrow-right"></i> Cerrar sesión
     </button>
+
+    <nav class="legal-links flex-row" aria-label="Información legal">
+      <a href="/terminos">Términos y condiciones</a>
+      <span aria-hidden="true">·</span>
+      <a href="/privacidad">Política de privacidad</a>
+    </nav>
   </div>
 
   <ConfirmDialog />
@@ -432,6 +438,19 @@ import ConfirmDialog from "../components/ConfirmDialog.astro";
     text-transform: none;
     cursor: pointer;
     transition: var(--transition);
+  }
+
+  .legal-links {
+    justify-content: center;
+    gap: 8px;
+    color: var(--clr-text-soft);
+    font-size: 0.78rem;
+  }
+
+  .legal-links a {
+    color: var(--clr-text-soft);
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
 
   /* ── Modal ── */
